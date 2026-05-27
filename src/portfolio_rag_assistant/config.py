@@ -8,7 +8,13 @@ from dataclasses import dataclass
 from typing import Literal, cast
 from urllib.parse import urlparse
 
-from portfolio_rag_assistant.provider import LLMProviderConfigurationError
+from portfolio_rag_assistant.provider import (
+    LLMProvider,
+    LLMProviderConfigurationError,
+    LlamaCppProvider,
+    OllamaProvider,
+    OpenAICompatibleProvider,
+)
 
 LLMBackend = Literal["ollama", "llama-cpp", "openai-compatible"]
 
@@ -63,6 +69,21 @@ def load_provider_settings(env: Mapping[str, str] | None = None) -> ProviderSett
         ),
         api_key=source.get("LLM_API_KEY"),
     )
+
+
+def build_llm_provider(settings: ProviderSettings) -> LLMProvider:
+    """Build the configured provider behind the provider-neutral contract."""
+
+    if settings.backend == "ollama":
+        return OllamaProvider(base_url=settings.base_url, api_key=settings.api_key)
+    if settings.backend == "llama-cpp":
+        return LlamaCppProvider(base_url=settings.base_url, api_key=settings.api_key)
+    if settings.backend == "openai-compatible":
+        return OpenAICompatibleProvider(
+            base_url=settings.base_url,
+            api_key=settings.api_key,
+        )
+    raise LLMProviderConfigurationError("unsupported LLM_BACKEND")
 
 
 def _require_text(value: str | None, field_name: str) -> str:
