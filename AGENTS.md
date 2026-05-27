@@ -62,8 +62,7 @@ same change.
   - `bugfix/<short-name>`
   - `release/<version>`
   - `hotfix/<short-name>`
-- Do not use non-canonical branch families such as `docs/`, `test/`,
-  `refactor/`, `chore/`, or `fix/`.
+- Do not use any non-canonical branch family.
 - Normal work targets `develop`.
 - Every completed item or sprint must be committed immediately after its
   validation step.
