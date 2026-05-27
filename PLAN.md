@@ -52,7 +52,7 @@ Implement Milestones 0 through 4 first. These define the reliable core:
 architecture, provider abstraction, verified knowledge, retrieval, answer policy,
 and grounded answer generation.
 
-Milestones 5 through 8 are intentionally deferred until the core proves it can
+Milestones 5 through 9 are intentionally deferred until the core proves it can
 answer correctly and refuse safely.
 
 ---
@@ -231,11 +231,69 @@ Items:
 
 ---
 
-## Milestone 6: Anonymous Question Collection
+## Milestone 6: Runtime Infrastructure
+
+**Feature:** reproducible container runtime for local development and a
+single-server deployment base.
+
+This milestone starts after the public API exists, so the backend service,
+health endpoint, database, and optional local LLM services can be validated as a
+real runtime stack. It must not introduce Kubernetes, Swarm, reverse proxy,
+TLS, automatic model downloads, committed secrets, or a second database unless a
+later milestone proves a real need.
+
+### Sprint 6.1: Backend Container
+
+Items:
+
+- Implementation: add backend `Dockerfile`.
+- Implementation: add `.dockerignore`.
+- Config: use only explicit existing environment names without aliases.
+- Validation: backend image builds from a clean checkout.
+- Validation: no secrets or local model files are baked into the image.
+- Checkpoint: backend container can start and expose `GET /health`.
+- Final track/doc: container notes in `docs/runtime.md`.
+
+### Sprint 6.2: Compose Core Stack
+
+Items:
+
+- Implementation: add Compose config for `api` and PostgreSQL with `pgvector`.
+- Implementation: add a named volume for PostgreSQL data.
+- Implementation: add private Compose network and service health checks.
+- Implementation: make the API service depend on database health.
+- Config: add Compose environment example with placeholder values only.
+- Validation: `docker compose config` passes.
+- Validation: default stack starts from clean volumes.
+- Validation: migration, ingestion, and `GET /health` can run through Compose.
+- Checkpoint: a developer can run the service locally with one documented
+  Compose command.
+- Final track/doc: `docs/runtime.md`.
+
+### Sprint 6.3: Optional Local LLM Profiles
+
+Items:
+
+- Implementation: add optional `ollama` profile using the official
+  `ollama/ollama` image and a named model volume.
+- Implementation: add optional `llama-cpp` profile using the official
+  `ghcr.io/ggml-org/llama.cpp:server` image and a mounted model directory.
+- Config: document internal service URLs for `LLM_BASE_URL`.
+- Config: document that model download and placement are manual and explicit.
+- Validation: enabling one local LLM profile does not require application code
+  changes.
+- Validation: default Compose stack does not start heavyweight LLM services.
+- Checkpoint: API can be configured against either local profile or an external
+  OpenAI-compatible endpoint.
+- Final track/doc: LLM runtime examples in `docs/runtime.md`.
+
+---
+
+## Milestone 7: Anonymous Question Collection
 
 **Feature:** collect useful question signals without visitor tracking.
 
-### Sprint 6.1: Question Events
+### Sprint 7.1: Question Events
 
 Items:
 
@@ -250,7 +308,7 @@ Items:
 - Checkpoint: question analytics are useful without tracking visitors.
 - Final track/doc: privacy note.
 
-### Sprint 6.2: Review Loop
+### Sprint 7.2: Review Loop
 
 Items:
 
@@ -266,11 +324,11 @@ Items:
 
 ---
 
-## Milestone 7: Portfolio Widget
+## Milestone 8: Portfolio Widget
 
 **Feature:** small customer-service-style chat UI.
 
-### Sprint 7.1: Widget Integration
+### Sprint 8.1: Widget Integration
 
 Items:
 
@@ -285,11 +343,11 @@ Items:
 
 ---
 
-## Milestone 8: Release Validation
+## Milestone 9: Release Validation
 
 **Feature:** prove reliability before recruiters see it.
 
-### Sprint 8.1: Evaluation Suite
+### Sprint 9.1: Evaluation Suite
 
 Items:
 
@@ -301,12 +359,14 @@ Items:
 - Checkpoint: minimum acceptance score is met before deploy.
 - Final track/doc: release report.
 
-### Sprint 8.2: Deployment
+### Sprint 9.2: Release Smoke
 
 Items:
 
 - Config: add production environment example.
-- Implementation: add Dockerfile and compose/deploy config.
-- Validation: run health check, DB migration, ingestion, and chat smoke test.
-- Checkpoint: deploy is reproducible from a clean state.
+- Validation: run health check, DB migration, ingestion, and chat smoke test
+  using the runtime infrastructure from Milestone 6.
+- Validation: confirm no debug traces, secrets, or private source material leak
+  into recruiter-facing responses.
+- Checkpoint: release candidate is reproducible from a clean state.
 - Final track/doc: `docs/deployment.md`.
