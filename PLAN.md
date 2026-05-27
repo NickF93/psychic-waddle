@@ -137,6 +137,7 @@ Items:
 
 Items:
 
+- Implementation: add PostgreSQL + `pgvector` migration foundation.
 - Implementation: add tables for `sources`, `facts`, `chunks`, and
   `chunk_embeddings`.
 - Implementation: add metadata categories: `experience`, `education`,
