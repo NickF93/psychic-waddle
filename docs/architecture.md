@@ -123,9 +123,9 @@ Owns final wording only.
 
 Owns anonymous question improvement signals only.
 
-- Stores redacted question text and non-identifying answer metadata when
-  collection is enabled.
-- Supports later review of gaps, aliases, and evaluation cases.
+- Stores only redacted question text when collection is enabled.
+- Supports later review of gaps, aliases, and evaluation cases. Review state is
+  admin-owned workflow data, not collected visitor metadata.
 - Must not store visitor identity, raw transcripts, or promote questions into
   knowledge automatically.
 
@@ -168,10 +168,12 @@ The system must not store IP addresses, user agents, cookies, session IDs,
 emails, phone numbers, names, company names, photos, raw transcripts, or any
 other visitor identity.
 
-If anonymous question collection is enabled, stored data is limited to redacted
-question text and non-identifying answer metadata such as language, answer
-status, source kinds, and retrieval scores. Visitor questions must be reviewed
-manually before they influence facts, aliases, or evaluation cases.
+If anonymous question collection is enabled, stored visitor-derived data is
+limited to redacted question text only. The system must not store per-question
+language, answer status, source kinds, retrieval scores, raw request metadata,
+or any other answer/request metadata from visitor traffic. Visitor questions
+must be reviewed manually before they influence facts, aliases, or evaluation
+cases.
 
 ## Milestone 0 Acceptance Checklist
 

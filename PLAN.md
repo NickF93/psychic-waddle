@@ -137,6 +137,7 @@ Items:
 
 Items:
 
+- Implementation: add PostgreSQL + `pgvector` migration foundation.
 - Implementation: add tables for `sources`, `facts`, `chunks`, and
   `chunk_embeddings`.
 - Implementation: add metadata categories: `experience`, `education`,
@@ -299,13 +300,14 @@ Items:
 
 - Implementation: redact emails, phone numbers, names, and organizations before
   storage.
-- Implementation: store only redacted question text, language, answer status,
-  source kinds, and top scores.
+- Implementation: store only redacted question text as visitor-derived data.
+- Implementation: do not store per-question language, answer status, source
+  kinds, top scores, retrieval scores, or request metadata.
 - Implementation: explicitly avoid IP address, user agent, cookies, session
   identity, email, phone, names, company names, photos, and raw transcripts.
 - Test: add redaction and persistence tests.
 - Validation: raw request metadata is not stored.
-- Checkpoint: question analytics are useful without tracking visitors.
+- Checkpoint: question review queue is useful without tracking visitors.
 - Final track/doc: privacy note.
 
 ### Sprint 7.2: Review Loop

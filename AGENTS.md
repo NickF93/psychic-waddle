@@ -44,8 +44,10 @@ same change.
 - Store no visitor identity.
 - Do not store IP addresses, user agents, cookies, session identifiers, email
   addresses, phone numbers, names, company names, photos, or raw transcripts.
-- If question collection is implemented, store only redacted question text and
-  non-identifying answer metadata needed to improve retrieval quality.
+- If question collection is implemented, store only redacted question text as
+  visitor-derived data.
+- Do not store per-question language, answer status, source kinds, retrieval
+  scores, or any other answer/request metadata from visitor traffic.
 
 ## Git-Flow Rules
 
@@ -55,15 +57,12 @@ same change.
 - Never push directly to `main` or `develop`.
 - If the current branch is `main` or `develop`, create or switch to a working
   branch before making changes.
-- Use branch names with clear prefixes:
+- Use only canonical Git-flow branch families:
   - `feature/<short-name>`
-  - `fix/<short-name>`
-  - `docs/<short-name>`
-  - `test/<short-name>`
-  - `refactor/<short-name>`
-  - `chore/<short-name>`
+  - `bugfix/<short-name>`
   - `release/<version>`
   - `hotfix/<short-name>`
+- Do not use any non-canonical branch family.
 - Normal work targets `develop`.
 - Every completed item or sprint must be committed immediately after its
   validation step.
@@ -77,6 +76,9 @@ same change.
 - Commit messages must always use the `type(scope): summary` format.
 - Keep commit scope names short and concrete, for example
   `docs(architecture): define milestone 0 contract`.
+- Commit type is not a branch family. Documentation, tests, refactors, chores,
+  and fixes still use the appropriate commit type while staying on a canonical
+  Git-flow branch.
 - After the first commit for a normal work branch, open a draft pull request to
   `develop`.
 - Release work uses `release/<version>` branches and may target `main` only with
