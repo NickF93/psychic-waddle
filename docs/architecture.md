@@ -146,8 +146,8 @@ Owns anonymous question improvement signals only.
 Configuration names are explicit. No aliases, deprecated names, compatibility
 names, or hidden fallbacks are allowed.
 
-- `LLM_BACKEND`: selected backend, one of `ollama`, `llama_cpp`, or
-  `openai_compatible`.
+- `LLM_BACKEND`: selected backend, one of `ollama`, `llama-cpp`, or
+  `openai-compatible`.
 - `LLM_BASE_URL`: base URL for the selected backend.
 - `LLM_API_KEY`: API key for providers that require one.
 - `CHAT_MODEL`: chat model name sent to the selected backend.
