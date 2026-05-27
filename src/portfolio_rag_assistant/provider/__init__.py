@@ -17,6 +17,7 @@ from portfolio_rag_assistant.provider.contract import (
     LLMProviderTransportError,
     TokenUsage,
 )
+from portfolio_rag_assistant.provider.openai_compatible import OpenAICompatibleProvider
 
 __all__ = [
     "ALLOWED_CHAT_ROLES",
@@ -33,5 +34,6 @@ __all__ = [
     "LLMProviderRequestError",
     "LLMProviderResponseError",
     "LLMProviderTransportError",
+    "OpenAICompatibleProvider",
     "TokenUsage",
 ]
