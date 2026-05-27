@@ -2,8 +2,17 @@ from __future__ import annotations
 
 import pytest
 
-from portfolio_rag_assistant.config import ProviderSettings, load_provider_settings
-from portfolio_rag_assistant.provider import LLMProviderConfigurationError
+from portfolio_rag_assistant.config import (
+    ProviderSettings,
+    build_llm_provider,
+    load_provider_settings,
+)
+from portfolio_rag_assistant.provider import (
+    LLMProviderConfigurationError,
+    LlamaCppProvider,
+    OllamaProvider,
+    OpenAICompatibleProvider,
+)
 
 
 def test_load_provider_settings_reads_exact_env_names() -> None:
@@ -106,3 +115,28 @@ def test_provider_settings_rejects_invalid_values(
 ) -> None:
     with pytest.raises(LLMProviderConfigurationError):
         ProviderSettings(**settings)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("backend", "provider_type"),
+    (
+        ("ollama", OllamaProvider),
+        ("llama-cpp", LlamaCppProvider),
+        ("openai-compatible", OpenAICompatibleProvider),
+    ),
+)
+def test_build_llm_provider_selects_configured_backend(
+    backend: str,
+    provider_type: type[object],
+) -> None:
+    provider = build_llm_provider(
+        ProviderSettings(
+            backend=backend,  # type: ignore[arg-type]
+            base_url="http://localhost:8080/v1",
+            chat_model="chat-model",
+            embedding_model="embedding-model",
+            api_key="secret",
+        )
+    )
+
+    assert isinstance(provider, provider_type)
