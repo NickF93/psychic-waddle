@@ -16,7 +16,8 @@ rules, and uses the LLM only to produce a polished final answer.
 - **Item:** an atomic unit of documentation, implementation, test, validation,
   checkpoint, or final tracking documentation.
 - **Commit:** required immediately after each completed item or sprint, using
-  the `type(scope): summary` message format.
+  the `type(scope): summary` message format. Huge milestone-end commits are
+  forbidden; commits must follow coherent semantic work groups.
 
 ## Non-Negotiable Principles
 

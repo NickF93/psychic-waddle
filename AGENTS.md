@@ -67,6 +67,11 @@ same change.
 - Normal work targets `develop`.
 - Every completed item or sprint must be committed immediately after its
   validation step.
+- Huge milestone-end or implementation-end commits are forbidden.
+- Split work into small, semantically defined commits for each coherent
+  documentation, code, config, test, validation, or tracking change.
+- Do not batch unrelated item groups into one commit just because they belong to
+  the same milestone.
 - Do not leave a completed item or sprint uncommitted unless the user explicitly
   stops the work before completion.
 - Commit messages must always use the `type(scope): summary` format.
