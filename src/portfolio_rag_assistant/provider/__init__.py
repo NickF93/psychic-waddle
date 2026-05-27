@@ -18,6 +18,7 @@ from portfolio_rag_assistant.provider.contract import (
     TokenUsage,
 )
 from portfolio_rag_assistant.provider.llama_cpp import LlamaCppProvider
+from portfolio_rag_assistant.provider.ollama import OllamaProvider
 from portfolio_rag_assistant.provider.openai_compatible import OpenAICompatibleProvider
 
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     "LLMProviderResponseError",
     "LLMProviderTransportError",
     "LlamaCppProvider",
+    "OllamaProvider",
     "OpenAICompatibleProvider",
     "TokenUsage",
 ]
