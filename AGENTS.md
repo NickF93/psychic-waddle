@@ -44,8 +44,10 @@ same change.
 - Store no visitor identity.
 - Do not store IP addresses, user agents, cookies, session identifiers, email
   addresses, phone numbers, names, company names, photos, or raw transcripts.
-- If question collection is implemented, store only redacted question text and
-  non-identifying answer metadata needed to improve retrieval quality.
+- If question collection is implemented, store only redacted question text as
+  visitor-derived data.
+- Do not store per-question language, answer status, source kinds, retrieval
+  scores, or any other answer/request metadata from visitor traffic.
 
 ## Git-Flow Rules
 
