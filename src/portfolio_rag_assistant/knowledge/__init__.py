@@ -32,6 +32,12 @@ from portfolio_rag_assistant.knowledge.store import (
     StoredChunk,
     connect_database,
 )
+from portfolio_rag_assistant.knowledge.validation import (
+    KnowledgeValidationError,
+    KnowledgeValidationReport,
+    validate_knowledge_batch,
+    validate_knowledge_files,
+)
 
 __all__ = [
     "ALLOWED_KNOWLEDGE_CATEGORIES",
@@ -48,6 +54,8 @@ __all__ = [
     "KnowledgeInputError",
     "KnowledgeStore",
     "KnowledgeStoreError",
+    "KnowledgeValidationError",
+    "KnowledgeValidationReport",
     "SourceInput",
     "StoredChunk",
     "build_fact_chunks",
@@ -58,4 +66,6 @@ __all__ = [
     "load_knowledge_document",
     "parse_knowledge_document",
     "stable_chunk_index",
+    "validate_knowledge_batch",
+    "validate_knowledge_files",
 ]

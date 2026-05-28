@@ -16,9 +16,11 @@ from portfolio_rag_assistant.knowledge import (
     KnowledgeIngestionError,
     KnowledgeStore,
     KnowledgeStoreError,
+    KnowledgeValidationError,
     connect_database,
     index_embeddings,
     load_knowledge_batch,
+    validate_knowledge_files,
 )
 from portfolio_rag_assistant.provider import LLMProviderError
 
@@ -50,6 +52,8 @@ def run(
 
     try:
         if args.command == "knowledge":
+            if args.knowledge_command == "validate":
+                return _run_knowledge_validate(args.files, output)
             if args.knowledge_command == "ingest":
                 return _run_knowledge_ingest(args.files, environment, output)
             if args.knowledge_command == "index-embeddings":
@@ -61,6 +65,7 @@ def run(
         EmbeddingIndexingError,
         KnowledgeIngestionError,
         KnowledgeStoreError,
+        KnowledgeValidationError,
         LLMProviderError,
     ) as error:
         print(f"error: {error}", file=errors)
@@ -78,6 +83,18 @@ def _run_knowledge_ingest(
         KnowledgeStore(connection).ingest_batch(batch)
     print(
         f"ingested {len(batch.sources)} sources and {len(batch.facts)} facts",
+        file=stdout,
+    )
+    return 0
+
+
+def _run_knowledge_validate(files: Sequence[Path], stdout: TextIO) -> int:
+    report = validate_knowledge_files(files)
+    print(
+        "validated "
+        f"{report.source_count} sources, "
+        f"{report.fact_count} facts, "
+        f"{report.chunk_count} chunks",
         file=stdout,
     )
     return 0
@@ -109,6 +126,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
     knowledge = subcommands.add_parser("knowledge")
     knowledge_subcommands = knowledge.add_subparsers(dest="knowledge_command")
+
+    validate = knowledge_subcommands.add_parser("validate")
+    validate.add_argument(
+        "files",
+        nargs="+",
+        type=Path,
+        help="curated JSON files to validate",
+    )
 
     ingest = knowledge_subcommands.add_parser("ingest")
     ingest.add_argument(
