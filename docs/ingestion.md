@@ -67,6 +67,32 @@ experience: Niccolo worked at NAIS s.r.l.
 
 Non-public facts are stored as facts but do not produce chunks or embeddings.
 
+## Embedding Indexing
+
+Embedding indexing is a separate command:
+
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/portfolio \
+LLM_BACKEND=ollama \
+LLM_BASE_URL=http://localhost:11434 \
+CHAT_MODEL=llama3.2 \
+EMBEDDING_MODEL=nomic-embed-text \
+  portfolio-rag-assistant knowledge index-embeddings
+```
+
+The command reads public chunks that do not already have an embedding for the
+selected backend and model. It calls only `LLMProvider.embed()` and stores:
+
+- `chunk_id`.
+- `embedding_backend`.
+- `embedding_model`.
+- `embedding_dimension`.
+- `embedding`.
+
+Rerunning the command for the same backend and model skips already indexed
+chunks. Running it with a different backend or model creates separate embedding
+rows for the same chunks.
+
 ## Boundary
 
 Ingestion owns only:
@@ -79,8 +105,11 @@ Ingestion owns only:
 Ingestion must not own:
 
 - provider-specific payloads.
-- embedding generation.
 - retrieval or ranking.
 - answerability policy.
 - final answer wording.
 - visitor question collection.
+
+Embedding indexing owns only provider-neutral embedding calls and vector
+persistence. Provider-specific request and response payloads remain inside the
+provider implementations.
