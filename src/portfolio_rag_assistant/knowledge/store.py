@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from contextlib import AbstractContextManager
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 from portfolio_rag_assistant.knowledge.ingestion import (
@@ -18,10 +19,34 @@ class KnowledgeStoreError(RuntimeError):
     """Raised when verified knowledge cannot be persisted."""
 
 
+@dataclass(frozen=True, slots=True)
+class StoredChunk:
+    """Public chunk loaded for embedding generation."""
+
+    id: int
+    chunk_text: str
+
+
+@dataclass(frozen=True, slots=True)
+class ChunkEmbeddingInput:
+    """Embedding vector ready for persistence."""
+
+    chunk_id: int
+    embedding: tuple[float, ...]
+
+    def __post_init__(self) -> None:
+        if self.chunk_id <= 0:
+            raise KnowledgeStoreError("chunk_id must be positive")
+        if not self.embedding:
+            raise KnowledgeStoreError("embedding must not be empty")
+
+
 class DatabaseCursor(Protocol):
     """Small cursor surface used by the knowledge store."""
 
     def fetchone(self) -> tuple[Any, ...] | None: ...
+
+    def fetchall(self) -> list[tuple[Any, ...]]: ...
 
 
 class DatabaseConnection(Protocol):
@@ -67,6 +92,72 @@ class KnowledgeStore:
                     self._upsert_fact(source_id, fact)
                 for chunk in source_chunks:
                     self._upsert_chunk(source_id, chunk)
+
+    def list_public_chunks_missing_embedding(
+        self,
+        backend: str,
+        model: str,
+    ) -> tuple[StoredChunk, ...]:
+        """Return public chunks without an embedding for backend/model."""
+
+        cursor = self._connection.execute(
+            """
+            SELECT chunks.id, chunks.chunk_text
+            FROM chunks
+            WHERE chunks.public_visible = true
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM chunk_embeddings
+                  WHERE chunk_embeddings.chunk_id = chunks.id
+                    AND chunk_embeddings.embedding_backend = %s
+                    AND chunk_embeddings.embedding_model = %s
+              )
+            ORDER BY chunks.id
+            """,
+            (backend, model),
+        )
+        return tuple(
+            StoredChunk(id=int(row[0]), chunk_text=str(row[1]))
+            for row in cursor.fetchall()
+        )
+
+    def upsert_chunk_embeddings(
+        self,
+        *,
+        backend: str,
+        model: str,
+        embeddings: tuple[ChunkEmbeddingInput, ...],
+    ) -> None:
+        """Store embeddings for one backend/model pair."""
+
+        if not embeddings:
+            return
+
+        with self._connection.transaction():
+            for embedding in embeddings:
+                self._connection.execute(
+                    """
+                    INSERT INTO chunk_embeddings (
+                        chunk_id,
+                        embedding_backend,
+                        embedding_model,
+                        embedding_dimension,
+                        embedding
+                    )
+                    VALUES (%s, %s, %s, %s, %s::vector)
+                    ON CONFLICT (chunk_id, embedding_backend, embedding_model)
+                    DO UPDATE
+                    SET embedding_dimension = EXCLUDED.embedding_dimension,
+                        embedding = EXCLUDED.embedding
+                    """,
+                    (
+                        embedding.chunk_id,
+                        backend,
+                        model,
+                        len(embedding.embedding),
+                        _format_vector(embedding.embedding),
+                    ),
+                )
 
     def _upsert_source(self, source: SourceInput) -> int:
         cursor = self._connection.execute(
@@ -191,6 +282,10 @@ def connect_database(database_url: str) -> Any:
     except ImportError as error:
         raise KnowledgeStoreError("psycopg is required for database commands") from error
     return psycopg.connect(database_url)
+
+
+def _format_vector(embedding: tuple[float, ...]) -> str:
+    return "[" + ",".join(str(value) for value in embedding) + "]"
 
 
 def _group_facts_by_source(
