@@ -13,6 +13,9 @@ dependencies = [
     "psycopg[binary]>=3.2,<4.0",
 ]
 
+[project.scripts]
+portfolio-rag-assistant = "portfolio_rag_assistant.cli:main"
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
