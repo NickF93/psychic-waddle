@@ -148,18 +148,77 @@ Items:
 - Checkpoint: schema supports work-history questions cleanly.
 - Final track/doc: `docs/knowledge-model.md`.
 
-### Sprint 2.2: Offline Ingestion
+### Sprint 2.2: Curated Fact Input Format
 
 Items:
 
-- Implementation: add ingestion command for curated Markdown and JSON facts.
-- Implementation: add deterministic chunking strategy.
-- Implementation: generate embeddings through the configured provider.
-- Implementation: make re-indexing idempotent.
-- Test: add ingestion tests with sample profile data.
-- Validation: repeated ingestion does not duplicate facts or chunks.
-- Checkpoint: sample KB supports "where did Niccolò work?"
-- Final track/doc: ingestion guide.
+- Documentation: define curated sources, accepted public source origins,
+  forbidden inputs, and the JSON contract.
+- Implementation: add typed input models for source records, fact records, and
+  full knowledge documents.
+- Implementation: validate `schema_version`, unique source identifiers,
+  reviewed timestamps, non-empty text fields, bounded categories, explicit
+  public visibility, and fact source references.
+- Implementation: reject visitor questions, unsupported categories, missing
+  sources, blank facts, and malformed documents.
+- Test: add curated input validation tests.
+- Validation: the JSON model maps directly to existing `sources` and `facts`.
+- Checkpoint: the format can express "Niccolò worked at NAIS s.r.l." as a
+  reviewed public fact.
+- Final track/doc: `docs/knowledge-input-format.md`.
+
+### Sprint 2.3: Offline Ingestion Pipeline
+
+Items:
+
+- Implementation: add a minimal PostgreSQL client dependency and raw SQL
+  persistence only.
+- Implementation: add a bounded `KnowledgeStore` persistence module for
+  sources, facts, and chunks.
+- Implementation: add an `ingest` command for curated JSON files.
+- Implementation: validate the full JSON document before any database write.
+- Implementation: upsert sources by `source_uri`.
+- Implementation: persist facts exactly from curated input.
+- Implementation: generate one deterministic chunk per fact.
+- Implementation: make repeated ingestion idempotent.
+- Test: cover source, fact, and chunk persistence.
+- Test: cover repeated ingestion and invalid input rollback.
+- Validation: ingestion does not call LLMs, retrieve, rank, answer, or collect
+  questions.
+- Checkpoint: sample curated data can populate work-history facts.
+- Final track/doc: `docs/ingestion.md`.
+
+### Sprint 2.4: Embedding Indexing
+
+Items:
+
+- Implementation: add an `index-embeddings` command.
+- Implementation: read chunks from PostgreSQL and call only
+  `LLMProvider.embed()`.
+- Implementation: store vectors in `chunk_embeddings` with backend, model, and
+  dimension.
+- Implementation: overwrite embeddings for the selected backend and model when
+  rerun without deleting embeddings for other backend/model pairs.
+- Test: use a fake provider for deterministic embedding tests.
+- Test: verify stored backend, model, dimension, and idempotent reruns.
+- Validation: embedding logic contains no provider-specific payloads.
+- Validation: tests perform no real network calls.
+- Checkpoint: the knowledge base has vector-ready chunks for Milestone 3.
+- Final track/doc: update `docs/ingestion.md`.
+
+### Sprint 2.5: Knowledge QA and Maintenance
+
+Items:
+
+- Implementation: add a `validate` command using the same validation logic as
+  ingestion.
+- Implementation: add QA checks for duplicate facts, orphan source references,
+  empty public facts, sources with no facts, and invalid public chunk
+  derivation.
+- Test: cover valid minimal knowledge and each QA failure.
+- Validation: QA checks are deterministic, local, LLM-free, and non-mutating.
+- Checkpoint: curated knowledge can be checked before deployment or indexing.
+- Final track/doc: `docs/knowledge-maintenance.md`.
 
 ---
 
