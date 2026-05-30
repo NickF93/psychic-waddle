@@ -52,9 +52,38 @@ services:
       retries: 5
       start_period: 10s
 
+  ollama:
+    image: ollama/ollama
+    profiles:
+      - ollama
+    volumes:
+      - ollama-models:/root/.ollama
+    networks:
+      - runtime
+
+  llama-cpp:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    profiles:
+      - llama-cpp
+    command:
+      - -m
+      - ${LLAMA_CPP_MODEL_PATH}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+    volumes:
+      - type: bind
+        source: ${LLAMA_CPP_MODEL_DIR}
+        target: /models
+        read_only: true
+    networks:
+      - runtime
+
 networks:
   runtime:
     driver: bridge
 
 volumes:
   postgres-data:
+  ollama-models:
