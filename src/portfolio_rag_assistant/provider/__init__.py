@@ -2,14 +2,15 @@
 
 from portfolio_rag_assistant.provider.contract import (
     ALLOWED_CHAT_ROLES,
+    ChatProvider,
     ChatMessage,
     ChatRequest,
     ChatResponse,
     ChatRole,
+    EmbeddingProvider,
     EmbeddingRequest,
     EmbeddingResponse,
     EmbeddingVector,
-    LLMProvider,
     LLMProviderConfigurationError,
     LLMProviderError,
     LLMProviderRequestError,
@@ -23,14 +24,15 @@ from portfolio_rag_assistant.provider.openai_compatible import OpenAICompatibleP
 
 __all__ = [
     "ALLOWED_CHAT_ROLES",
+    "ChatProvider",
     "ChatMessage",
     "ChatRequest",
     "ChatResponse",
     "ChatRole",
+    "EmbeddingProvider",
     "EmbeddingRequest",
     "EmbeddingResponse",
     "EmbeddingVector",
-    "LLMProvider",
     "LLMProviderConfigurationError",
     "LLMProviderError",
     "LLMProviderRequestError",

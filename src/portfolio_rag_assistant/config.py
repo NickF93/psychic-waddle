@@ -9,7 +9,8 @@ from typing import Literal, cast
 from urllib.parse import urlparse
 
 from portfolio_rag_assistant.provider import (
-    LLMProvider,
+    ChatProvider,
+    EmbeddingProvider,
     LLMProviderConfigurationError,
     LlamaCppProvider,
     OllamaProvider,
@@ -17,41 +18,88 @@ from portfolio_rag_assistant.provider import (
 )
 from portfolio_rag_assistant.retrieval import RetrievalConfigurationError
 
-LLMBackend = Literal["ollama", "llama-cpp", "openai-compatible"]
+ProviderBackend = Literal["ollama", "llama-cpp", "openai-compatible"]
 
-SUPPORTED_LLM_BACKENDS: frozenset[str] = frozenset(
+SUPPORTED_PROVIDER_BACKENDS: frozenset[str] = frozenset(
     ("ollama", "llama-cpp", "openai-compatible")
 )
 
 
-@dataclass(frozen=True, slots=True)
-class ProviderSettings:
-    """Validated model provider settings."""
+class RuntimeConfigurationError(RuntimeError):
+    """Raised when non-provider runtime configuration is invalid."""
 
-    backend: LLMBackend
+
+@dataclass(frozen=True, slots=True)
+class ChatProviderSettings:
+    """Validated chat model provider settings."""
+
+    backend: ProviderBackend
     base_url: str
-    chat_model: str
-    embedding_model: str
+    model: str
     api_key: str | None = None
 
     def __post_init__(self) -> None:
-        if self.backend not in SUPPORTED_LLM_BACKENDS:
-            allowed = ", ".join(sorted(SUPPORTED_LLM_BACKENDS))
-            raise LLMProviderConfigurationError(
-                f"LLM_BACKEND must be one of: {allowed}"
-            )
-
-        base_url = _normalize_base_url(self.base_url)
-        object.__setattr__(self, "base_url", base_url)
-        object.__setattr__(self, "chat_model", _require_text(self.chat_model, "CHAT_MODEL"))
+        _require_supported_backend(self.backend, "CHAT_BACKEND")
         object.__setattr__(
             self,
-            "embedding_model",
-            _require_text(self.embedding_model, "EMBEDDING_MODEL"),
+            "base_url",
+            _normalize_base_url(self.base_url, "CHAT_BASE_URL"),
         )
-        if self.api_key is not None:
-            api_key = self.api_key.strip()
-            object.__setattr__(self, "api_key", api_key or None)
+        object.__setattr__(self, "model", _require_text(self.model, "CHAT_MODEL"))
+        object.__setattr__(self, "api_key", _normalize_api_key(self.api_key))
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddingProviderSettings:
+    """Validated embedding model provider settings."""
+
+    backend: ProviderBackend
+    base_url: str
+    model: str
+    api_key: str | None = None
+
+    def __post_init__(self) -> None:
+        _require_supported_backend(self.backend, "EMBEDDING_BACKEND")
+        object.__setattr__(
+            self,
+            "base_url",
+            _normalize_base_url(self.base_url, "EMBEDDING_BASE_URL"),
+        )
+        object.__setattr__(
+            self,
+            "model",
+            _require_text(self.model, "EMBEDDING_MODEL"),
+        )
+        object.__setattr__(self, "api_key", _normalize_api_key(self.api_key))
+
+
+@dataclass(frozen=True, slots=True)
+class DatabaseSettings:
+    """Validated PostgreSQL connection settings."""
+
+    host: str
+    port: int
+    name: str
+    user: str
+    password: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "host",
+            _require_runtime_text(self.host, "DB_HOST"),
+        )
+        if not isinstance(self.port, int) or isinstance(self.port, bool):
+            raise RuntimeConfigurationError("DB_PORT must be an integer")
+        if not 1 <= self.port <= 65535:
+            raise RuntimeConfigurationError("DB_PORT must be between 1 and 65535")
+        object.__setattr__(self, "name", _require_runtime_text(self.name, "DB_NAME"))
+        object.__setattr__(self, "user", _require_runtime_text(self.user, "DB_USER"))
+        object.__setattr__(
+            self,
+            "password",
+            _require_runtime_text(self.password, "DB_PASSWORD"),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,21 +122,51 @@ class RetrievalSettings:
             )
 
 
-def load_provider_settings(env: Mapping[str, str] | None = None) -> ProviderSettings:
-    """Load provider settings from exact environment variable names."""
+def load_chat_provider_settings(
+    env: Mapping[str, str] | None = None,
+) -> ChatProviderSettings:
+    """Load chat provider settings from exact environment variable names."""
 
     source = os.environ if env is None else env
-    backend = _require_text(source.get("LLM_BACKEND"), "LLM_BACKEND")
+    backend = _require_text(source.get("CHAT_BACKEND"), "CHAT_BACKEND")
 
-    return ProviderSettings(
-        backend=cast(LLMBackend, backend),
-        base_url=_require_text(source.get("LLM_BASE_URL"), "LLM_BASE_URL"),
-        chat_model=_require_text(source.get("CHAT_MODEL"), "CHAT_MODEL"),
-        embedding_model=_require_text(
-            source.get("EMBEDDING_MODEL"),
-            "EMBEDDING_MODEL",
+    return ChatProviderSettings(
+        backend=cast(ProviderBackend, backend),
+        base_url=_require_text(source.get("CHAT_BASE_URL"), "CHAT_BASE_URL"),
+        model=_require_text(source.get("CHAT_MODEL"), "CHAT_MODEL"),
+        api_key=source.get("CHAT_API_KEY"),
+    )
+
+
+def load_embedding_provider_settings(
+    env: Mapping[str, str] | None = None,
+) -> EmbeddingProviderSettings:
+    """Load embedding provider settings from exact environment variable names."""
+
+    source = os.environ if env is None else env
+    backend = _require_text(source.get("EMBEDDING_BACKEND"), "EMBEDDING_BACKEND")
+
+    return EmbeddingProviderSettings(
+        backend=cast(ProviderBackend, backend),
+        base_url=_require_text(
+            source.get("EMBEDDING_BASE_URL"),
+            "EMBEDDING_BASE_URL",
         ),
-        api_key=source.get("LLM_API_KEY"),
+        model=_require_text(source.get("EMBEDDING_MODEL"), "EMBEDDING_MODEL"),
+        api_key=source.get("EMBEDDING_API_KEY"),
+    )
+
+
+def load_database_settings(env: Mapping[str, str] | None = None) -> DatabaseSettings:
+    """Load database settings from exact environment variable names."""
+
+    source = os.environ if env is None else env
+    return DatabaseSettings(
+        host=_require_runtime_text(source.get("DB_HOST"), "DB_HOST"),
+        port=_require_runtime_int(source.get("DB_PORT"), "DB_PORT"),
+        name=_require_runtime_text(source.get("DB_NAME"), "DB_NAME"),
+        user=_require_runtime_text(source.get("DB_USER"), "DB_USER"),
+        password=_require_runtime_text(source.get("DB_PASSWORD"), "DB_PASSWORD"),
     )
 
 
@@ -97,27 +175,57 @@ def load_retrieval_settings(env: Mapping[str, str] | None = None) -> RetrievalSe
 
     source = os.environ if env is None else env
     return RetrievalSettings(
-        top_k=_require_int(source.get("RETRIEVAL_TOP_K"), "RETRIEVAL_TOP_K"),
-        min_score=_require_float(
+        top_k=_require_retrieval_int(source.get("RETRIEVAL_TOP_K"), "RETRIEVAL_TOP_K"),
+        min_score=_require_retrieval_float(
             source.get("RETRIEVAL_MIN_SCORE"),
             "RETRIEVAL_MIN_SCORE",
         ),
     )
 
 
-def build_llm_provider(settings: ProviderSettings) -> LLMProvider:
-    """Build the configured provider behind the provider-neutral contract."""
+def build_chat_provider(settings: ChatProviderSettings) -> ChatProvider:
+    """Build the configured chat provider."""
 
-    if settings.backend == "ollama":
-        return OllamaProvider(base_url=settings.base_url, api_key=settings.api_key)
-    if settings.backend == "llama-cpp":
-        return LlamaCppProvider(base_url=settings.base_url, api_key=settings.api_key)
-    if settings.backend == "openai-compatible":
-        return OpenAICompatibleProvider(
-            base_url=settings.base_url,
-            api_key=settings.api_key,
-        )
-    raise LLMProviderConfigurationError("unsupported LLM_BACKEND")
+    provider = _build_provider(
+        backend=settings.backend,
+        base_url=settings.base_url,
+        api_key=settings.api_key,
+    )
+    return cast(ChatProvider, provider)
+
+
+def build_embedding_provider(
+    settings: EmbeddingProviderSettings,
+) -> EmbeddingProvider:
+    """Build the configured embedding provider."""
+
+    provider = _build_provider(
+        backend=settings.backend,
+        base_url=settings.base_url,
+        api_key=settings.api_key,
+    )
+    return cast(EmbeddingProvider, provider)
+
+
+def _build_provider(
+    *,
+    backend: ProviderBackend,
+    base_url: str,
+    api_key: str | None,
+) -> object:
+    if backend == "ollama":
+        return OllamaProvider(base_url=base_url, api_key=api_key)
+    if backend == "llama-cpp":
+        return LlamaCppProvider(base_url=base_url, api_key=api_key)
+    if backend == "openai-compatible":
+        return OpenAICompatibleProvider(base_url=base_url, api_key=api_key)
+    raise LLMProviderConfigurationError("unsupported provider backend")
+
+
+def _require_supported_backend(value: str, field_name: str) -> None:
+    if value not in SUPPORTED_PROVIDER_BACKENDS:
+        allowed = ", ".join(sorted(SUPPORTED_PROVIDER_BACKENDS))
+        raise LLMProviderConfigurationError(f"{field_name} must be one of: {allowed}")
 
 
 def _require_text(value: str | None, field_name: str) -> str:
@@ -126,17 +234,38 @@ def _require_text(value: str | None, field_name: str) -> str:
     return value.strip()
 
 
-def _normalize_base_url(value: str) -> str:
-    base_url = _require_text(value, "LLM_BASE_URL").rstrip("/")
+def _normalize_base_url(value: str, field_name: str) -> str:
+    base_url = _require_text(value, field_name).rstrip("/")
     parsed = urlparse(base_url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         raise LLMProviderConfigurationError(
-            "LLM_BASE_URL must be an absolute http or https API root"
+            f"{field_name} must be an absolute http or https API root"
         )
     return base_url
 
 
-def _require_int(value: str | None, field_name: str) -> int:
+def _normalize_api_key(value: str | None) -> str | None:
+    if value is None:
+        return None
+    api_key = value.strip()
+    return api_key or None
+
+
+def _require_runtime_text(value: str | None, field_name: str) -> str:
+    if value is None or not value.strip():
+        raise RuntimeConfigurationError(f"{field_name} must be set")
+    return value.strip()
+
+
+def _require_runtime_int(value: str | None, field_name: str) -> int:
+    text = _require_runtime_text(value, field_name)
+    try:
+        return int(text)
+    except ValueError as exc:
+        raise RuntimeConfigurationError(f"{field_name} must be an integer") from exc
+
+
+def _require_retrieval_int(value: str | None, field_name: str) -> int:
     text = _require_retrieval_text(value, field_name)
     try:
         return int(text)
@@ -144,7 +273,7 @@ def _require_int(value: str | None, field_name: str) -> int:
         raise RetrievalConfigurationError(f"{field_name} must be an integer") from exc
 
 
-def _require_float(value: str | None, field_name: str) -> float:
+def _require_retrieval_float(value: str | None, field_name: str) -> float:
     text = _require_retrieval_text(value, field_name)
     try:
         return float(text)

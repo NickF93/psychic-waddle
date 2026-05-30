@@ -1,10 +1,19 @@
 """Public HTTP API boundary."""
 
-from portfolio_rag_assistant.api.app import create_api_app
+from portfolio_rag_assistant.api.app import (
+    ReadinessServiceError,
+    create_api_app,
+)
 from portfolio_rag_assistant.api.composition import (
     APICompositionError,
+    RuntimeServices,
     build_public_chat_service,
+    build_runtime_services,
     create_runtime_api_app,
+)
+from portfolio_rag_assistant.api.readiness import (
+    DatabaseReadinessService,
+    ReadinessCheckError,
 )
 from portfolio_rag_assistant.api.schemas import (
     MAX_QUESTION_LENGTH,
@@ -14,6 +23,7 @@ from portfolio_rag_assistant.api.schemas import (
     ChatSourceBody,
     ErrorBody,
     HealthResponseBody,
+    ReadinessResponseBody,
 )
 from portfolio_rag_assistant.api.service import ChatServiceError, PublicChatService
 
@@ -26,9 +36,15 @@ __all__ = [
     "APICompositionError",
     "ErrorBody",
     "HealthResponseBody",
+    "ReadinessResponseBody",
     "ChatServiceError",
+    "DatabaseReadinessService",
     "PublicChatService",
+    "ReadinessCheckError",
+    "ReadinessServiceError",
+    "RuntimeServices",
     "build_public_chat_service",
+    "build_runtime_services",
     "create_api_app",
     "create_runtime_api_app",
 ]

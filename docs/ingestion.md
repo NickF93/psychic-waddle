@@ -22,18 +22,26 @@ Markdown ingestion is intentionally out of scope for Milestone 2.
 ## Command
 
 ```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/portfolio \
+DB_HOST=localhost \
+DB_PORT=5432 \
+DB_NAME=portfolio \
+DB_USER=user \
+DB_PASSWORD=password \
   portfolio-rag-assistant knowledge ingest knowledge/profile.json
 ```
 
 Multiple files may be provided:
 
 ```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/portfolio \
+DB_HOST=localhost \
+DB_PORT=5432 \
+DB_NAME=portfolio \
+DB_USER=user \
+DB_PASSWORD=password \
   portfolio-rag-assistant knowledge ingest knowledge/cv.json knowledge/projects.json
 ```
 
-`DATABASE_URL` is the only database connection variable for ingestion.
+Ingestion uses only the explicit database fields shown above.
 
 ## Persistence
 
@@ -72,16 +80,20 @@ Non-public facts are stored as facts but do not produce chunks or embeddings.
 Embedding indexing is a separate command:
 
 ```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/portfolio \
-LLM_BACKEND=ollama \
-LLM_BASE_URL=http://localhost:11434 \
-CHAT_MODEL=llama3.2 \
+DB_HOST=localhost \
+DB_PORT=5432 \
+DB_NAME=portfolio \
+DB_USER=user \
+DB_PASSWORD=password \
+EMBEDDING_BACKEND=ollama \
+EMBEDDING_BASE_URL=http://localhost:11434/api \
 EMBEDDING_MODEL=nomic-embed-text \
   portfolio-rag-assistant knowledge index-embeddings
 ```
 
 The command reads public chunks that do not already have an embedding for the
-selected backend and model. It calls only `LLMProvider.embed()` and stores:
+selected backend and model. It calls only `EmbeddingProvider.embed()` and
+stores:
 
 - `chunk_id`.
 - `embedding_backend`.

@@ -3,10 +3,16 @@ from __future__ import annotations
 import pytest
 
 from portfolio_rag_assistant.config import (
-    ProviderSettings,
+    ChatProviderSettings,
+    DatabaseSettings,
+    EmbeddingProviderSettings,
     RetrievalSettings,
-    build_llm_provider,
-    load_provider_settings,
+    RuntimeConfigurationError,
+    build_chat_provider,
+    build_embedding_provider,
+    load_chat_provider_settings,
+    load_database_settings,
+    load_embedding_provider_settings,
     load_retrieval_settings,
 )
 from portfolio_rag_assistant.provider import (
@@ -18,70 +24,113 @@ from portfolio_rag_assistant.provider import (
 from portfolio_rag_assistant.retrieval import RetrievalConfigurationError
 
 
-def test_load_provider_settings_reads_exact_env_names() -> None:
-    settings = load_provider_settings(
+def test_load_chat_provider_settings_reads_exact_env_names() -> None:
+    settings = load_chat_provider_settings(
         {
-            "LLM_BACKEND": "ollama",
-            "LLM_BASE_URL": " http://localhost:11434/api/ ",
-            "CHAT_MODEL": " llama3.2 ",
-            "EMBEDDING_MODEL": " nomic-embed-text ",
-            "LLM_API_KEY": " local-secret ",
+            "CHAT_BACKEND": "openai-compatible",
+            "CHAT_BASE_URL": " https://provider.test/v1/ ",
+            "CHAT_MODEL": " chat-model ",
+            "CHAT_API_KEY": " chat-secret ",
         }
     )
 
-    assert settings == ProviderSettings(
+    assert settings == ChatProviderSettings(
+        backend="openai-compatible",
+        base_url="https://provider.test/v1",
+        model="chat-model",
+        api_key="chat-secret",
+    )
+
+
+def test_load_embedding_provider_settings_reads_exact_env_names() -> None:
+    settings = load_embedding_provider_settings(
+        {
+            "EMBEDDING_BACKEND": "ollama",
+            "EMBEDDING_BASE_URL": " http://localhost:11434/api/ ",
+            "EMBEDDING_MODEL": " nomic-embed-text ",
+            "EMBEDDING_API_KEY": " ",
+        }
+    )
+
+    assert settings == EmbeddingProviderSettings(
         backend="ollama",
         base_url="http://localhost:11434/api",
-        chat_model="llama3.2",
-        embedding_model="nomic-embed-text",
-        api_key="local-secret",
+        model="nomic-embed-text",
+        api_key=None,
     )
 
 
-def test_load_provider_settings_treats_blank_api_key_as_missing() -> None:
-    settings = load_provider_settings(
+def test_chat_and_embedding_settings_can_use_the_same_endpoint() -> None:
+    env = {
+        "CHAT_BACKEND": "openai-compatible",
+        "CHAT_BASE_URL": "https://api.example.test/v1",
+        "CHAT_MODEL": "chat-model",
+        "EMBEDDING_BACKEND": "openai-compatible",
+        "EMBEDDING_BASE_URL": "https://api.example.test/v1",
+        "EMBEDDING_MODEL": "embedding-model",
+    }
+
+    chat_settings = load_chat_provider_settings(env)
+    embedding_settings = load_embedding_provider_settings(env)
+
+    assert chat_settings.base_url == embedding_settings.base_url
+    assert chat_settings.backend == embedding_settings.backend
+
+
+def test_chat_and_embedding_settings_can_use_different_endpoints() -> None:
+    chat_settings = load_chat_provider_settings(
         {
-            "LLM_BACKEND": "llama-cpp",
-            "LLM_BASE_URL": "http://localhost:8080/v1",
-            "CHAT_MODEL": "local-chat",
-            "EMBEDDING_MODEL": "local-embed",
-            "LLM_API_KEY": " ",
+            "CHAT_BACKEND": "openai-compatible",
+            "CHAT_BASE_URL": "https://api.example.test/v1",
+            "CHAT_MODEL": "chat-model",
+        }
+    )
+    embedding_settings = load_embedding_provider_settings(
+        {
+            "EMBEDDING_BACKEND": "ollama",
+            "EMBEDDING_BASE_URL": "http://localhost:11434/api",
+            "EMBEDDING_MODEL": "nomic-embed-text",
         }
     )
 
-    assert settings.api_key is None
+    assert chat_settings.backend == "openai-compatible"
+    assert embedding_settings.backend == "ollama"
 
 
 @pytest.mark.parametrize(
     "missing_name",
-    ("LLM_BACKEND", "LLM_BASE_URL", "CHAT_MODEL", "EMBEDDING_MODEL"),
+    ("CHAT_BACKEND", "CHAT_BASE_URL", "CHAT_MODEL"),
 )
-def test_load_provider_settings_requires_named_values(missing_name: str) -> None:
+def test_load_chat_provider_settings_requires_named_values(
+    missing_name: str,
+) -> None:
     env = {
-        "LLM_BACKEND": "openai-compatible",
-        "LLM_BASE_URL": "https://api.openai.com/v1",
+        "CHAT_BACKEND": "openai-compatible",
+        "CHAT_BASE_URL": "https://api.example.test/v1",
         "CHAT_MODEL": "chat-model",
-        "EMBEDDING_MODEL": "embedding-model",
     }
     del env[missing_name]
 
     with pytest.raises(LLMProviderConfigurationError):
-        load_provider_settings(env)
+        load_chat_provider_settings(env)
 
 
 @pytest.mark.parametrize(
-    "backend",
-    ("ollama", "llama-cpp", "openai-compatible"),
+    "missing_name",
+    ("EMBEDDING_BACKEND", "EMBEDDING_BASE_URL", "EMBEDDING_MODEL"),
 )
-def test_provider_settings_accepts_supported_backends(backend: str) -> None:
-    settings = ProviderSettings(
-        backend=backend,  # type: ignore[arg-type]
-        base_url="http://localhost:8080/v1",
-        chat_model="chat-model",
-        embedding_model="embedding-model",
-    )
+def test_load_embedding_provider_settings_requires_named_values(
+    missing_name: str,
+) -> None:
+    env = {
+        "EMBEDDING_BACKEND": "ollama",
+        "EMBEDDING_BASE_URL": "http://localhost:11434/api",
+        "EMBEDDING_MODEL": "nomic-embed-text",
+    }
+    del env[missing_name]
 
-    assert settings.backend == backend
+    with pytest.raises(LLMProviderConfigurationError):
+        load_embedding_provider_settings(env)
 
 
 @pytest.mark.parametrize(
@@ -90,34 +139,27 @@ def test_provider_settings_accepts_supported_backends(backend: str) -> None:
         {
             "backend": "unknown",
             "base_url": "http://localhost:8080/v1",
-            "chat_model": "chat-model",
-            "embedding_model": "embedding-model",
+            "model": "model",
         },
         {
             "backend": "ollama",
             "base_url": "localhost:11434/api",
-            "chat_model": "chat-model",
-            "embedding_model": "embedding-model",
+            "model": "model",
         },
         {
             "backend": "ollama",
             "base_url": "http://localhost:11434/api",
-            "chat_model": " ",
-            "embedding_model": "embedding-model",
-        },
-        {
-            "backend": "ollama",
-            "base_url": "http://localhost:11434/api",
-            "chat_model": "chat-model",
-            "embedding_model": "",
+            "model": " ",
         },
     ),
 )
-def test_provider_settings_rejects_invalid_values(
+def test_provider_settings_reject_invalid_values(
     settings: dict[str, str],
 ) -> None:
     with pytest.raises(LLMProviderConfigurationError):
-        ProviderSettings(**settings)  # type: ignore[arg-type]
+        ChatProviderSettings(**settings)  # type: ignore[arg-type]
+    with pytest.raises(LLMProviderConfigurationError):
+        EmbeddingProviderSettings(**settings)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -128,21 +170,110 @@ def test_provider_settings_rejects_invalid_values(
         ("openai-compatible", OpenAICompatibleProvider),
     ),
 )
-def test_build_llm_provider_selects_configured_backend(
+def test_build_chat_provider_selects_configured_backend(
     backend: str,
     provider_type: type[object],
 ) -> None:
-    provider = build_llm_provider(
-        ProviderSettings(
+    provider = build_chat_provider(
+        ChatProviderSettings(
             backend=backend,  # type: ignore[arg-type]
             base_url="http://localhost:8080/v1",
-            chat_model="chat-model",
-            embedding_model="embedding-model",
+            model="chat-model",
             api_key="secret",
         )
     )
 
     assert isinstance(provider, provider_type)
+
+
+@pytest.mark.parametrize(
+    ("backend", "provider_type"),
+    (
+        ("ollama", OllamaProvider),
+        ("llama-cpp", LlamaCppProvider),
+        ("openai-compatible", OpenAICompatibleProvider),
+    ),
+)
+def test_build_embedding_provider_selects_configured_backend(
+    backend: str,
+    provider_type: type[object],
+) -> None:
+    provider = build_embedding_provider(
+        EmbeddingProviderSettings(
+            backend=backend,  # type: ignore[arg-type]
+            base_url="http://localhost:8080/v1",
+            model="embedding-model",
+            api_key="secret",
+        )
+    )
+
+    assert isinstance(provider, provider_type)
+
+
+def test_load_database_settings_reads_exact_env_names() -> None:
+    settings = load_database_settings(
+        {
+            "DB_HOST": " db ",
+            "DB_PORT": " 5432 ",
+            "DB_NAME": " portfolio ",
+            "DB_USER": " portfolio_user ",
+            "DB_PASSWORD": " p@ss/word:% ",
+        }
+    )
+
+    assert settings == DatabaseSettings(
+        host="db",
+        port=5432,
+        name="portfolio",
+        user="portfolio_user",
+        password="p@ss/word:%",
+    )
+
+
+@pytest.mark.parametrize(
+    "missing_name",
+    ("DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"),
+)
+def test_load_database_settings_requires_named_values(missing_name: str) -> None:
+    env = {
+        "DB_HOST": "db",
+        "DB_PORT": "5432",
+        "DB_NAME": "portfolio",
+        "DB_USER": "portfolio_user",
+        "DB_PASSWORD": "secret",
+    }
+    del env[missing_name]
+
+    with pytest.raises(RuntimeConfigurationError):
+        load_database_settings(env)
+
+
+@pytest.mark.parametrize(
+    "settings",
+    (
+        {"host": "db", "port": 0, "name": "portfolio", "user": "user", "password": "x"},
+        {
+            "host": "db",
+            "port": 65536,
+            "name": "portfolio",
+            "user": "user",
+            "password": "x",
+        },
+        {
+            "host": "db",
+            "port": True,
+            "name": "portfolio",
+            "user": "user",
+            "password": "x",
+        },
+        {"host": " ", "port": 5432, "name": "portfolio", "user": "user", "password": "x"},
+    ),
+)
+def test_database_settings_reject_invalid_values(
+    settings: dict[str, str | int | bool],
+) -> None:
+    with pytest.raises(RuntimeConfigurationError):
+        DatabaseSettings(**settings)  # type: ignore[arg-type]
 
 
 def test_load_retrieval_settings_reads_exact_env_names() -> None:

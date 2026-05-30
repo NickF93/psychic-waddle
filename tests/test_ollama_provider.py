@@ -9,10 +9,11 @@ import httpx
 import pytest
 
 from portfolio_rag_assistant.provider import (
+    ChatProvider,
     ChatMessage,
     ChatRequest,
+    EmbeddingProvider,
     EmbeddingRequest,
-    LLMProvider,
     LLMProviderRequestError,
     LLMProviderResponseError,
     LLMProviderTransportError,
@@ -30,7 +31,8 @@ def run_async(awaitable: Awaitable[T]) -> T:
 def test_ollama_provider_satisfies_runtime_contract() -> None:
     provider = OllamaProvider(base_url="http://localhost:11434/api")
 
-    assert isinstance(provider, LLMProvider)
+    assert isinstance(provider, ChatProvider)
+    assert isinstance(provider, EmbeddingProvider)
 
 
 def test_ollama_chat_sends_native_payload_and_reads_response() -> None:

@@ -272,16 +272,27 @@ class KnowledgeStore:
         )
 
 
-def connect_database(database_url: str) -> Any:
+def connect_database(
+    *,
+    host: str,
+    port: int,
+    name: str,
+    user: str,
+    password: str,
+) -> Any:
     """Open a PostgreSQL connection for knowledge commands."""
 
-    if not database_url.strip():
-        raise KnowledgeStoreError("DATABASE_URL must be set")
     try:
         import psycopg
     except ImportError as error:
         raise KnowledgeStoreError("psycopg is required for database commands") from error
-    return psycopg.connect(database_url)
+    return psycopg.connect(
+        host=host,
+        port=port,
+        dbname=name,
+        user=user,
+        password=password,
+    )
 
 
 def _format_vector(embedding: tuple[float, ...]) -> str:

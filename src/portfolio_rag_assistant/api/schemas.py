@@ -21,6 +21,14 @@ class HealthResponseBody(BaseModel):
     status: str = "ok"
 
 
+class ReadinessResponseBody(BaseModel):
+    """Public readiness response body."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: str = "ready"
+
+
 class ErrorBody(BaseModel):
     """Stable public error response body."""
 

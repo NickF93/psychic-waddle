@@ -51,13 +51,13 @@ analytics and must not be stored as visitor-derived data.
 Retrieval may:
 
 - Read reviewed knowledge through the knowledge store.
-- Use `LLMProvider.embed()` to embed the visitor question.
+- Use `EmbeddingProvider.embed()` to embed the visitor question.
 - Rank public chunks.
 - Return source metadata needed by answer policy and later answer generation.
 
 Retrieval must not:
 
-- Call `LLMProvider.chat()`.
+- Call `ChatProvider.chat()`.
 - Decide whether a question is answerable.
 - Produce polished recruiter-facing prose.
 - Persist, update, or delete knowledge.
@@ -74,9 +74,9 @@ legacy names, or fallback defaults.
 | `RETRIEVAL_TOP_K` | Yes | Positive maximum number of chunks requested by the application layer. |
 | `RETRIEVAL_MIN_SCORE` | Yes | Minimum accepted combined score from `0` to `1`. |
 
-The configured `EMBEDDING_MODEL` and `LLM_BACKEND` identify the embeddings used
-by PostgreSQL retrieval. The retriever filters stored embeddings by backend and
-model before comparing vectors.
+The configured `EMBEDDING_MODEL` and `EMBEDDING_BACKEND` identify the
+embeddings used by PostgreSQL retrieval. The retriever filters stored
+embeddings by backend and model before comparing vectors.
 
 ## PostgreSQL Retrieval
 
@@ -85,7 +85,7 @@ model before comparing vectors.
 
 The retriever:
 
-- Embeds the question through `LLMProvider.embed()` only.
+- Embeds the question through `EmbeddingProvider.embed()` only.
 - Searches only `chunks.public_visible = true`.
 - Runs exact vector search over `chunk_embeddings`.
 - Filters vector candidates by embedding backend and embedding model.

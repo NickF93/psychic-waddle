@@ -7,12 +7,13 @@ from typing import TypeVar
 import pytest
 
 from portfolio_rag_assistant.provider import (
+    ChatProvider,
     ChatMessage,
     ChatRequest,
     ChatResponse,
+    EmbeddingProvider,
     EmbeddingRequest,
     EmbeddingResponse,
-    LLMProvider,
     LLMProviderConfigurationError,
     LLMProviderError,
     LLMProviderRequestError,
@@ -47,10 +48,11 @@ def run_async(awaitable: Awaitable[T]) -> T:
     return asyncio.run(awaitable)
 
 
-def test_fake_provider_satisfies_runtime_contract() -> None:
+def test_fake_provider_satisfies_chat_and_embedding_contracts() -> None:
     provider = FakeProvider()
 
-    assert isinstance(provider, LLMProvider)
+    assert isinstance(provider, ChatProvider)
+    assert isinstance(provider, EmbeddingProvider)
 
 
 def test_fake_provider_chat_returns_provider_neutral_response() -> None:

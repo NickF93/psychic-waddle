@@ -72,7 +72,8 @@ Items:
 - Documentation: list candidate reviewed source paths without treating them as
   automatically ingested knowledge.
 - Documentation: define isolated authorities:
-  - `LLMProvider`: model I/O only.
+  - `ChatProvider`: chat model I/O only.
+  - `EmbeddingProvider`: embedding model I/O only.
   - `KnowledgeStore`: verified facts, chunks, sources, and embeddings only.
   - `Retriever`: search, ranking, and retrieval diagnostics only.
   - `AnswerPolicy`: answerability decisions only.
@@ -104,7 +105,7 @@ Acceptance:
 
 Items:
 
-- Implementation: define `LLMProvider` protocol with `chat()` and `embed()`.
+- Implementation: define `ChatProvider` and `EmbeddingProvider` protocols.
 - Implementation: define provider-neutral request and response models.
 - Implementation: define explicit provider error types.
 - Test: add contract tests using a fake provider.
@@ -120,8 +121,8 @@ Items:
 - Implementation: add `OllamaProvider`.
 - Implementation: add `LlamaCppProvider`.
 - Implementation: add `OpenAICompatibleProvider`.
-- Config: support `LLM_BACKEND`, `LLM_BASE_URL`, `CHAT_MODEL`,
-  `EMBEDDING_MODEL`, and `LLM_API_KEY`.
+- Config: support separate chat and embedding backend, base URL, model, and API
+  key settings.
 - Test: add mocked HTTP tests for each provider.
 - Validation: verify app code switches provider only through configuration.
 - Checkpoint: the same provider contract tests pass for all providers.
@@ -194,7 +195,7 @@ Items:
 
 - Implementation: add an `index-embeddings` command.
 - Implementation: read chunks from PostgreSQL and call only
-  `LLMProvider.embed()`.
+  `EmbeddingProvider.embed()`.
 - Implementation: store vectors in `chunk_embeddings` with backend, model, and
   dimension.
 - Implementation: overwrite embeddings for the selected backend and model when
@@ -264,7 +265,8 @@ Items:
 
 - Config: support `RETRIEVAL_TOP_K` and `RETRIEVAL_MIN_SCORE`.
 - Implementation: add PostgreSQL retrieval against public chunks only.
-- Implementation: embed visitor questions through `LLMProvider.embed()` only.
+- Implementation: embed visitor questions through `EmbeddingProvider.embed()`
+  only.
 - Implementation: filter chunk embeddings by configured backend and embedding
   model.
 - Implementation: add exact vector search with `pgvector`.
@@ -364,8 +366,8 @@ Items:
   prompt.
 - Implementation: exclude retrieval scores and internal diagnostics from the
   prompt.
-- Implementation: call `LLMProvider.chat()` only for `answerable` decisions.
-- Implementation: never call `LLMProvider.embed()`.
+- Implementation: call `ChatProvider.chat()` only for `answerable` decisions.
+- Implementation: never call `EmbeddingProvider.embed()`.
 - Implementation: return deterministic fallback text for `not_answerable`.
 - Implementation: return deterministic clarification text for
   `needs_clarification`.
@@ -510,16 +512,30 @@ Items:
 **Feature:** reproducible container runtime for local development and a
 single-server deployment base.
 
+**Branch:** `feature/runtime-infrastructure`.
+
 This milestone starts after the public API exists, so the backend service,
 health endpoint, database, and optional local LLM services can be validated as a
 real runtime stack. It must not introduce Kubernetes, Swarm, reverse proxy,
 TLS, automatic model downloads, committed secrets, or a second database unless a
 later milestone proves a real need.
 
+Runtime defaults:
+
+- PostgreSQL runtime uses `pgvector/pgvector:0.8.2-pg17`.
+- Runtime container images are pinned by digest.
+- Python runtime dependencies are constrained by `requirements.lock`.
+- API port binding defaults to `127.0.0.1` and can be explicitly overridden for
+  VPN/tun0 deployment.
+- Database migrations run explicitly through the PostgreSQL container with
+  `psql`; the API container does not run migrations on startup.
+- Optional local LLM services are CPU-only profiles in this milestone.
+
 ### Sprint 6.1: Backend Container
 
 Items:
 
+- Implementation: add minimal ASGI runtime dependency.
 - Implementation: add backend `Dockerfile`.
 - Implementation: add `.dockerignore`.
 - Config: use only explicit existing environment names without aliases.
@@ -537,6 +553,7 @@ Items:
 - Implementation: add private Compose network and service health checks.
 - Implementation: make the API service depend on database health.
 - Config: add Compose environment example with placeholder values only.
+- Validation: default API port binding is localhost-only.
 - Validation: `docker compose config` passes.
 - Validation: default stack starts from clean volumes.
 - Validation: migration, ingestion, and `GET /health` can run through Compose.
@@ -552,7 +569,7 @@ Items:
   `ollama/ollama` image and a named model volume.
 - Implementation: add optional `llama-cpp` profile using the official
   `ghcr.io/ggml-org/llama.cpp:server` image and a mounted model directory.
-- Config: document internal service URLs for `LLM_BASE_URL`.
+- Config: document internal service URLs for chat and embedding base URLs.
 - Config: document that model download and placement are manual and explicit.
 - Validation: enabling one local LLM profile does not require application code
   changes.
@@ -560,6 +577,42 @@ Items:
 - Checkpoint: API can be configured against either local profile or an external
   OpenAI-compatible endpoint.
 - Final track/doc: LLM runtime examples in `docs/runtime.md`.
+
+### Sprint 6.4: Runtime Documentation And Guards
+
+Items:
+
+- Test: add static runtime configuration guards.
+- Documentation: document image build and Compose operation.
+- Documentation: document explicit DB migration, ingestion, indexing, and
+  health-check commands.
+- Documentation: document optional LLM profiles and manual model setup.
+- Validation: full test suite passes.
+- Final track/doc: `docs/runtime.md`.
+
+### Sprint 6.5: Runtime Remediation
+
+Items:
+
+- Refactor: split chat and embedding provider authorities in runtime
+  composition.
+- Config: replace ambiguous single-provider settings with capability-specific
+  chat and embedding settings.
+- Config: replace interpolated database connection URLs with discrete
+  PostgreSQL connection fields.
+- Implementation: add separate llama.cpp chat and embedding services.
+- Implementation: add `/ready` for database, schema, and configured embedding
+  readiness.
+- Implementation: add an explicit `runtime smoke` command for database, chat
+  provider, and embedding provider reachability before public exposure.
+- Implementation: pin runtime images by digest.
+- Implementation: add a runtime dependency lock consumed by the Docker build.
+- Test: parse Compose structurally and verify local model profiles.
+- Test: cover readiness and smoke command behavior with fakes.
+- Documentation: update runtime, provider, API, retrieval, ingestion, and
+  architecture docs.
+- Validation: `docker compose config`, profile rendering, Docker build, and the
+  full test suite pass.
 
 ---
 

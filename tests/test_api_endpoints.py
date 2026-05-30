@@ -20,6 +20,33 @@ def test_health_endpoint_returns_ok() -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_ready_endpoint_returns_ready_when_runtime_checks_pass() -> None:
+    response = _request("GET", "/ready", readiness_service=ReadyService())
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
+
+
+def test_ready_endpoint_returns_service_error_when_runtime_is_not_ready() -> None:
+    response = _request("GET", "/ready", readiness_service=NotReadyService())
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "error": {
+            "code": "service_unavailable",
+            "message": "service is not ready",
+        }
+    }
+    assert "schema missing" not in response.text
+
+
+def test_ready_endpoint_requires_configured_readiness_service() -> None:
+    response = _request("GET", "/ready")
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "service_unavailable"
+
+
 def test_chat_endpoint_returns_answerable_response() -> None:
     service = FakeChatService(
         ChatResponseBody(
@@ -149,10 +176,14 @@ def _request(
     *,
     json: dict[str, object] | None = None,
     chat_service: object | None = None,
+    readiness_service: object | None = None,
 ) -> httpx.Response:
     async def run() -> httpx.Response:
         transport = httpx.ASGITransport(
-            app=create_api_app(chat_service=chat_service),
+            app=create_api_app(
+                chat_service=chat_service,
+                readiness_service=readiness_service,
+            ),
             raise_app_exceptions=False,
         )
         async with httpx.AsyncClient(
@@ -191,3 +222,13 @@ class UnavailableChatService:
 class ExplodingChatService:
     async def answer(self, request: ChatRequestBody) -> ChatResponseBody:
         raise RuntimeError("provider stack trace leaked")
+
+
+class ReadyService:
+    async def check(self) -> None:
+        return None
+
+
+class NotReadyService:
+    async def check(self) -> None:
+        raise RuntimeError("schema missing")

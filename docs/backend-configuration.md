@@ -2,9 +2,13 @@
 
 ## Purpose
 
-Provider configuration selects exactly one model backend behind the
-`LLMProvider` contract. It does not perform retrieval, answer policy,
-generation orchestration, question collection, or knowledge-base access.
+Provider configuration selects explicit model capabilities behind
+provider-neutral contracts. Chat and embeddings are configured separately
+because a deployment may serve them from the same endpoint or from different
+systems.
+
+Provider configuration does not perform retrieval, answer policy, generation
+orchestration, question collection, or knowledge-base access.
 
 Application code must build providers through the configuration layer. It must
 not switch directly on concrete provider classes.
@@ -16,34 +20,41 @@ defaults.
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `LLM_BACKEND` | Yes | One of `ollama`, `llama-cpp`, `openai-compatible`. |
-| `LLM_BASE_URL` | Yes | API root URL. Providers append only endpoint names. |
-| `CHAT_MODEL` | Yes | Chat model configured for callers that build `ChatRequest`. |
-| `EMBEDDING_MODEL` | Yes | Embedding model configured for callers that build `EmbeddingRequest`. |
-| `LLM_API_KEY` | No | Optional bearer token. If blank or unset, no auth header is sent. |
+| `CHAT_BACKEND` | Yes | One of `ollama`, `llama-cpp`, `openai-compatible`. |
+| `CHAT_BASE_URL` | Yes | API root URL for chat requests. |
+| `CHAT_MODEL` | Yes | Chat model used by answer generation. |
+| `CHAT_API_KEY` | No | Optional bearer token for chat requests. |
+| `EMBEDDING_BACKEND` | Yes | One of `ollama`, `llama-cpp`, `openai-compatible`. |
+| `EMBEDDING_BASE_URL` | Yes | API root URL for embedding requests. |
+| `EMBEDDING_MODEL` | Yes | Embedding model used for indexing and retrieval. |
+| `EMBEDDING_API_KEY` | No | Optional bearer token for embedding requests. |
 
-`LLM_BASE_URL` must include the provider API root:
+Use one provider for both capabilities by setting both base URLs to the same
+API root:
 
 ```env
-LLM_BACKEND=ollama
-LLM_BASE_URL=http://localhost:11434/api
-CHAT_MODEL=llama3.2
+CHAT_BACKEND=openai-compatible
+CHAT_BASE_URL=https://api.example.com/v1
+CHAT_MODEL=chat-model
+CHAT_API_KEY=replace-me
+
+EMBEDDING_BACKEND=openai-compatible
+EMBEDDING_BASE_URL=https://api.example.com/v1
+EMBEDDING_MODEL=embedding-model
+EMBEDDING_API_KEY=replace-me
+```
+
+Use mixed providers by setting capability-specific values:
+
+```env
+CHAT_BACKEND=openai-compatible
+CHAT_BASE_URL=https://api.example.com/v1
+CHAT_MODEL=external-chat-model
+CHAT_API_KEY=replace-me
+
+EMBEDDING_BACKEND=ollama
+EMBEDDING_BASE_URL=http://localhost:11434/api
 EMBEDDING_MODEL=nomic-embed-text
-```
-
-```env
-LLM_BACKEND=llama-cpp
-LLM_BASE_URL=http://localhost:8080/v1
-CHAT_MODEL=local-chat
-EMBEDDING_MODEL=local-embedding
-```
-
-```env
-LLM_BACKEND=openai-compatible
-LLM_BASE_URL=https://api.openai.com/v1
-CHAT_MODEL=gpt-4.1-mini
-EMBEDDING_MODEL=text-embedding-3-small
-LLM_API_KEY=replace-me
 ```
 
 ## Provider Routes
@@ -52,16 +63,15 @@ Concrete providers own backend-specific routes and payloads.
 
 | Backend | Chat route | Embedding route |
 | --- | --- | --- |
-| `ollama` | `POST {LLM_BASE_URL}/chat` | `POST {LLM_BASE_URL}/embed` |
-| `llama-cpp` | `POST {LLM_BASE_URL}/chat/completions` | `POST {LLM_BASE_URL}/embeddings` |
-| `openai-compatible` | `POST {LLM_BASE_URL}/chat/completions` | `POST {LLM_BASE_URL}/embeddings` |
+| `ollama` | `POST {CHAT_BASE_URL}/chat` | `POST {EMBEDDING_BASE_URL}/embed` |
+| `llama-cpp` | `POST {CHAT_BASE_URL}/chat/completions` | `POST {EMBEDDING_BASE_URL}/embeddings` |
+| `openai-compatible` | `POST {CHAT_BASE_URL}/chat/completions` | `POST {EMBEDDING_BASE_URL}/embeddings` |
 
 Ollama uses the native `/embed` route. The deprecated `/embeddings` route is
 not used.
 
 `ChatRequest.model` and `EmbeddingRequest.model` remain authoritative for
-provider calls. The configured `CHAT_MODEL` and `EMBEDDING_MODEL` values are
-stored for the future application layer that creates those requests.
+provider calls.
 
 ## Error Translation
 

@@ -10,7 +10,19 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TextIO
 
-from portfolio_rag_assistant.config import build_llm_provider, load_provider_settings
+from portfolio_rag_assistant.api.readiness import (
+    DatabaseReadinessService,
+    ReadinessCheckError,
+)
+from portfolio_rag_assistant.config import (
+    DatabaseSettings,
+    RuntimeConfigurationError,
+    build_chat_provider,
+    build_embedding_provider,
+    load_chat_provider_settings,
+    load_database_settings,
+    load_embedding_provider_settings,
+)
 from portfolio_rag_assistant.knowledge import (
     EmbeddingIndexingError,
     KnowledgeIngestionError,
@@ -22,7 +34,14 @@ from portfolio_rag_assistant.knowledge import (
     load_knowledge_batch,
     validate_knowledge_files,
 )
-from portfolio_rag_assistant.provider import LLMProviderError
+from portfolio_rag_assistant.provider import (
+    ChatMessage,
+    ChatProvider,
+    ChatRequest,
+    EmbeddingProvider,
+    EmbeddingRequest,
+    LLMProviderError,
+)
 
 
 class CommandError(RuntimeError):
@@ -58,6 +77,9 @@ def run(
                 return _run_knowledge_ingest(args.files, environment, output)
             if args.knowledge_command == "index-embeddings":
                 return _run_knowledge_index_embeddings(environment, output)
+        if args.command == "runtime":
+            if args.runtime_command == "smoke":
+                return _run_runtime_smoke(environment, output)
         parser.print_help(file=errors)
         return 2
     except (
@@ -66,6 +88,8 @@ def run(
         KnowledgeIngestionError,
         KnowledgeStoreError,
         KnowledgeValidationError,
+        ReadinessCheckError,
+        RuntimeConfigurationError,
         LLMProviderError,
     ) as error:
         print(f"error: {error}", file=errors)
@@ -78,8 +102,8 @@ def _run_knowledge_ingest(
     stdout: TextIO,
 ) -> int:
     batch = load_knowledge_batch(files)
-    database_url = _require_env(env, "DATABASE_URL")
-    with connect_database(database_url) as connection:
+    database_settings = load_database_settings(env)
+    with _connect_database(database_settings) as connection:
         KnowledgeStore(connection).ingest_batch(batch)
     print(
         f"ingested {len(batch.sources)} sources and {len(batch.facts)} facts",
@@ -104,20 +128,73 @@ def _run_knowledge_index_embeddings(
     env: Mapping[str, str],
     stdout: TextIO,
 ) -> int:
-    database_url = _require_env(env, "DATABASE_URL")
-    provider_settings = load_provider_settings(env)
-    provider = build_llm_provider(provider_settings)
-    with connect_database(database_url) as connection:
+    database_settings = load_database_settings(env)
+    provider_settings = load_embedding_provider_settings(env)
+    provider = build_embedding_provider(provider_settings)
+    with _connect_database(database_settings) as connection:
         result = asyncio.run(
             index_embeddings(
                 store=KnowledgeStore(connection),
                 provider=provider,
                 backend=provider_settings.backend,
-                model=provider_settings.embedding_model,
+                model=provider_settings.model,
             )
         )
     print(f"indexed {result.indexed_count} chunk embeddings", file=stdout)
     return 0
+
+
+def _run_runtime_smoke(env: Mapping[str, str], stdout: TextIO) -> int:
+    database_settings = load_database_settings(env)
+    chat_settings = load_chat_provider_settings(env)
+    embedding_settings = load_embedding_provider_settings(env)
+    chat_provider = build_chat_provider(chat_settings)
+    embedding_provider = build_embedding_provider(embedding_settings)
+
+    with _connect_database(database_settings) as connection:
+        asyncio.run(
+            DatabaseReadinessService(
+                connection=connection,
+                embedding_backend=embedding_settings.backend,
+                embedding_model=embedding_settings.model,
+            ).check()
+        )
+
+    asyncio.run(
+        _check_provider_reachability(
+            chat_provider=chat_provider,
+            chat_model=chat_settings.model,
+            embedding_provider=embedding_provider,
+            embedding_model=embedding_settings.model,
+        )
+    )
+    print(
+        "runtime smoke passed: database ready, embeddings ready, providers reachable",
+        file=stdout,
+    )
+    return 0
+
+
+async def _check_provider_reachability(
+    *,
+    chat_provider: ChatProvider,
+    chat_model: str,
+    embedding_provider: EmbeddingProvider,
+    embedding_model: str,
+) -> None:
+    embedding_response = await embedding_provider.embed(
+        EmbeddingRequest(model=embedding_model, inputs=("runtime smoke",))
+    )
+    if len(embedding_response.embeddings) != 1:
+        raise CommandError("embedding provider returned the wrong embedding count")
+    await chat_provider.chat(
+        ChatRequest(
+            model=chat_model,
+            messages=(ChatMessage(role="user", content="Reply with OK."),),
+            temperature=0.0,
+            max_tokens=8,
+        )
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -143,11 +220,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help="curated JSON files to ingest",
     )
     knowledge_subcommands.add_parser("index-embeddings")
+
+    runtime = subcommands.add_parser("runtime")
+    runtime_subcommands = runtime.add_subparsers(dest="runtime_command")
+    runtime_subcommands.add_parser("smoke")
     return parser
 
 
-def _require_env(env: Mapping[str, str], name: str) -> str:
-    value = env.get(name)
-    if value is None or not value.strip():
-        raise CommandError(f"{name} must be set")
-    return value.strip()
+def _connect_database(settings: DatabaseSettings) -> object:
+    return connect_database(
+        host=settings.host,
+        port=settings.port,
+        name=settings.name,
+        user=settings.user,
+        password=settings.password,
+    )

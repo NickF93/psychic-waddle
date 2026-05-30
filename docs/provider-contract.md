@@ -7,16 +7,22 @@ application. It supports chat completion and embedding calls without exposing
 Ollama, llama.cpp, OpenAI-compatible payloads, authentication details, HTTP
 routes, or backend-specific response shapes.
 
-Provider implementations belong behind this contract. Application authorities
-must depend on `LLMProvider`, not on a concrete backend.
+Provider implementations belong behind these contracts. Application authorities
+must depend on the narrow capability they need, not on a concrete backend.
 
 ## Interface
 
-`LLMProvider` owns model I/O only:
+`ChatProvider` owns chat model I/O only:
 
 ```python
-class LLMProvider(Protocol):
+class ChatProvider(Protocol):
     async def chat(self, request: ChatRequest) -> ChatResponse: ...
+```
+
+`EmbeddingProvider` owns embedding model I/O only:
+
+```python
+class EmbeddingProvider(Protocol):
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse: ...
 ```
 
