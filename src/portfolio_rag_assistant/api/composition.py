@@ -12,36 +12,57 @@ from portfolio_rag_assistant.answer import GroundedAnswerGenerator
 from portfolio_rag_assistant.api.app import create_api_app
 from portfolio_rag_assistant.api.service import PublicChatService
 from portfolio_rag_assistant.config import (
-    ProviderSettings,
-    build_llm_provider,
-    load_provider_settings,
+    ChatProviderSettings,
+    DatabaseSettings,
+    EmbeddingProviderSettings,
+    build_chat_provider,
+    build_embedding_provider,
+    load_chat_provider_settings,
+    load_database_settings,
+    load_embedding_provider_settings,
     load_retrieval_settings,
 )
 from portfolio_rag_assistant.knowledge import connect_database
 from portfolio_rag_assistant.policy import DeterministicAnswerPolicy
-from portfolio_rag_assistant.provider import LLMProvider
+from portfolio_rag_assistant.provider import ChatProvider, EmbeddingProvider
 from portfolio_rag_assistant.retrieval import PostgreSQLRetriever
 
-ProviderFactory = Callable[[ProviderSettings], LLMProvider]
-ConnectionFactory = Callable[[str], Any]
+ChatProviderFactory = Callable[[ChatProviderSettings], ChatProvider]
+EmbeddingProviderFactory = Callable[[EmbeddingProviderSettings], EmbeddingProvider]
+ConnectionFactory = Callable[[DatabaseSettings], Any]
 
 
 class APICompositionError(RuntimeError):
     """Raised when the runtime API cannot be composed."""
 
 
+def _connect_database(settings: DatabaseSettings) -> Any:
+    try:
+        return connect_database(
+            host=settings.host,
+            port=settings.port,
+            name=settings.name,
+            user=settings.user,
+            password=settings.password,
+        )
+    except Exception as error:
+        raise APICompositionError("database connection failed") from error
+
+
 def create_runtime_api_app(
     *,
     env: Mapping[str, str] | None = None,
-    provider_factory: ProviderFactory = build_llm_provider,
-    connection_factory: ConnectionFactory = connect_database,
+    chat_provider_factory: ChatProviderFactory = build_chat_provider,
+    embedding_provider_factory: EmbeddingProviderFactory = build_embedding_provider,
+    connection_factory: ConnectionFactory = _connect_database,
 ) -> FastAPI:
     """Create the ASGI API application from explicit runtime configuration."""
 
     return create_api_app(
         chat_service=build_public_chat_service(
             env=env,
-            provider_factory=provider_factory,
+            chat_provider_factory=chat_provider_factory,
+            embedding_provider_factory=embedding_provider_factory,
             connection_factory=connection_factory,
         )
     )
@@ -50,37 +71,33 @@ def create_runtime_api_app(
 def build_public_chat_service(
     *,
     env: Mapping[str, str] | None = None,
-    provider_factory: ProviderFactory = build_llm_provider,
-    connection_factory: ConnectionFactory = connect_database,
+    chat_provider_factory: ChatProviderFactory = build_chat_provider,
+    embedding_provider_factory: EmbeddingProviderFactory = build_embedding_provider,
+    connection_factory: ConnectionFactory = _connect_database,
 ) -> PublicChatService:
     """Compose the public chat service from configured authorities."""
 
     environment = os.environ if env is None else env
-    database_url = _require_env(environment, "DATABASE_URL")
-    provider_settings = load_provider_settings(environment)
+    database_settings = load_database_settings(environment)
+    chat_settings = load_chat_provider_settings(environment)
+    embedding_settings = load_embedding_provider_settings(environment)
     retrieval_settings = load_retrieval_settings(environment)
-    provider = provider_factory(provider_settings)
-    connection = connection_factory(database_url)
+    chat_provider = chat_provider_factory(chat_settings)
+    embedding_provider = embedding_provider_factory(embedding_settings)
+    connection = connection_factory(database_settings)
     retriever = PostgreSQLRetriever(
         connection=connection,
-        provider=provider,
-        embedding_backend=provider_settings.backend,
-        embedding_model=provider_settings.embedding_model,
+        provider=embedding_provider,
+        embedding_backend=embedding_settings.backend,
+        embedding_model=embedding_settings.model,
         min_score=retrieval_settings.min_score,
     )
     return PublicChatService(
         retriever=retriever,
         answer_policy=DeterministicAnswerPolicy(),
         answer_generator=GroundedAnswerGenerator(
-            provider=provider,
-            chat_model=provider_settings.chat_model,
+            provider=chat_provider,
+            chat_model=chat_settings.model,
         ),
         retrieval_settings=retrieval_settings,
     )
-
-
-def _require_env(env: Mapping[str, str], name: str) -> str:
-    value = env.get(name)
-    if value is None or not value.strip():
-        raise APICompositionError(f"{name} must be set")
-    return value.strip()

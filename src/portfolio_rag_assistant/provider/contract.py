@@ -127,11 +127,16 @@ class EmbeddingResponse:
 
 
 @runtime_checkable
-class LLMProvider(Protocol):
-    """Provider-owned model I/O."""
+class ChatProvider(Protocol):
+    """Provider-owned chat model I/O."""
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
         """Return one chat response for a provider-neutral request."""
+
+
+@runtime_checkable
+class EmbeddingProvider(Protocol):
+    """Provider-owned embedding model I/O."""
 
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse:
         """Return embeddings in the same order as request inputs."""

@@ -10,7 +10,13 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TextIO
 
-from portfolio_rag_assistant.config import build_llm_provider, load_provider_settings
+from portfolio_rag_assistant.config import (
+    DatabaseSettings,
+    RuntimeConfigurationError,
+    build_embedding_provider,
+    load_database_settings,
+    load_embedding_provider_settings,
+)
 from portfolio_rag_assistant.knowledge import (
     EmbeddingIndexingError,
     KnowledgeIngestionError,
@@ -66,6 +72,7 @@ def run(
         KnowledgeIngestionError,
         KnowledgeStoreError,
         KnowledgeValidationError,
+        RuntimeConfigurationError,
         LLMProviderError,
     ) as error:
         print(f"error: {error}", file=errors)
@@ -78,8 +85,8 @@ def _run_knowledge_ingest(
     stdout: TextIO,
 ) -> int:
     batch = load_knowledge_batch(files)
-    database_url = _require_env(env, "DATABASE_URL")
-    with connect_database(database_url) as connection:
+    database_settings = load_database_settings(env)
+    with _connect_database(database_settings) as connection:
         KnowledgeStore(connection).ingest_batch(batch)
     print(
         f"ingested {len(batch.sources)} sources and {len(batch.facts)} facts",
@@ -104,16 +111,16 @@ def _run_knowledge_index_embeddings(
     env: Mapping[str, str],
     stdout: TextIO,
 ) -> int:
-    database_url = _require_env(env, "DATABASE_URL")
-    provider_settings = load_provider_settings(env)
-    provider = build_llm_provider(provider_settings)
-    with connect_database(database_url) as connection:
+    database_settings = load_database_settings(env)
+    provider_settings = load_embedding_provider_settings(env)
+    provider = build_embedding_provider(provider_settings)
+    with _connect_database(database_settings) as connection:
         result = asyncio.run(
             index_embeddings(
                 store=KnowledgeStore(connection),
                 provider=provider,
                 backend=provider_settings.backend,
-                model=provider_settings.embedding_model,
+                model=provider_settings.model,
             )
         )
     print(f"indexed {result.indexed_count} chunk embeddings", file=stdout)
@@ -146,8 +153,11 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _require_env(env: Mapping[str, str], name: str) -> str:
-    value = env.get(name)
-    if value is None or not value.strip():
-        raise CommandError(f"{name} must be set")
-    return value.strip()
+def _connect_database(settings: DatabaseSettings) -> object:
+    return connect_database(
+        host=settings.host,
+        port=settings.port,
+        name=settings.name,
+        user=settings.user,
+        password=settings.password,
+    )

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol, cast
 
 from portfolio_rag_assistant.knowledge import KnowledgeCategory
-from portfolio_rag_assistant.provider import EmbeddingRequest, LLMProvider
+from portfolio_rag_assistant.provider import EmbeddingProvider, EmbeddingRequest
 from portfolio_rag_assistant.retrieval.contract import (
     RetrievedContext,
     RetrievalConfigurationError,
@@ -81,7 +81,7 @@ class PostgreSQLRetriever:
         self,
         *,
         connection: RetrievalDatabaseConnection,
-        provider: LLMProvider,
+        provider: EmbeddingProvider,
         embedding_backend: str,
         embedding_model: str,
         min_score: float,

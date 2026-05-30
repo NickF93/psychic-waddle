@@ -10,7 +10,7 @@ from portfolio_rag_assistant.knowledge.store import (
     KnowledgeStore,
     StoredChunk,
 )
-from portfolio_rag_assistant.provider import EmbeddingRequest, LLMProvider
+from portfolio_rag_assistant.provider import EmbeddingProvider, EmbeddingRequest
 
 
 class EmbeddingIndexingError(RuntimeError):
@@ -27,7 +27,7 @@ class EmbeddingIndexResult:
 async def index_embeddings(
     *,
     store: KnowledgeStore,
-    provider: LLMProvider,
+    provider: EmbeddingProvider,
     backend: str,
     model: str,
     batch_size: int = 32,

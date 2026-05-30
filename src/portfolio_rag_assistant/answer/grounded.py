@@ -16,9 +16,9 @@ from portfolio_rag_assistant.policy import (
     NOT_ANSWERABLE,
 )
 from portfolio_rag_assistant.provider import (
+    ChatProvider,
     ChatMessage,
     ChatRequest,
-    LLMProvider,
     LLMProviderError,
 )
 from portfolio_rag_assistant.retrieval import RetrievedContext
@@ -64,14 +64,14 @@ class GroundedAnswerGenerator:
 
     def __init__(
         self,
-        provider: LLMProvider,
+        provider: ChatProvider,
         chat_model: str,
         *,
         max_tokens: int = 384,
     ) -> None:
-        if not isinstance(provider, LLMProvider):
+        if not isinstance(provider, ChatProvider):
             raise AnswerGenerationConfigurationError(
-                "provider must satisfy LLMProvider"
+                "provider must satisfy ChatProvider"
             )
         _require_non_empty_text(chat_model, "chat_model")
         _require_positive_int(max_tokens, "max_tokens")

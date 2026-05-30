@@ -8,8 +8,14 @@ import httpx
 import pytest
 
 from portfolio_rag_assistant.api import APICompositionError, create_runtime_api_app
-from portfolio_rag_assistant.config import ProviderSettings
+from portfolio_rag_assistant.config import (
+    ChatProviderSettings,
+    DatabaseSettings,
+    EmbeddingProviderSettings,
+    RuntimeConfigurationError,
+)
 from portfolio_rag_assistant.provider import (
+    ChatMessage,
     ChatRequest,
     ChatResponse,
     EmbeddingRequest,
@@ -17,23 +23,30 @@ from portfolio_rag_assistant.provider import (
 )
 
 
-def test_runtime_api_composition_uses_configured_authorities_without_network() -> None:
-    provider = FakeProvider(embeddings=((0.0, 0.0),))
+def test_runtime_api_composition_uses_separate_chat_and_embedding_authorities() -> None:
+    chat_provider = FakeChatProvider("unused")
+    embedding_provider = FakeEmbeddingProvider(embeddings=((0.0, 0.0),))
     connection = FakeRetrievalConnection()
-    provider_settings: list[ProviderSettings] = []
-    connection_urls: list[str] = []
+    chat_settings: list[ChatProviderSettings] = []
+    embedding_settings: list[EmbeddingProviderSettings] = []
+    database_settings: list[DatabaseSettings] = []
 
     app = create_runtime_api_app(
         env=_env(),
-        provider_factory=lambda settings: _record_provider(
+        chat_provider_factory=lambda settings: _record_chat_provider(
             settings,
-            provider,
-            provider_settings,
+            chat_provider,
+            chat_settings,
         ),
-        connection_factory=lambda url: _record_connection(
-            url,
+        embedding_provider_factory=lambda settings: _record_embedding_provider(
+            settings,
+            embedding_provider,
+            embedding_settings,
+        ),
+        connection_factory=lambda settings: _record_connection(
+            settings,
             connection,
-            connection_urls,
+            database_settings,
         ),
     )
 
@@ -45,35 +58,69 @@ def test_runtime_api_composition_uses_configured_authorities_without_network() -
         "answer": "I do not have verified public context to answer that reliably.",
         "sources": [],
     }
-    assert provider_settings == [
-        ProviderSettings(
-            backend="ollama",
-            base_url="http://localhost:11434/api",
-            chat_model="llama3.2",
-            embedding_model="nomic-embed-text",
+    assert chat_settings == [
+        ChatProviderSettings(
+            backend="openai-compatible",
+            base_url="https://api.example.test/v1",
+            model="chat-model",
+            api_key="chat-secret",
         )
     ]
-    assert connection_urls == ["postgresql://portfolio:test@localhost/portfolio"]
-    assert provider.embedding_requests == (
+    assert embedding_settings == [
+        EmbeddingProviderSettings(
+            backend="ollama",
+            base_url="http://localhost:11434/api",
+            model="nomic-embed-text",
+            api_key=None,
+        )
+    ]
+    assert database_settings == [
+        DatabaseSettings(
+            host="db",
+            port=5432,
+            name="portfolio",
+            user="portfolio_user",
+            password="p@ss/word:%",
+        )
+    ]
+    assert embedding_provider.embedding_requests == (
         EmbeddingRequest(
             model="nomic-embed-text",
             inputs=("Where did Niccolo work?",),
         ),
     )
-    assert provider.chat_requests == ()
+    assert chat_provider.chat_requests == ()
     assert len(connection.calls) == 2
     assert "access-control-allow-origin" not in response.headers
 
 
-def test_runtime_api_composition_requires_database_url() -> None:
+def test_runtime_api_composition_requires_database_settings() -> None:
     env = _env()
-    del env["DATABASE_URL"]
+    del env["DB_HOST"]
 
-    with pytest.raises(APICompositionError, match="DATABASE_URL must be set"):
+    with pytest.raises(RuntimeConfigurationError, match="DB_HOST must be set"):
         create_runtime_api_app(
             env=env,
-            provider_factory=lambda settings: FakeProvider(embeddings=((0.0,),)),
-            connection_factory=lambda url: FakeRetrievalConnection(),
+            chat_provider_factory=lambda settings: FakeChatProvider("unused"),
+            embedding_provider_factory=lambda settings: FakeEmbeddingProvider(
+                embeddings=((0.0,),)
+            ),
+            connection_factory=lambda settings: FakeRetrievalConnection(),
+        )
+
+
+def test_runtime_api_composition_wraps_database_connection_failure() -> None:
+    def fail_connection(settings: DatabaseSettings) -> object:
+        raise APICompositionError("database connection failed")
+
+    with pytest.raises(APICompositionError, match="database connection failed"):
+        create_runtime_api_app(
+            env=_env(),
+            chat_provider_factory=lambda settings: FakeChatProvider("unused"),
+            embedding_provider_factory=lambda settings: FakeEmbeddingProvider(
+                embeddings=((0.0,),)
+            ),
+            connection_factory=fail_connection,
         )
 
 
@@ -92,30 +139,46 @@ def _post_chat(app) -> httpx.Response:
     return asyncio.run(run())
 
 
-def _record_provider(
-    settings: ProviderSettings,
-    provider: "FakeProvider",
-    records: list[ProviderSettings],
-) -> "FakeProvider":
+def _record_chat_provider(
+    settings: ChatProviderSettings,
+    provider: "FakeChatProvider",
+    records: list[ChatProviderSettings],
+) -> "FakeChatProvider":
+    records.append(settings)
+    return provider
+
+
+def _record_embedding_provider(
+    settings: EmbeddingProviderSettings,
+    provider: "FakeEmbeddingProvider",
+    records: list[EmbeddingProviderSettings],
+) -> "FakeEmbeddingProvider":
     records.append(settings)
     return provider
 
 
 def _record_connection(
-    url: str,
+    settings: DatabaseSettings,
     connection: "FakeRetrievalConnection",
-    records: list[str],
+    records: list[DatabaseSettings],
 ) -> "FakeRetrievalConnection":
-    records.append(url)
+    records.append(settings)
     return connection
 
 
 def _env() -> dict[str, str]:
     return {
-        "DATABASE_URL": "postgresql://portfolio:test@localhost/portfolio",
-        "LLM_BACKEND": "ollama",
-        "LLM_BASE_URL": "http://localhost:11434/api",
-        "CHAT_MODEL": "llama3.2",
+        "DB_HOST": "db",
+        "DB_PORT": "5432",
+        "DB_NAME": "portfolio",
+        "DB_USER": "portfolio_user",
+        "DB_PASSWORD": "p@ss/word:%",
+        "CHAT_BACKEND": "openai-compatible",
+        "CHAT_BASE_URL": "https://api.example.test/v1",
+        "CHAT_API_KEY": "chat-secret",
+        "CHAT_MODEL": "chat-model",
+        "EMBEDDING_BACKEND": "ollama",
+        "EMBEDDING_BASE_URL": "http://localhost:11434/api",
         "EMBEDDING_MODEL": "nomic-embed-text",
         "RETRIEVAL_TOP_K": "2",
         "RETRIEVAL_MIN_SCORE": "0.25",
@@ -140,15 +203,23 @@ class FakeRetrievalConnection:
         return FakeCursor()
 
 
-class FakeProvider:
-    def __init__(self, embeddings: tuple[tuple[float, ...], ...]) -> None:
-        self._embeddings = embeddings
-        self.embedding_requests: tuple[EmbeddingRequest, ...] = ()
+class FakeChatProvider:
+    def __init__(self, answer_text: str) -> None:
+        self.answer_text = answer_text
         self.chat_requests: tuple[ChatRequest, ...] = ()
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
         self.chat_requests = (*self.chat_requests, request)
-        raise AssertionError("not-answerable composition must not call chat")
+        return ChatResponse(
+            model=request.model,
+            message=ChatMessage(role="assistant", content=self.answer_text),
+        )
+
+
+class FakeEmbeddingProvider:
+    def __init__(self, embeddings: tuple[tuple[float, ...], ...]) -> None:
+        self._embeddings = embeddings
+        self.embedding_requests: tuple[EmbeddingRequest, ...] = ()
 
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse:
         self.embedding_requests = (*self.embedding_requests, request)

@@ -9,10 +9,11 @@ import httpx
 import pytest
 
 from portfolio_rag_assistant.provider import (
+    ChatProvider,
     ChatMessage,
     ChatRequest,
+    EmbeddingProvider,
     EmbeddingRequest,
-    LLMProvider,
     LLMProviderRequestError,
     LLMProviderResponseError,
     LLMProviderTransportError,
@@ -30,7 +31,8 @@ def run_async(awaitable: Awaitable[T]) -> T:
 def test_llama_cpp_provider_satisfies_runtime_contract() -> None:
     provider = LlamaCppProvider(base_url="http://localhost:8080/v1")
 
-    assert isinstance(provider, LLMProvider)
+    assert isinstance(provider, ChatProvider)
+    assert isinstance(provider, EmbeddingProvider)
 
 
 def test_llama_cpp_provider_does_not_subclass_generic_provider() -> None:

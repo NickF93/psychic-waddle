@@ -24,17 +24,17 @@ def test_ingest_command_validates_input_before_database_connection(
     )
     called = False
 
-    def fail_connect_database(database_url: str) -> object:
+    def fail_connect_database(**kwargs: object) -> object:
         nonlocal called
         called = True
-        raise AssertionError(database_url)
+        raise AssertionError(kwargs)
 
     monkeypatch.setattr(cli, "connect_database", fail_connect_database)
     stderr = StringIO()
 
     exit_code = cli.run(
         ("knowledge", "ingest", str(invalid_path)),
-        env={"DATABASE_URL": "postgresql://example"},
+        env=_db_env(),
         stderr=stderr,
     )
 
@@ -60,7 +60,9 @@ def test_validate_command_does_not_require_database_or_provider_config(
     assert "validated 1 sources, 1 facts, 1 chunks" in stdout.getvalue()
 
 
-def test_ingest_command_requires_database_url_after_valid_input(tmp_path: Path) -> None:
+def test_ingest_command_requires_database_settings_after_valid_input(
+    tmp_path: Path,
+) -> None:
     valid_path = tmp_path / "knowledge.json"
     valid_path.write_text(json.dumps(_valid_document()), encoding="utf-8")
     stderr = StringIO()
@@ -68,7 +70,7 @@ def test_ingest_command_requires_database_url_after_valid_input(tmp_path: Path) 
     exit_code = cli.run(("knowledge", "ingest", str(valid_path)), env={}, stderr=stderr)
 
     assert exit_code == 2
-    assert "DATABASE_URL must be set" in stderr.getvalue()
+    assert "DB_HOST must be set" in stderr.getvalue()
 
 
 def _valid_document() -> dict[str, object]:
@@ -90,4 +92,14 @@ def _valid_document() -> dict[str, object]:
                 "public_visible": True,
             }
         ],
+    }
+
+
+def _db_env() -> dict[str, str]:
+    return {
+        "DB_HOST": "db",
+        "DB_PORT": "5432",
+        "DB_NAME": "portfolio",
+        "DB_USER": "portfolio_user",
+        "DB_PASSWORD": "secret",
     }
