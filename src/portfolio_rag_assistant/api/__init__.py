@@ -10,6 +10,7 @@ from portfolio_rag_assistant.api.schemas import (
     ErrorBody,
     HealthResponseBody,
 )
+from portfolio_rag_assistant.api.service import ChatServiceError, PublicChatService
 
 __all__ = [
     "MAX_QUESTION_LENGTH",
@@ -19,5 +20,7 @@ __all__ = [
     "ChatSourceBody",
     "ErrorBody",
     "HealthResponseBody",
+    "ChatServiceError",
+    "PublicChatService",
     "create_api_app",
 ]
