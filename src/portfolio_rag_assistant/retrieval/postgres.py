@@ -150,6 +150,43 @@ class PostgreSQLRetriever:
         )
         return tuple(_vector_candidate_from_row(row) for row in cursor.fetchall())
 
+    def _search_keywords(
+        self,
+        *,
+        question: str,
+        limit: int,
+    ) -> tuple[RetrievalCandidate, ...]:
+        cursor = self._connection.execute(
+            """
+            WITH keyword_query AS (
+                SELECT plainto_tsquery('simple', %s) AS value
+            )
+            SELECT
+                chunks.id,
+                chunks.chunk_text,
+                chunks.category,
+                sources.source_uri,
+                sources.title,
+                chunks.source_locator,
+                LEAST(
+                    1.0,
+                    ts_rank_cd(
+                        to_tsvector('simple', chunks.chunk_text),
+                        keyword_query.value
+                    )::double precision
+                ) AS keyword_score
+            FROM chunks
+            JOIN sources ON sources.id = chunks.source_id
+            CROSS JOIN keyword_query
+            WHERE chunks.public_visible = true
+              AND to_tsvector('simple', chunks.chunk_text) @@ keyword_query.value
+            ORDER BY keyword_score DESC, chunks.id ASC
+            LIMIT %s
+            """,
+            (question, limit),
+        )
+        return tuple(_keyword_candidate_from_row(row) for row in cursor.fetchall())
+
 
 def _rank_candidates(
     candidates: tuple[RetrievalCandidate, ...],
@@ -181,6 +218,18 @@ def _vector_candidate_from_row(row: tuple[Any, ...]) -> RetrievalCandidate:
         source_title=str(row[4]),
         source_locator=_optional_text(row[5]),
         vector_score=float(row[6]),
+    )
+
+
+def _keyword_candidate_from_row(row: tuple[Any, ...]) -> RetrievalCandidate:
+    return RetrievalCandidate(
+        chunk_id=int(row[0]),
+        chunk_text=str(row[1]),
+        category=cast(KnowledgeCategory, str(row[2])),
+        source_uri=str(row[3]),
+        source_title=str(row[4]),
+        source_locator=_optional_text(row[5]),
+        keyword_score=float(row[6]),
     )
 
 
