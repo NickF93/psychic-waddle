@@ -1,4 +1,4 @@
-"""Explicit runtime configuration for provider selection."""
+"""Explicit runtime configuration."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from portfolio_rag_assistant.provider import (
     OllamaProvider,
     OpenAICompatibleProvider,
 )
+from portfolio_rag_assistant.retrieval import RetrievalConfigurationError
 
 LLMBackend = Literal["ollama", "llama-cpp", "openai-compatible"]
 
@@ -53,6 +54,26 @@ class ProviderSettings:
             object.__setattr__(self, "api_key", api_key or None)
 
 
+@dataclass(frozen=True, slots=True)
+class RetrievalSettings:
+    """Validated retrieval settings."""
+
+    top_k: int
+    min_score: float
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.top_k, int) or isinstance(self.top_k, bool):
+            raise RetrievalConfigurationError("RETRIEVAL_TOP_K must be an integer")
+        if self.top_k <= 0:
+            raise RetrievalConfigurationError("RETRIEVAL_TOP_K must be positive")
+        if not isinstance(self.min_score, float):
+            raise RetrievalConfigurationError("RETRIEVAL_MIN_SCORE must be a float")
+        if not 0 <= self.min_score <= 1:
+            raise RetrievalConfigurationError(
+                "RETRIEVAL_MIN_SCORE must be between 0 and 1"
+            )
+
+
 def load_provider_settings(env: Mapping[str, str] | None = None) -> ProviderSettings:
     """Load provider settings from exact environment variable names."""
 
@@ -68,6 +89,19 @@ def load_provider_settings(env: Mapping[str, str] | None = None) -> ProviderSett
             "EMBEDDING_MODEL",
         ),
         api_key=source.get("LLM_API_KEY"),
+    )
+
+
+def load_retrieval_settings(env: Mapping[str, str] | None = None) -> RetrievalSettings:
+    """Load retrieval settings from exact environment variable names."""
+
+    source = os.environ if env is None else env
+    return RetrievalSettings(
+        top_k=_require_int(source.get("RETRIEVAL_TOP_K"), "RETRIEVAL_TOP_K"),
+        min_score=_require_float(
+            source.get("RETRIEVAL_MIN_SCORE"),
+            "RETRIEVAL_MIN_SCORE",
+        ),
     )
 
 
@@ -100,3 +134,25 @@ def _normalize_base_url(value: str) -> str:
             "LLM_BASE_URL must be an absolute http or https API root"
         )
     return base_url
+
+
+def _require_int(value: str | None, field_name: str) -> int:
+    text = _require_retrieval_text(value, field_name)
+    try:
+        return int(text)
+    except ValueError as exc:
+        raise RetrievalConfigurationError(f"{field_name} must be an integer") from exc
+
+
+def _require_float(value: str | None, field_name: str) -> float:
+    text = _require_retrieval_text(value, field_name)
+    try:
+        return float(text)
+    except ValueError as exc:
+        raise RetrievalConfigurationError(f"{field_name} must be a float") from exc
+
+
+def _require_retrieval_text(value: str | None, field_name: str) -> str:
+    if value is None or not value.strip():
+        raise RetrievalConfigurationError(f"{field_name} must be set")
+    return value.strip()

@@ -11,8 +11,10 @@ from portfolio_rag_assistant.retrieval.contract import (
     RetrievalStoreError,
     Retriever,
 )
+from portfolio_rag_assistant.retrieval.postgres import PostgreSQLRetriever
 
 __all__ = [
+    "PostgreSQLRetriever",
     "RetrievedContext",
     "RetrievalConfigurationError",
     "RetrievalError",
