@@ -665,6 +665,21 @@ Items:
   mixed provider deployments.
 - Validation: full test suite passes.
 
+### Sprint 6.9: Runtime Script Readiness Remediation
+
+Items:
+
+- Implementation: add health checks for Ollama and separate llama.cpp chat and
+  embedding services.
+- Implementation: make setup and start scripts wait for targeted service
+  readiness.
+- Implementation: make PostgreSQL migration fail on SQL errors.
+- Test: guard readiness waits, strict migration failure, and local model health
+  checks.
+- Documentation: make runtime scripts the primary documented setup path and
+  document shared Ollama service behavior.
+- Validation: Compose renders supported profiles and the full test suite passes.
+
 ---
 
 ## Milestone 7: Anonymous Question Collection
