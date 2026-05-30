@@ -67,6 +67,10 @@ default, and accept an explicit env file with:
 ENV_FILE=/absolute/path/to/.env scripts/runtime/api-start.sh
 ```
 
+For the full zero-to-running server procedure with PostgreSQL, Ollama, API
+startup, knowledge ingestion, embedding indexing, smoke checks, and manual chat
+tests, see [Server Setup Procedure](server-setup.md).
+
 Setup and start scripts wait for the targeted service to become ready before
 returning. The wait timeout defaults to 120 seconds and can be changed with:
 
