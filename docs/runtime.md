@@ -67,6 +67,13 @@ default, and accept an explicit env file with:
 ENV_FILE=/absolute/path/to/.env scripts/runtime/api-start.sh
 ```
 
+Setup and start scripts wait for the targeted service to become ready before
+returning. The wait timeout defaults to 120 seconds and can be changed with:
+
+```sh
+RUNTIME_WAIT_TIMEOUT_SECONDS=300 scripts/runtime/llama-cpp-chat-start.sh
+```
+
 `down` scripts stop and remove only the targeted service container. They do not
 remove unrelated services, networks, or volumes. Cleanup scripts are bounded to
 their own component:
@@ -150,19 +157,19 @@ profiles with `.env.example` so interpolation and profile errors fail locally.
 Start PostgreSQL:
 
 ```sh
-docker compose --env-file .env up -d db
+scripts/runtime/postgres-start.sh
 ```
 
 Run the schema migration explicitly through the database container:
 
 ```sh
-docker compose --env-file .env exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /migrations/0001_knowledge_schema.sql'
+scripts/runtime/postgres-migrate.sh
 ```
 
 Start the API:
 
 ```sh
-docker compose --env-file .env up -d api
+scripts/runtime/api-start.sh
 ```
 
 Check liveness:
@@ -265,8 +272,14 @@ The default Compose stack does not start local model services.
 Enable the optional Ollama service:
 
 ```sh
-docker compose --env-file .env --profile ollama up -d ollama
+scripts/runtime/ollama-chat-start.sh
+# or
+scripts/runtime/ollama-embeddings-start.sh
 ```
+
+Ollama is one shared service. The chat and embedding scripts target the same
+service, model volume, and daemon; stopping or cleaning either side affects the
+shared Ollama runtime.
 
 Use Ollama for embeddings:
 
@@ -284,7 +297,15 @@ CHAT_BASE_URL=http://ollama:11434/api
 CHAT_MODEL=llama3.2
 ```
 
-Model download is manual and explicit:
+Model download is explicit. Use the matching setup script for the configured
+capability:
+
+```sh
+scripts/runtime/ollama-chat-setup.sh
+scripts/runtime/ollama-embeddings-setup.sh
+```
+
+Equivalent manual commands are:
 
 ```sh
 docker compose --env-file .env --profile ollama exec ollama ollama pull llama3.2
@@ -313,7 +334,8 @@ LLAMA_CPP_EMBEDDING_POOLING=mean
 Enable both llama.cpp services:
 
 ```sh
-docker compose --env-file .env --profile llama-cpp up -d llama-cpp-chat llama-cpp-embeddings
+scripts/runtime/llama-cpp-chat-start.sh
+scripts/runtime/llama-cpp-embeddings-start.sh
 ```
 
 Use llama.cpp for chat:
