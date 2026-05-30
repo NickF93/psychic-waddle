@@ -21,6 +21,12 @@ Milestone 5 does not add CORS middleware. If a future deployment exposes the
 API directly to browsers, that change must add explicit allowed-origin
 configuration without wildcard defaults.
 
+The ASGI entrypoint is:
+
+```text
+portfolio_rag_assistant.api.main:app
+```
+
 ## Endpoints
 
 ### `GET /health`
@@ -58,6 +64,14 @@ Request fields:
 - `question`: non-empty visitor question, up to 1000 characters.
 - `language`: explicit answer language, either `en` or `it`.
 
+Example proxied call:
+
+```sh
+curl -X POST https://pigreco.xyz/chat \
+  -H 'content-type: application/json' \
+  -d '{"question":"Where did Niccolo work?","language":"en"}'
+```
+
 Response:
 
 ```json
@@ -86,6 +100,26 @@ Public sources expose only:
 - optional `locator`
 
 The API does not expose internal source URIs.
+
+Refusal response:
+
+```json
+{
+  "status": "not_answerable",
+  "answer": "I do not have verified public context to answer that reliably.",
+  "sources": []
+}
+```
+
+Clarification response:
+
+```json
+{
+  "status": "needs_clarification",
+  "answer": "I can answer that, but I need a more specific question about experience, education, projects, research, skills, or contact details.",
+  "sources": []
+}
+```
 
 ## Limits
 
@@ -128,6 +162,19 @@ Runtime composition uses only existing explicit environment names:
 
 No aliases, deprecated names, hidden fallbacks, wildcard CORS defaults, or
 legacy compatibility paths are allowed.
+
+At runtime, composition builds:
+
+1. the configured `LLMProvider`;
+2. `PostgreSQLRetriever`;
+3. `DeterministicAnswerPolicy`;
+4. `GroundedAnswerGenerator`;
+5. `PublicChatService`;
+6. the FastAPI application.
+
+The API layer only adapts HTTP input/output and orchestrates these authorities.
+It must not copy prompt text, fallback wording, ranking logic, answerability
+logic, provider payload logic, or database query logic.
 
 ## Milestone 5 Acceptance
 
