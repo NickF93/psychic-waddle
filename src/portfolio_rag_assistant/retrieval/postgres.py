@@ -105,10 +105,14 @@ class PostgreSQLRetriever:
             query_embedding=embedding_response.embeddings[0],
             limit=request.top_k,
         )
+        keyword_candidates = self._search_keywords(
+            question=request.question,
+            limit=request.top_k,
+        )
         results = tuple(
             candidate.to_context()
             for candidate in _rank_candidates(
-                vector_candidates,
+                _merge_candidates(vector_candidates, keyword_candidates),
                 top_k=request.top_k,
                 min_score=self._min_score,
             )
@@ -207,6 +211,44 @@ def _rank_candidates(
         )
         if candidate.combined_score >= min_score
     )[:top_k]
+
+
+def _merge_candidates(
+    *candidate_groups: tuple[RetrievalCandidate, ...],
+) -> tuple[RetrievalCandidate, ...]:
+    merged: dict[int, RetrievalCandidate] = {}
+    for candidates in candidate_groups:
+        for candidate in candidates:
+            existing = merged.get(candidate.chunk_id)
+            if existing is None:
+                merged[candidate.chunk_id] = candidate
+                continue
+            merged[candidate.chunk_id] = _merge_candidate(existing, candidate)
+    return tuple(merged.values())
+
+
+def _merge_candidate(
+    left: RetrievalCandidate,
+    right: RetrievalCandidate,
+) -> RetrievalCandidate:
+    return RetrievalCandidate(
+        chunk_id=left.chunk_id,
+        chunk_text=left.chunk_text,
+        category=left.category,
+        source_uri=left.source_uri,
+        source_title=left.source_title,
+        source_locator=left.source_locator,
+        vector_score=_max_optional(left.vector_score, right.vector_score),
+        keyword_score=_max_optional(left.keyword_score, right.keyword_score),
+    )
+
+
+def _max_optional(left: float | None, right: float | None) -> float | None:
+    if left is None:
+        return right
+    if right is None:
+        return left
+    return max(left, right)
 
 
 def _vector_candidate_from_row(row: tuple[Any, ...]) -> RetrievalCandidate:
