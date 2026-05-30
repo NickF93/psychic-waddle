@@ -64,8 +64,45 @@ Retrieval must not:
 - Store visitor questions or request metadata.
 - Use private facts or chunks in recruiter-facing results.
 
-## Sprint 3.1 Scope
+## Configuration
 
-Sprint 3.1 defines the provider-neutral retrieval contract only. PostgreSQL
-queries, vector search, keyword search, hybrid ranking, and retrieval
-configuration are implemented in Sprint 3.2.
+Retrieval uses explicit environment variable names. There are no aliases,
+legacy names, or fallback defaults.
+
+| Name | Required | Description |
+| --- | --- | --- |
+| `RETRIEVAL_TOP_K` | Yes | Positive maximum number of chunks requested by the application layer. |
+| `RETRIEVAL_MIN_SCORE` | Yes | Minimum accepted combined score from `0` to `1`. |
+
+The configured `EMBEDDING_MODEL` and `LLM_BACKEND` identify the embeddings used
+by PostgreSQL retrieval. The retriever filters stored embeddings by backend and
+model before comparing vectors.
+
+## PostgreSQL Retrieval
+
+`PostgreSQLRetriever` implements the retrieval contract against PostgreSQL and
+`pgvector`.
+
+The retriever:
+
+- Embeds the question through `LLMProvider.embed()` only.
+- Searches only `chunks.public_visible = true`.
+- Runs exact vector search over `chunk_embeddings`.
+- Filters vector candidates by embedding backend and embedding model.
+- Runs keyword search with PostgreSQL full-text search using the `simple`
+  configuration.
+- Merges vector and keyword candidates by chunk id.
+- Ranks deterministically by combined score, vector score, keyword score, and
+  chunk id.
+- Returns only source-backed `RetrievedContext` records.
+
+The combined score is the highest available score for the chunk across vector
+and keyword search. This keeps scoring simple and inspectable for the later
+answerability policy.
+
+## Sprint 3.2 Scope
+
+Sprint 3.2 adds PostgreSQL vector retrieval, keyword retrieval, deterministic
+hybrid ranking, retrieval configuration, and mocked retrieval tests. It still
+does not add answerability policy, grounded answer generation, chat APIs, or
+visitor question collection.
