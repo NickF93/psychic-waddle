@@ -103,6 +103,25 @@ def test_compose_local_llms_are_profile_gated() -> None:
     assert services["llama-cpp-embeddings"]["profiles"] == ["llama-cpp"]
 
 
+def test_compose_local_llms_have_readiness_healthchecks() -> None:
+    services = _compose()["services"]
+
+    assert services["ollama"]["healthcheck"]["test"] == [
+        "CMD",
+        "ollama",
+        "list",
+    ]
+    for service_name in ("llama-cpp-chat", "llama-cpp-embeddings"):
+        healthcheck = services[service_name]["healthcheck"]
+        assert healthcheck["test"] == [
+            "CMD",
+            "curl",
+            "-fsS",
+            "http://127.0.0.1:8080/health",
+        ]
+        assert healthcheck["retries"] >= 12
+
+
 def test_llama_cpp_profile_has_separate_chat_and_embedding_servers() -> None:
     services = _compose()["services"]
     chat_command = services["llama-cpp-chat"]["command"]

@@ -76,6 +76,8 @@ def test_scripts_use_explicit_env_file_contract() -> None:
 
     assert 'ENV_FILE=${ENV_FILE:-"$ROOT_DIR/.env"}' in common
     assert 'docker compose --env-file "$ENV_FILE"' in common
+    assert "RUNTIME_WAIT_TIMEOUT_SECONDS" in common
+    assert "up --wait --wait-timeout" in common
     assert ".env.example" not in _all_script_text()
 
 
@@ -92,7 +94,7 @@ def test_api_scripts_target_only_api_runtime_operations() -> None:
     assert "compose build api" in _script("api-build.sh")
     assert "compose build api" in _script("api-setup.sh")
     assert "compose_config" in _script("api-setup.sh")
-    assert "compose up -d api" in _script("api-start.sh")
+    assert "compose_up_wait api" in _script("api-start.sh")
     assert "compose stop api" in _script("api-stop.sh")
     assert "remove_service api" in _script("api-down.sh")
     assert "remove_docker_image portfolio-rag-assistant:local" in _script(
@@ -102,13 +104,14 @@ def test_api_scripts_target_only_api_runtime_operations() -> None:
 
 
 def test_postgres_scripts_own_database_lifecycle_and_migration() -> None:
-    assert "compose up -d db" in _script("postgres-setup.sh")
-    assert "compose up -d db" in _script("postgres-start.sh")
+    assert "compose_up_wait db" in _script("postgres-setup.sh")
+    assert "compose_up_wait db" in _script("postgres-start.sh")
     assert "compose stop db" in _script("postgres-stop.sh")
     assert "remove_service db" in _script("postgres-down.sh")
     assert "require_cleanup_flag --destroy-data" in _script("postgres-cleanup.sh")
     assert "remove_compose_volume postgres-data" in _script("postgres-cleanup.sh")
     assert "psql" in _script("postgres-migrate.sh")
+    assert "--set ON_ERROR_STOP=1" in _script("postgres-migrate.sh")
     assert "/migrations/0001_knowledge_schema.sql" in _script("postgres-migrate.sh")
 
 
@@ -125,11 +128,15 @@ def test_migration_command_is_not_duplicated() -> None:
 def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
     assert "require_backend CHAT_BACKEND ollama" in _script("ollama-chat-setup.sh")
     assert "configured_value CHAT_MODEL" in _script("ollama-chat-setup.sh")
+    assert "compose_profile_up_wait ollama ollama" in _script("ollama-chat-setup.sh")
     assert "ollama pull" in _script("ollama-chat-setup.sh")
     assert "require_backend EMBEDDING_BACKEND ollama" in _script(
         "ollama-embeddings-setup.sh"
     )
     assert "configured_value EMBEDDING_MODEL" in _script(
+        "ollama-embeddings-setup.sh"
+    )
+    assert "compose_profile_up_wait ollama ollama" in _script(
         "ollama-embeddings-setup.sh"
     )
     assert "ollama pull" in _script("ollama-embeddings-setup.sh")
@@ -143,6 +150,10 @@ def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
         "ollama-embeddings-down.sh",
     ):
         assert "ollama" in _script(name)
+    assert "compose_profile_up_wait ollama ollama" in _script("ollama-chat-start.sh")
+    assert "compose_profile_up_wait ollama ollama" in _script(
+        "ollama-embeddings-start.sh"
+    )
 
 
 def test_llama_cpp_scripts_keep_chat_and_embedding_services_separate() -> None:
@@ -150,15 +161,23 @@ def test_llama_cpp_scripts_keep_chat_and_embedding_services_separate() -> None:
         "llama-cpp-chat-setup.sh"
     )
     assert "LLAMA_CPP_CHAT_MODEL_PATH" in _script("llama-cpp-chat-setup.sh")
-    assert "up -d llama-cpp-chat" in _script("llama-cpp-chat-setup.sh")
+    assert "compose_profile_up_wait llama-cpp llama-cpp-chat" in _script(
+        "llama-cpp-chat-setup.sh"
+    )
+    assert "compose_profile_up_wait llama-cpp llama-cpp-chat" in _script(
+        "llama-cpp-chat-start.sh"
+    )
     assert "require_backend EMBEDDING_BACKEND llama-cpp" in _script(
         "llama-cpp-embeddings-setup.sh"
     )
     assert "LLAMA_CPP_EMBEDDING_MODEL_PATH" in _script(
         "llama-cpp-embeddings-setup.sh"
     )
-    assert "up -d llama-cpp-embeddings" in _script(
+    assert "compose_profile_up_wait llama-cpp llama-cpp-embeddings" in _script(
         "llama-cpp-embeddings-setup.sh"
+    )
+    assert "compose_profile_up_wait llama-cpp llama-cpp-embeddings" in _script(
+        "llama-cpp-embeddings-start.sh"
     )
 
 
