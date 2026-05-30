@@ -303,18 +303,103 @@ Items:
 
 **Feature:** polished recruiter-facing replies from verified context.
 
-### Sprint 4.1: Grounded Synthesis
+This milestone adds the `AnswerGenerator` authority only. It does not add public
+HTTP endpoints, request orchestration, retrieval, answerability decisions,
+database access, ingestion, or question collection.
+
+Milestone 4 uses one canonical implementation branch:
+`feature/answer-generation`. Sprint boundaries are preserved through separate
+semantic commits.
+
+Source evidence is represented in two ways:
+
+- structured source references are returned deterministically from approved
+  retrieved context;
+- a compact source note is appended deterministically to the final answer text.
+
+The LLM must not invent, rename, select, or validate sources. Source identity is
+owned by code using `AnswerPolicyDecision.approved_context`.
+
+### Sprint 4.0: Answer Generation Plan Alignment
 
 Items:
 
-- Implementation: add system prompt for context-only answers.
-- Implementation: generate answers only from approved retrieved context.
-- Implementation: return source-aware answer payloads.
-- Implementation: preserve user language for English and Italian.
-- Test: verify generated answers use only supplied context.
-- Validation: missing context returns a clear "not verified" response.
-- Checkpoint: answers are concise, professional, and source-grounded.
-- Final track/doc: prompt contract.
+- Documentation: expand Milestone 4 into concrete sprints.
+- Documentation: define M4 boundaries against retrieval, policy, storage, API,
+  and question collection.
+- Documentation: define deterministic source payload plus deterministic source
+  note behavior.
+- Validation: confirm `PLAN.md`, `AGENTS.md`, and `docs/architecture.md` remain
+  coherent.
+- Checkpoint: M4 can start without architectural ambiguity.
+
+### Sprint 4.1: Answer Generator Contract
+
+Items:
+
+- Implementation: add an `AnswerGenerator` protocol with async `generate()`.
+- Implementation: define request model containing the visitor question, an
+  `AnswerPolicyDecision`, and explicit language: `en` or `it`.
+- Implementation: define response model containing answer text, answer status,
+  and deterministic source references.
+- Implementation: define source reference model from approved context with
+  source title, source URI, and optional source locator.
+- Implementation: define explicit answer generation error types.
+- Test: validate accepted answerable requests.
+- Test: reject blank questions and unsupported languages.
+- Test: verify non-answerable decisions cannot carry sources.
+- Test: add fake generator contract tests.
+- Validation: contract does not retrieve, rank, decide answerability, call
+  embeddings, access the database, or store questions.
+- Final track/doc: `docs/answer-generation.md`.
+
+### Sprint 4.2: Grounded Synthesis Implementation
+
+Items:
+
+- Implementation: add `GroundedAnswerGenerator`.
+- Implementation: build a system prompt that forbids unsupported claims,
+  speculation, private data, and external knowledge.
+- Implementation: include only `AnswerPolicyDecision.approved_context` in the
+  prompt.
+- Implementation: exclude retrieval scores and internal diagnostics from the
+  prompt.
+- Implementation: call `LLMProvider.chat()` only for `answerable` decisions.
+- Implementation: never call `LLMProvider.embed()`.
+- Implementation: return deterministic fallback text for `not_answerable`.
+- Implementation: return deterministic clarification text for
+  `needs_clarification`.
+- Implementation: append deterministic English or Italian source notes for
+  answerable responses.
+- Implementation: return structured source references deduplicated from
+  approved context.
+- Test: fake provider receives exactly one chat request for answerable
+  decisions.
+- Test: fake provider is not called for refusal or clarification responses.
+- Test: prompt contains approved context and excludes unapproved context.
+- Test: prompt excludes score metadata.
+- Test: answer text includes deterministic English and Italian source notes.
+- Test: structured sources match approved context.
+- Validation: generated answer body is model-produced, but evidence identity is
+  code-produced.
+- Final track/doc: update `docs/answer-generation.md` with prompt and fallback
+  contract.
+
+### Sprint 4.3: Milestone 4 Acceptance and Handoff
+
+Items:
+
+- Test: add an integration-style unit test using fake approved context for
+  "Where did Niccolò work?".
+- Test: verify answer generation works without retrieval, database, API, or
+  question collection.
+- Validation: answer generator output is suitable for later `POST /chat`
+  response composition.
+- Validation: no visitor-derived data is stored.
+- Documentation: add M4 acceptance checklist and M5 handoff notes to
+  `docs/answer-generation.md`.
+- Checkpoint: M4 can produce recruiter-facing wording from an already approved
+  policy decision.
 
 ---
 
