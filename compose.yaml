@@ -1,0 +1,60 @@
+name: portfolio-rag-assistant
+
+services:
+  api:
+    build:
+      context: .
+    image: portfolio-rag-assistant:local
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      LLM_BACKEND: ${LLM_BACKEND}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      LLM_API_KEY: ${LLM_API_KEY}
+      CHAT_MODEL: ${CHAT_MODEL}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K}
+      RETRIEVAL_MIN_SCORE: ${RETRIEVAL_MIN_SCORE}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000"
+    networks:
+      - runtime
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  db:
+    image: pgvector/pgvector:0.8.2-pg17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./migrations:/migrations:ro
+    networks:
+      - runtime
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  runtime:
+    driver: bridge
+
+volumes:
+  postgres-data:
