@@ -21,8 +21,16 @@ class AnswerGenerationError(Exception):
     """Base error for answer generation failures."""
 
 
+class AnswerGenerationConfigurationError(AnswerGenerationError):
+    """Raised when an answer generator is configured incorrectly."""
+
+
 class AnswerGenerationRequestError(AnswerGenerationError):
     """Raised when answer generation input violates the contract."""
+
+
+class AnswerGenerationProviderError(AnswerGenerationError):
+    """Raised when model I/O fails during answer generation."""
 
 
 @dataclass(frozen=True, slots=True)
