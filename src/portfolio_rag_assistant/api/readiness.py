@@ -1,0 +1,102 @@
+"""Runtime readiness checks for deployment exposure."""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import Any, Protocol
+
+
+class ReadinessCheckError(RuntimeError):
+    """Raised when the runtime is not ready for public traffic."""
+
+
+class ReadinessCursor(Protocol):
+    """Small cursor surface used by readiness checks."""
+
+    def fetchone(self) -> tuple[Any, ...] | None: ...
+
+
+class ReadinessConnection(Protocol):
+    """Small connection surface used by readiness checks."""
+
+    def execute(
+        self,
+        query: str,
+        params: Sequence[object] = (),
+    ) -> ReadinessCursor: ...
+
+
+class DatabaseReadinessService:
+    """Check database, schema, and configured embedding availability."""
+
+    def __init__(
+        self,
+        *,
+        connection: ReadinessConnection,
+        embedding_backend: str,
+        embedding_model: str,
+    ) -> None:
+        self._connection = connection
+        self._embedding_backend = _require_text(
+            embedding_backend,
+            "embedding_backend",
+        )
+        self._embedding_model = _require_text(embedding_model, "embedding_model")
+
+    async def check(self) -> None:
+        """Raise when the database is not ready for public answers."""
+
+        try:
+            _require_schema(self._connection)
+            _require_embedding_availability(
+                self._connection,
+                embedding_backend=self._embedding_backend,
+                embedding_model=self._embedding_model,
+            )
+        except ReadinessCheckError:
+            raise
+        except Exception as error:
+            raise ReadinessCheckError("runtime readiness check failed") from error
+
+
+def _require_schema(connection: ReadinessConnection) -> None:
+    row = connection.execute(
+        """
+        SELECT
+            to_regclass('public.sources') IS NOT NULL,
+            to_regclass('public.facts') IS NOT NULL,
+            to_regclass('public.chunks') IS NOT NULL,
+            to_regclass('public.chunk_embeddings') IS NOT NULL
+        """
+    ).fetchone()
+    if row != (True, True, True, True):
+        raise ReadinessCheckError("knowledge schema is not ready")
+
+
+def _require_embedding_availability(
+    connection: ReadinessConnection,
+    *,
+    embedding_backend: str,
+    embedding_model: str,
+) -> None:
+    row = connection.execute(
+        """
+        SELECT EXISTS (
+            SELECT 1
+            FROM chunk_embeddings
+            JOIN chunks ON chunks.id = chunk_embeddings.chunk_id
+            WHERE chunks.public_visible = true
+              AND chunk_embeddings.embedding_backend = %s
+              AND chunk_embeddings.embedding_model = %s
+        )
+        """,
+        (embedding_backend, embedding_model),
+    ).fetchone()
+    if row != (True,):
+        raise ReadinessCheckError("configured embeddings are not ready")
+
+
+def _require_text(value: str, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ReadinessCheckError(f"{field_name} must be set")
+    return value.strip()

@@ -16,6 +16,7 @@ from portfolio_rag_assistant.api.schemas import (
     ChatResponseBody,
     ErrorBody,
     HealthResponseBody,
+    ReadinessResponseBody,
 )
 from portfolio_rag_assistant.api.service import ChatServiceError
 
@@ -24,6 +25,16 @@ class ChatService(Protocol):
     """Small API-facing chat service surface."""
 
     def answer(self, request: ChatRequestBody) -> Awaitable[ChatResponseBody]: ...
+
+
+class ReadinessService(Protocol):
+    """Small API-facing readiness service surface."""
+
+    def check(self) -> Awaitable[None]: ...
+
+
+class ReadinessServiceError(RuntimeError):
+    """Raised when runtime readiness cannot be confirmed."""
 
 
 class RequestSizeLimitMiddleware:
@@ -70,12 +81,14 @@ class RequestSizeLimitMiddleware:
 def create_api_app(
     *,
     chat_service: ChatService | None = None,
+    readiness_service: ReadinessService | None = None,
     max_body_bytes: int = MAX_REQUEST_BODY_BYTES,
 ) -> FastAPI:
     """Create the public API application with injected authorities."""
 
     app = FastAPI(title="Portfolio RAG Assistant API")
     app.state.chat_service = chat_service
+    app.state.readiness_service = readiness_service
     app.add_middleware(
         RequestSizeLimitMiddleware,
         max_body_bytes=max_body_bytes,
@@ -89,6 +102,15 @@ def _register_routes(app: FastAPI) -> None:
     @app.get("/health", response_model=HealthResponseBody)
     async def health() -> HealthResponseBody:
         return HealthResponseBody()
+
+    @app.get("/ready", response_model=ReadinessResponseBody)
+    async def ready(request: Request) -> ReadinessResponseBody:
+        service = _require_readiness_service(request)
+        try:
+            await service.check()
+        except Exception as error:
+            raise ReadinessServiceError("runtime is not ready") from error
+        return ReadinessResponseBody()
 
     @app.post("/chat", response_model=ChatResponseBody)
     async def chat(body: ChatRequestBody, request: Request) -> ChatResponseBody:
@@ -119,6 +141,17 @@ def _register_error_handlers(app: FastAPI) -> None:
             message="chat service is unavailable",
         )
 
+    @app.exception_handler(ReadinessServiceError)
+    async def readiness_service_error_handler(
+        request: Request,
+        error: ReadinessServiceError,
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=503,
+            code="service_unavailable",
+            message="service is not ready",
+        )
+
     @app.exception_handler(Exception)
     async def unhandled_error_handler(
         request: Request,
@@ -135,6 +168,13 @@ def _require_chat_service(request: Request) -> ChatService:
     service = request.app.state.chat_service
     if service is None or not callable(getattr(service, "answer", None)):
         raise ChatServiceError("chat service is not configured")
+    return service
+
+
+def _require_readiness_service(request: Request) -> ReadinessService:
+    service = request.app.state.readiness_service
+    if service is None or not callable(getattr(service, "check", None)):
+        raise ReadinessServiceError("readiness service is not configured")
     return service
 
 

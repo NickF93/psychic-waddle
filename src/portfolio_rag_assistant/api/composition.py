@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import FastAPI
 
 from portfolio_rag_assistant.answer import GroundedAnswerGenerator
 from portfolio_rag_assistant.api.app import create_api_app
+from portfolio_rag_assistant.api.readiness import DatabaseReadinessService
 from portfolio_rag_assistant.api.service import PublicChatService
 from portfolio_rag_assistant.config import (
     ChatProviderSettings,
@@ -36,6 +38,14 @@ class APICompositionError(RuntimeError):
     """Raised when the runtime API cannot be composed."""
 
 
+@dataclass(frozen=True, slots=True)
+class RuntimeServices:
+    """Composed services exposed by the ASGI application."""
+
+    chat_service: PublicChatService
+    readiness_service: DatabaseReadinessService
+
+
 def _connect_database(settings: DatabaseSettings) -> Any:
     try:
         return connect_database(
@@ -58,13 +68,15 @@ def create_runtime_api_app(
 ) -> FastAPI:
     """Create the ASGI API application from explicit runtime configuration."""
 
+    services = build_runtime_services(
+        env=env,
+        chat_provider_factory=chat_provider_factory,
+        embedding_provider_factory=embedding_provider_factory,
+        connection_factory=connection_factory,
+    )
     return create_api_app(
-        chat_service=build_public_chat_service(
-            env=env,
-            chat_provider_factory=chat_provider_factory,
-            embedding_provider_factory=embedding_provider_factory,
-            connection_factory=connection_factory,
-        )
+        chat_service=services.chat_service,
+        readiness_service=services.readiness_service,
     )
 
 
@@ -76,6 +88,23 @@ def build_public_chat_service(
     connection_factory: ConnectionFactory = _connect_database,
 ) -> PublicChatService:
     """Compose the public chat service from configured authorities."""
+
+    return build_runtime_services(
+        env=env,
+        chat_provider_factory=chat_provider_factory,
+        embedding_provider_factory=embedding_provider_factory,
+        connection_factory=connection_factory,
+    ).chat_service
+
+
+def build_runtime_services(
+    *,
+    env: Mapping[str, str] | None = None,
+    chat_provider_factory: ChatProviderFactory = build_chat_provider,
+    embedding_provider_factory: EmbeddingProviderFactory = build_embedding_provider,
+    connection_factory: ConnectionFactory = _connect_database,
+) -> RuntimeServices:
+    """Compose public chat and readiness services from runtime configuration."""
 
     environment = os.environ if env is None else env
     database_settings = load_database_settings(environment)
@@ -92,12 +121,19 @@ def build_public_chat_service(
         embedding_model=embedding_settings.model,
         min_score=retrieval_settings.min_score,
     )
-    return PublicChatService(
-        retriever=retriever,
-        answer_policy=DeterministicAnswerPolicy(),
-        answer_generator=GroundedAnswerGenerator(
-            provider=chat_provider,
-            chat_model=chat_settings.model,
+    return RuntimeServices(
+        chat_service=PublicChatService(
+            retriever=retriever,
+            answer_policy=DeterministicAnswerPolicy(),
+            answer_generator=GroundedAnswerGenerator(
+                provider=chat_provider,
+                chat_model=chat_settings.model,
+            ),
+            retrieval_settings=retrieval_settings,
         ),
-        retrieval_settings=retrieval_settings,
+        readiness_service=DatabaseReadinessService(
+            connection=connection,
+            embedding_backend=embedding_settings.backend,
+            embedding_model=embedding_settings.model,
+        ),
     )
