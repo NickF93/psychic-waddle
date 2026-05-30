@@ -41,7 +41,7 @@ Source identity is deterministic and code-owned. It is derived only from
 For answerable responses:
 
 - structured source references must be returned;
-- a compact source note may be included in the answer text;
+- a compact source note must be included in the answer text;
 - source references must correspond to approved context.
 
 For `not_answerable` and `needs_clarification` responses:
