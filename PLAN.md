@@ -510,16 +510,28 @@ Items:
 **Feature:** reproducible container runtime for local development and a
 single-server deployment base.
 
+**Branch:** `feature/runtime-infrastructure`.
+
 This milestone starts after the public API exists, so the backend service,
 health endpoint, database, and optional local LLM services can be validated as a
 real runtime stack. It must not introduce Kubernetes, Swarm, reverse proxy,
 TLS, automatic model downloads, committed secrets, or a second database unless a
 later milestone proves a real need.
 
+Runtime defaults:
+
+- PostgreSQL runtime uses `pgvector/pgvector:0.8.2-pg17`.
+- API port binding defaults to `127.0.0.1` and can be explicitly overridden for
+  VPN/tun0 deployment.
+- Database migrations run explicitly through the PostgreSQL container with
+  `psql`; the API container does not run migrations on startup.
+- Optional local LLM services are CPU-only profiles in this milestone.
+
 ### Sprint 6.1: Backend Container
 
 Items:
 
+- Implementation: add minimal ASGI runtime dependency.
 - Implementation: add backend `Dockerfile`.
 - Implementation: add `.dockerignore`.
 - Config: use only explicit existing environment names without aliases.
@@ -537,6 +549,7 @@ Items:
 - Implementation: add private Compose network and service health checks.
 - Implementation: make the API service depend on database health.
 - Config: add Compose environment example with placeholder values only.
+- Validation: default API port binding is localhost-only.
 - Validation: `docker compose config` passes.
 - Validation: default stack starts from clean volumes.
 - Validation: migration, ingestion, and `GET /health` can run through Compose.
@@ -560,6 +573,18 @@ Items:
 - Checkpoint: API can be configured against either local profile or an external
   OpenAI-compatible endpoint.
 - Final track/doc: LLM runtime examples in `docs/runtime.md`.
+
+### Sprint 6.4: Runtime Documentation And Guards
+
+Items:
+
+- Test: add static runtime configuration guards.
+- Documentation: document image build and Compose operation.
+- Documentation: document explicit DB migration, ingestion, indexing, and
+  health-check commands.
+- Documentation: document optional LLM profiles and manual model setup.
+- Validation: full test suite passes.
+- Final track/doc: `docs/runtime.md`.
 
 ---
 
