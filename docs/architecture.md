@@ -61,7 +61,7 @@ The normal request flow is fixed:
 1. The API receives a visitor question.
 2. The `Retriever` searches reviewed knowledge through `KnowledgeStore`.
 3. The `AnswerPolicy` decides whether the retrieved context is answerable.
-4. The `AnswerGenerator` asks `LLMProvider` to phrase only approved context.
+4. The `AnswerGenerator` asks a `ChatProvider` to phrase only approved context.
 5. The API returns the answer, refusal, or clarification response.
 6. If enabled, `QuestionCollector` stores only an anonymous improvement signal.
 
@@ -70,16 +70,25 @@ question is answerable.
 
 ## Authority Boundaries
 
-### `LLMProvider`
+### `ChatProvider`
 
-Owns model I/O only.
+Owns chat model I/O only.
 
-- Provides chat completion and embedding calls through provider-neutral
-  contracts.
+- Provides chat completion calls through a provider-neutral contract.
 - Contains provider-specific HTTP payloads, routes, authentication, and response
   parsing.
 - Must not retrieve knowledge, decide answerability, collect questions, or write
   application data.
+
+### `EmbeddingProvider`
+
+Owns embedding model I/O only.
+
+- Provides embedding calls through a provider-neutral contract.
+- Contains provider-specific HTTP payloads, routes, authentication, and response
+  parsing.
+- Must not retrieve knowledge, rank chunks, decide answerability, collect
+  questions, or write application data.
 
 ### `KnowledgeStore`
 
@@ -146,13 +155,18 @@ Owns anonymous question improvement signals only.
 Configuration names are explicit. No aliases, deprecated names, compatibility
 names, or hidden fallbacks are allowed.
 
-- `LLM_BACKEND`: selected backend, one of `ollama`, `llama-cpp`, or
+- `CHAT_BACKEND`: chat backend, one of `ollama`, `llama-cpp`, or
   `openai-compatible`.
-- `LLM_BASE_URL`: base URL for the selected backend.
-- `LLM_API_KEY`: API key for providers that require one.
-- `CHAT_MODEL`: chat model name sent to the selected backend.
-- `EMBEDDING_MODEL`: embedding model name sent to the selected backend.
-- `DATABASE_URL`: PostgreSQL connection URL.
+- `CHAT_BASE_URL`: base URL for chat requests.
+- `CHAT_API_KEY`: optional API key for chat requests.
+- `CHAT_MODEL`: chat model name.
+- `EMBEDDING_BACKEND`: embedding backend, one of `ollama`, `llama-cpp`, or
+  `openai-compatible`.
+- `EMBEDDING_BASE_URL`: base URL for embedding requests.
+- `EMBEDDING_API_KEY`: optional API key for embedding requests.
+- `EMBEDDING_MODEL`: embedding model name.
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: PostgreSQL
+  connection fields.
 - `RETRIEVAL_TOP_K`: number of candidate chunks requested by retrieval.
 - `RETRIEVAL_MIN_SCORE`: minimum score required by answer policy.
 - `QUESTION_COLLECTION_ENABLED`: enables anonymous question signal storage.

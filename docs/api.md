@@ -41,6 +41,24 @@ Response:
 }
 ```
 
+### `GET /ready`
+
+Returns readiness for recruiter-facing exposure. Readiness checks database
+access, the expected knowledge schema, and embedding availability for the
+configured embedding backend and model.
+
+Response:
+
+```json
+{
+  "status": "ready"
+}
+```
+
+`/ready` does not call chat or embedding providers. Provider reachability is
+checked by the explicit runtime smoke command documented in
+`docs/runtime.md`.
+
 ### `POST /chat`
 
 Runs the recruiter-facing question flow:
@@ -149,13 +167,20 @@ The API must never expose:
 
 ## Configuration
 
-Runtime composition uses only existing explicit environment names:
+Runtime composition uses only explicit environment names:
 
-- `DATABASE_URL`
-- `LLM_BACKEND`
-- `LLM_BASE_URL`
-- `LLM_API_KEY`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
+- `CHAT_BACKEND`
+- `CHAT_BASE_URL`
+- `CHAT_API_KEY`
 - `CHAT_MODEL`
+- `EMBEDDING_BACKEND`
+- `EMBEDDING_BASE_URL`
+- `EMBEDDING_API_KEY`
 - `EMBEDDING_MODEL`
 - `RETRIEVAL_TOP_K`
 - `RETRIEVAL_MIN_SCORE`
@@ -165,12 +190,14 @@ legacy compatibility paths are allowed.
 
 At runtime, composition builds:
 
-1. the configured `LLMProvider`;
-2. `PostgreSQLRetriever`;
-3. `DeterministicAnswerPolicy`;
-4. `GroundedAnswerGenerator`;
-5. `PublicChatService`;
-6. the FastAPI application.
+1. the configured `ChatProvider`;
+2. the configured `EmbeddingProvider`;
+3. `PostgreSQLRetriever`;
+4. `DeterministicAnswerPolicy`;
+5. `GroundedAnswerGenerator`;
+6. `PublicChatService`;
+7. the database readiness service;
+8. the FastAPI application.
 
 The API layer only adapts HTTP input/output and orchestrates these authorities.
 It must not copy prompt text, fallback wording, ranking logic, answerability
@@ -181,6 +208,7 @@ logic, provider payload logic, or database query logic.
 Milestone 5 is accepted when:
 
 - `GET /health` returns a stable health response;
+- `GET /ready` returns readiness only when schema and embeddings are ready;
 - `POST /chat` returns public-safe answers through the existing authorities;
 - API schemas reject invalid language, blank questions, and oversized input;
 - answerable responses expose source title and optional locator only;

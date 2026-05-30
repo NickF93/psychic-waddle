@@ -3,7 +3,7 @@
 ## Purpose
 
 Milestone 6 defines a reproducible local runtime for the public API, PostgreSQL
-with `pgvector`, and optional local LLM services.
+with `pgvector`, and optional local model services.
 
 The runtime layer does not add CORS, TLS, a reverse proxy, Kubernetes, Swarm,
 automatic model downloads, committed secrets, question collection, or API
@@ -23,16 +23,23 @@ The image starts:
 uvicorn portfolio_rag_assistant.api.main:app --host 0.0.0.0 --port 8000
 ```
 
-The image contains application code and migrations. It does not bake `.env`
-files, local model files, curated knowledge files, or database data into the
-image.
+The image contains application code, migrations, and the dependency lock file.
+It does not bake `.env` files, local model files, curated knowledge files, or
+database data into the image.
+
+Runtime build inputs are pinned:
+
+- the Python base image is pinned by digest;
+- PostgreSQL, Ollama, and llama.cpp images are pinned by digest;
+- Python dependencies are constrained by `requirements.lock`;
+- Docker builds do not upgrade `pip` at build time.
 
 ## Compose Stack
 
 The default Compose stack contains:
 
 - `api`: FastAPI public chat API.
-- `db`: PostgreSQL 17 with `pgvector`, using `pgvector/pgvector:0.8.2-pg17`.
+- `db`: PostgreSQL 17 with `pgvector`.
 - `postgres-data`: named PostgreSQL data volume.
 - `runtime`: private bridge network.
 
@@ -73,21 +80,41 @@ Start the API:
 docker compose --env-file .env up -d api
 ```
 
-Check health:
+Check liveness:
 
 ```sh
 curl http://127.0.0.1:8000/health
 ```
+
+Check runtime readiness:
+
+```sh
+curl http://127.0.0.1:8000/ready
+```
+
+`/health` is liveness only. It confirms the API process answers HTTP requests.
+`/ready` confirms database access, the expected knowledge schema, and at least
+one public embedding for the configured embedding backend and model.
+
+Before exposing the service to recruiters, run the explicit smoke check:
+
+```sh
+docker compose --env-file .env run --rm api portfolio-rag-assistant runtime smoke
+```
+
+The smoke check verifies readiness and calls both configured provider
+capabilities once. This is intentionally not part of the periodic Docker
+healthcheck because provider calls can be slow, metered, or model-loading.
 
 ## Knowledge Commands
 
 Curated knowledge files are not baked into the image. Mount them explicitly for
 maintenance commands.
 
-Validate curated knowledge:
+Validate curated knowledge without starting dependencies:
 
 ```sh
-docker compose --env-file .env run --rm --volume "$PWD/knowledge:/knowledge:ro" api portfolio-rag-assistant knowledge validate /knowledge/profile.json
+docker compose --env-file .env run --rm --no-deps --volume "$PWD/knowledge:/knowledge:ro" api portfolio-rag-assistant knowledge validate /knowledge/profile.json
 ```
 
 Ingest curated knowledge:
@@ -102,24 +129,15 @@ Index embeddings after ingestion:
 docker compose --env-file .env run --rm api portfolio-rag-assistant knowledge index-embeddings
 ```
 
-Embedding indexing uses only the configured `LLMProvider.embed()` path. It does
-not call chat models or create facts.
+Embedding indexing uses only the configured embedding provider. It does not call
+chat models or create facts.
 
-## Provider Configuration
+## Runtime Configuration
 
-The application still uses only the explicit configuration names defined in
-`docs/backend-configuration.md` and `docs/api.md`:
+All names are explicit. There are no aliases, legacy names, or fallback
+configuration paths.
 
-- `DATABASE_URL`
-- `LLM_BACKEND`
-- `LLM_BASE_URL`
-- `LLM_API_KEY`
-- `CHAT_MODEL`
-- `EMBEDDING_MODEL`
-- `RETRIEVAL_TOP_K`
-- `RETRIEVAL_MIN_SCORE`
-
-Compose builds `DATABASE_URL` from the PostgreSQL service values:
+Database configuration:
 
 ```env
 POSTGRES_DB=portfolio_rag_assistant
@@ -127,9 +145,35 @@ POSTGRES_USER=portfolio_rag_assistant
 POSTGRES_PASSWORD=replace-with-local-password
 ```
 
-## Optional Local LLM Profiles
+The API receives database settings as discrete environment variables inside
+Compose: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
+Application code passes those fields directly to the PostgreSQL driver instead
+of building a connection URL through string interpolation.
 
-The default Compose stack does not start local LLM services.
+Model capability configuration:
+
+```env
+CHAT_BACKEND=openai-compatible
+CHAT_BASE_URL=https://example.invalid/v1
+CHAT_API_KEY=replace-with-chat-provider-token
+CHAT_MODEL=replace-with-chat-model
+
+EMBEDDING_BACKEND=openai-compatible
+EMBEDDING_BASE_URL=https://example.invalid/v1
+EMBEDDING_API_KEY=replace-with-embedding-provider-token
+EMBEDDING_MODEL=replace-with-embedding-model
+```
+
+Set the chat and embedding base URLs to the same API root when one provider
+serves both capabilities. Set them differently when chat and embeddings are
+served by different systems.
+
+Changing `EMBEDDING_BACKEND` or `EMBEDDING_MODEL` requires re-indexing the
+knowledge base before `/ready` can pass for the new embedding pair.
+
+## Optional Local Model Profiles
+
+The default Compose stack does not start local model services.
 
 ### Ollama
 
@@ -139,13 +183,20 @@ Enable the optional Ollama service:
 docker compose --env-file .env --profile ollama up -d ollama
 ```
 
-Configure the API:
+Use Ollama for embeddings:
 
 ```env
-LLM_BACKEND=ollama
-LLM_BASE_URL=http://ollama:11434/api
-CHAT_MODEL=llama3.2
+EMBEDDING_BACKEND=ollama
+EMBEDDING_BASE_URL=http://ollama:11434/api
 EMBEDDING_MODEL=nomic-embed-text
+```
+
+Use Ollama for chat:
+
+```env
+CHAT_BACKEND=ollama
+CHAT_BASE_URL=http://ollama:11434/api
+CHAT_MODEL=llama3.2
 ```
 
 Model download is manual and explicit:
@@ -159,22 +210,58 @@ Ollama model data is stored in the `ollama-models` named volume.
 
 ### llama.cpp
 
-Place a GGUF model in the local model directory and set:
+llama.cpp runs as two services because chat and embedding workloads require
+separate server modes:
+
+- `llama-cpp-chat`: chat completions.
+- `llama-cpp-embeddings`: embeddings with `--embedding`.
+
+Place GGUF models in the local model directory and set:
 
 ```env
-LLM_BACKEND=llama-cpp
-LLM_BASE_URL=http://llama-cpp:8080/v1
 LLAMA_CPP_MODEL_DIR=./models
-LLAMA_CPP_MODEL_PATH=/models/replace-with-model.gguf
-CHAT_MODEL=replace-with-chat-model
-EMBEDDING_MODEL=replace-with-embedding-model
+LLAMA_CPP_CHAT_MODEL_PATH=/models/replace-with-chat-model.gguf
+LLAMA_CPP_EMBEDDING_MODEL_PATH=/models/replace-with-embedding-model.gguf
+LLAMA_CPP_EMBEDDING_POOLING=mean
 ```
 
-Enable the optional llama.cpp server:
+Enable both llama.cpp services:
 
 ```sh
-docker compose --env-file .env --profile llama-cpp up -d llama-cpp
+docker compose --env-file .env --profile llama-cpp up -d llama-cpp-chat llama-cpp-embeddings
+```
+
+Use llama.cpp for chat:
+
+```env
+CHAT_BACKEND=llama-cpp
+CHAT_BASE_URL=http://llama-cpp-chat:8080/v1
+CHAT_MODEL=local-chat
+```
+
+Use llama.cpp for embeddings:
+
+```env
+EMBEDDING_BACKEND=llama-cpp
+EMBEDDING_BASE_URL=http://llama-cpp-embeddings:8080/v1
+EMBEDDING_MODEL=local-embedding
 ```
 
 The model directory is mounted read-only. M6 does not add GPU-specific Compose
 configuration.
+
+### Mixed Mode
+
+Use an external OpenAI-compatible API for chat and a local embedding backend
+when the chat model is heavier than embedding generation:
+
+```env
+CHAT_BACKEND=openai-compatible
+CHAT_BASE_URL=https://api.example.com/v1
+CHAT_API_KEY=replace-with-chat-provider-token
+CHAT_MODEL=external-chat-model
+
+EMBEDDING_BACKEND=ollama
+EMBEDDING_BASE_URL=http://ollama:11434/api
+EMBEDDING_MODEL=nomic-embed-text
+```

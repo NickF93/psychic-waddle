@@ -22,7 +22,7 @@ It may use:
 
 It must not:
 
-- call `LLMProvider.chat()` or `LLMProvider.embed()`;
+- call `ChatProvider.chat()` or `EmbeddingProvider.embed()`;
 - search the database;
 - alter retrieval ranking;
 - create facts, chunks, or embeddings;

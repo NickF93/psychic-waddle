@@ -67,7 +67,7 @@ For `answerable` decisions, it:
 
 - formats only approved context into the user prompt;
 - excludes retrieval scores, thresholds, rankings, and internal diagnostics;
-- calls `LLMProvider.chat()` with the configured chat model;
+- calls `ChatProvider.chat()` with the configured chat model;
 - appends the deterministic source note;
 - returns structured source references deduplicated from approved context.
 
@@ -103,14 +103,14 @@ generator only phrases the already-decided outcome.
 
 Answer generation may:
 
-- call `LLMProvider.chat()` for `answerable` decisions;
+- call `ChatProvider.chat()` for `answerable` decisions;
 - format approved context into a prompt;
 - produce deterministic fallback or clarification text;
 - attach deterministic source references.
 
 Answer generation must not:
 
-- call `LLMProvider.embed()`;
+- call `EmbeddingProvider.embed()`;
 - call `Retriever`;
 - query PostgreSQL;
 - run answer policy;
@@ -136,10 +136,10 @@ metadata from reaching the model.
 Milestone 4 is accepted when:
 
 - an answerable policy decision can produce recruiter-facing text through
-  `LLMProvider.chat()`;
+  `ChatProvider.chat()`;
 - fallback and clarification decisions return deterministic text without model
   calls;
-- `LLMProvider.embed()` is never called by answer generation;
+- `EmbeddingProvider.embed()` is never called by answer generation;
 - approved context is the only context sent to the chat provider;
 - retrieval scores and internal diagnostics are excluded from prompts and
   answer text;
