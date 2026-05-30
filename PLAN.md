@@ -407,18 +407,101 @@ Items:
 
 **Feature:** minimal backend API for the portfolio widget.
 
-### Sprint 5.1: API Surface
+Milestone 5 adds the HTTP application boundary only. The API receives a visitor
+question, orchestrates existing authorities, and returns a public-safe response.
+It does not retrieve, decide answerability, generate wording, persist knowledge,
+or collect visitor questions itself.
+
+The portfolio website is expected to call this service through a server-side
+proxy over the private OpenVPN/tun0 network. Milestone 5 therefore does not add
+CORS middleware.
+
+### Sprint 5.1: API Plan And Contract
+
+Items:
+
+- Documentation: expand Milestone 5 into concrete sprints.
+- Documentation: define API boundaries against retrieval, policy, answer
+  generation, storage, and question collection.
+- Documentation: define `GET /health`.
+- Documentation: define `POST /chat`.
+- Documentation: define public request fields:
+  - `question`
+  - `language`
+- Documentation: define public response fields:
+  - `status`
+  - `answer`
+  - `sources`
+- Documentation: define public source fields:
+  - `title`
+  - optional `locator`
+- Documentation: define that source URIs, retrieval scores, prompts, stack
+  traces, provider errors, and database details never reach the frontend.
+- Validation: confirm M5 does not introduce visitor question persistence.
+- Final track/doc: `docs/api.md`.
+
+### Sprint 5.2: API Schemas And Application Boundary
+
+Items:
+
+- Chore: add FastAPI dependency.
+- Implementation: add API package.
+- Implementation: define typed request and response schemas.
+- Implementation: require explicit language: `en` or `it`.
+- Implementation: reject blank questions.
+- Implementation: reject oversized questions.
+- Implementation: reject oversized request bodies.
+- Implementation: add app factory with injected chat service.
+- Test: validate accepted English and Italian requests.
+- Test: reject blank questions, unsupported language, and oversized input.
+- Test: verify source URI is not part of the public response model.
+
+### Sprint 5.3: Chat Orchestration Service
+
+Items:
+
+- Implementation: add a chat service that orchestrates only:
+  - `Retriever.retrieve()`
+  - `AnswerPolicy.decide()`
+  - `AnswerGenerator.generate()`
+  - public response mapping
+- Implementation: pass configured retrieval limits to retrieval and policy.
+- Implementation: map answer sources to public title and locator only.
+- Implementation: keep retrieval scores and diagnostics internal.
+- Implementation: sanitize authority failures into public-safe API errors.
+- Test: answerable flow calls retriever, policy, and generator.
+- Test: not-answerable flow returns the generator fallback.
+- Test: clarification flow returns the generator clarification response.
+- Test: internal errors do not leak raw messages.
+
+### Sprint 5.4: HTTP Endpoints
 
 Items:
 
 - Implementation: add `POST /chat`.
 - Implementation: add `GET /health`.
-- Implementation: add typed request and response schemas.
-- Implementation: add request size limits and simple abuse controls.
-- Test: add API tests.
-- Validation: raw internal traces never leak to the frontend.
-- Checkpoint: frontend can call one endpoint.
-- Final track/doc: API reference.
+- Implementation: wire endpoint to the injected chat service.
+- Implementation: return stable JSON errors for validation and service failures.
+- Implementation: do not add CORS in M5.
+- Test: `GET /health` returns healthy status.
+- Test: `POST /chat` returns answerable response.
+- Test: `POST /chat` returns not-answerable response.
+- Test: invalid input returns stable validation errors.
+- Test: internal exceptions return sanitized errors only.
+
+### Sprint 5.5: Real Runtime Composition
+
+Items:
+
+- Implementation: compose configured provider, PostgreSQL retriever,
+  deterministic policy, and grounded answer generator.
+- Config: use only exact existing environment names.
+- Implementation: expose an ASGI `app` object.
+- Validation: no config aliases or hidden fallbacks.
+- Test: composition can be tested with fakes without real database or network.
+- Documentation: document API examples and proxy deployment assumption.
+- Checkpoint: frontend can call one proxied endpoint.
+- Final track/doc: `docs/api.md`.
 
 ---
 
