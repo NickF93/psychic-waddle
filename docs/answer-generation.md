@@ -131,5 +131,37 @@ provider tests, deterministic fallback and clarification wording, deterministic
 source notes, and prompt checks that prevent unapproved context and score
 metadata from reaching the model.
 
-Milestone 4 acceptance coverage and Milestone 5 handoff notes belong to the
-final Sprint 4 commit.
+## Milestone 4 Acceptance
+
+Milestone 4 is accepted when:
+
+- an answerable policy decision can produce recruiter-facing text through
+  `LLMProvider.chat()`;
+- fallback and clarification decisions return deterministic text without model
+  calls;
+- `LLMProvider.embed()` is never called by answer generation;
+- approved context is the only context sent to the chat provider;
+- retrieval scores and internal diagnostics are excluded from prompts and
+  answer text;
+- answerable responses include deterministic structured sources;
+- answerable response text includes a deterministic English or Italian source
+  note;
+- no visitor-derived data is persisted.
+
+## Milestone 5 Handoff
+
+Milestone 5 may use `AnswerGenerator` as the final authority in the API request
+flow:
+
+1. API receives the visitor question.
+2. API asks `Retriever` for context.
+3. API asks `AnswerPolicy` for a decision.
+4. API asks `AnswerGenerator` for final wording.
+5. API maps `AnswerGenerationResponse` to the public `POST /chat` response.
+
+The API layer must not copy answer-generation prompt logic, fallback wording, or
+source formatting. It should only orchestrate authorities and adapt the response
+for HTTP.
+
+Sprint 4.3 adds acceptance coverage and these handoff notes. Public HTTP
+schemas and endpoints remain Milestone 5 work.
