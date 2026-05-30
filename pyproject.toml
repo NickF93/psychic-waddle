@@ -9,6 +9,7 @@ description = "Recruiter-facing portfolio RAG assistant."
 readme = "PLAN.md"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.115,<1.0",
     "httpx>=0.28.1,<1.0",
     "psycopg[binary]>=3.2,<4.0",
 ]
