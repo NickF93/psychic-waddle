@@ -40,7 +40,7 @@ services:
       start_period: 10s
 
   db:
-    image: pgvector/pgvector:0.8.2-pg17
+    image: pgvector/pgvector:0.8.2-pg17@sha256:feb68f4f15446397d8cac7f4fe48fe4586de83160d1fc48b46283312d1a33966
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -60,7 +60,7 @@ services:
       start_period: 10s
 
   ollama:
-    image: ollama/ollama
+    image: ollama/ollama:latest@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
     profiles:
       - ollama
     volumes:
@@ -69,7 +69,7 @@ services:
       - runtime
 
   llama-cpp-chat:
-    image: ghcr.io/ggml-org/llama.cpp:server
+    image: ghcr.io/ggml-org/llama.cpp:server@sha256:1c2e5802addaaf61684532d828664027b5daaf2e2b29943cf338b7005e4ea9ca
     profiles:
       - llama-cpp
     command:
@@ -88,7 +88,7 @@ services:
       - runtime
 
   llama-cpp-embeddings:
-    image: ghcr.io/ggml-org/llama.cpp:server
+    image: ghcr.io/ggml-org/llama.cpp:server@sha256:1c2e5802addaaf61684532d828664027b5daaf2e2b29943cf338b7005e4ea9ca
     profiles:
       - llama-cpp
     command:
