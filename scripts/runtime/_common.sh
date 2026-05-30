@@ -4,6 +4,7 @@ set -eu
 ROOT_DIR=$(CDPATH= cd "$SCRIPT_DIR/../.." && pwd)
 ENV_FILE=${ENV_FILE:-"$ROOT_DIR/.env"}
 COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-portfolio-rag-assistant}
+RUNTIME_WAIT_TIMEOUT_SECONDS=${RUNTIME_WAIT_TIMEOUT_SECONDS:-120}
 
 fail() {
     printf 'error: %s\n' "$*" >&2
@@ -36,6 +37,24 @@ compose_profile() {
 
 compose_config() {
     compose config >/dev/null
+}
+
+wait_timeout() {
+    case "$RUNTIME_WAIT_TIMEOUT_SECONDS" in
+        ""|*[!0-9]*) fail "RUNTIME_WAIT_TIMEOUT_SECONDS must be a positive integer" ;;
+    esac
+    [ "$RUNTIME_WAIT_TIMEOUT_SECONDS" -gt 0 ] || fail "RUNTIME_WAIT_TIMEOUT_SECONDS must be a positive integer"
+    printf '%s\n' "$RUNTIME_WAIT_TIMEOUT_SECONDS"
+}
+
+compose_up_wait() {
+    compose up --wait --wait-timeout "$(wait_timeout)" "$@"
+}
+
+compose_profile_up_wait() {
+    PROFILE_NAME=$1
+    shift
+    compose_profile "$PROFILE_NAME" up --wait --wait-timeout "$(wait_timeout)" "$@"
 }
 
 env_value() {
