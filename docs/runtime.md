@@ -57,6 +57,87 @@ VPN/tun0 address.
 Use `.env.example` only as a placeholder template. Real values belong in an
 untracked local `.env` file.
 
+## Runtime Scripts
+
+The `scripts/runtime` directory provides the supported local operation layer
+over Compose. Scripts resolve the repository root automatically, read `.env` by
+default, and accept an explicit env file with:
+
+```sh
+ENV_FILE=/absolute/path/to/.env scripts/runtime/api-start.sh
+```
+
+`down` scripts stop and remove only the targeted service container. They do not
+remove unrelated services, networks, or volumes. Cleanup scripts are bounded to
+their own component:
+
+- API cleanup removes the API container and `portfolio-rag-assistant:local`
+  image.
+- PostgreSQL cleanup requires `--destroy-data` before deleting the
+  `postgres-data` volume.
+- Ollama cleanup requires `--destroy-models` before deleting the shared
+  `ollama-models` volume.
+- llama.cpp cleanup removes only service containers. It never deletes
+  bind-mounted model files.
+
+Script matrix:
+
+| Component | Build | Setup | Start | Stop | Down | Cleanup | Extra |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| API/backend | `api-build.sh` | `api-setup.sh` | `api-start.sh` | `api-stop.sh` | `api-down.sh` | `api-cleanup.sh` | |
+| PostgreSQL/pgvector | | `postgres-setup.sh` | `postgres-start.sh` | `postgres-stop.sh` | `postgres-down.sh` | `postgres-cleanup.sh --destroy-data` | `postgres-migrate.sh` |
+| Ollama chat | | `ollama-chat-setup.sh` | `ollama-chat-start.sh` | `ollama-chat-stop.sh` | `ollama-chat-down.sh` | `ollama-chat-cleanup.sh --destroy-models` | |
+| Ollama embeddings | | `ollama-embeddings-setup.sh` | `ollama-embeddings-start.sh` | `ollama-embeddings-stop.sh` | `ollama-embeddings-down.sh` | `ollama-embeddings-cleanup.sh --destroy-models` | |
+| llama.cpp chat | | `llama-cpp-chat-setup.sh` | `llama-cpp-chat-start.sh` | `llama-cpp-chat-stop.sh` | `llama-cpp-chat-down.sh` | `llama-cpp-chat-cleanup.sh` | |
+| llama.cpp embeddings | | `llama-cpp-embeddings-setup.sh` | `llama-cpp-embeddings-start.sh` | `llama-cpp-embeddings-stop.sh` | `llama-cpp-embeddings-down.sh` | `llama-cpp-embeddings-cleanup.sh` | |
+
+There is exactly one migration script:
+
+```sh
+scripts/runtime/postgres-migrate.sh
+```
+
+Provider scripts do not run database migrations. API scripts also do not run
+database migrations.
+
+Common setup orders:
+
+```sh
+# External chat and external embeddings.
+scripts/runtime/postgres-setup.sh
+scripts/runtime/postgres-migrate.sh
+scripts/runtime/api-setup.sh
+scripts/runtime/api-start.sh
+
+# External chat with Ollama embeddings.
+scripts/runtime/postgres-setup.sh
+scripts/runtime/postgres-migrate.sh
+scripts/runtime/ollama-embeddings-setup.sh
+scripts/runtime/api-setup.sh
+scripts/runtime/api-start.sh
+
+# Ollama chat and Ollama embeddings.
+scripts/runtime/postgres-setup.sh
+scripts/runtime/postgres-migrate.sh
+scripts/runtime/ollama-chat-setup.sh
+scripts/runtime/ollama-embeddings-setup.sh
+scripts/runtime/api-setup.sh
+scripts/runtime/api-start.sh
+
+# llama.cpp chat and llama.cpp embeddings.
+scripts/runtime/postgres-setup.sh
+scripts/runtime/postgres-migrate.sh
+scripts/runtime/llama-cpp-chat-setup.sh
+scripts/runtime/llama-cpp-embeddings-setup.sh
+scripts/runtime/api-setup.sh
+scripts/runtime/api-start.sh
+```
+
+For mixed local providers, run the setup script for the configured chat backend
+and the setup script for the configured embedding backend. For example,
+llama.cpp chat with Ollama embeddings uses `llama-cpp-chat-setup.sh` and
+`ollama-embeddings-setup.sh`.
+
 Validate the Compose file:
 
 ```sh
