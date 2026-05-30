@@ -4,8 +4,10 @@ import pytest
 
 from portfolio_rag_assistant.config import (
     ProviderSettings,
+    RetrievalSettings,
     build_llm_provider,
     load_provider_settings,
+    load_retrieval_settings,
 )
 from portfolio_rag_assistant.provider import (
     LLMProviderConfigurationError,
@@ -13,6 +15,7 @@ from portfolio_rag_assistant.provider import (
     OllamaProvider,
     OpenAICompatibleProvider,
 )
+from portfolio_rag_assistant.retrieval import RetrievalConfigurationError
 
 
 def test_load_provider_settings_reads_exact_env_names() -> None:
@@ -140,3 +143,57 @@ def test_build_llm_provider_selects_configured_backend(
     )
 
     assert isinstance(provider, provider_type)
+
+
+def test_load_retrieval_settings_reads_exact_env_names() -> None:
+    settings = load_retrieval_settings(
+        {
+            "RETRIEVAL_TOP_K": " 6 ",
+            "RETRIEVAL_MIN_SCORE": " 0.25 ",
+        }
+    )
+
+    assert settings == RetrievalSettings(top_k=6, min_score=0.25)
+
+
+@pytest.mark.parametrize("missing_name", ("RETRIEVAL_TOP_K", "RETRIEVAL_MIN_SCORE"))
+def test_load_retrieval_settings_requires_named_values(missing_name: str) -> None:
+    env = {
+        "RETRIEVAL_TOP_K": "6",
+        "RETRIEVAL_MIN_SCORE": "0.25",
+    }
+    del env[missing_name]
+
+    with pytest.raises(RetrievalConfigurationError):
+        load_retrieval_settings(env)
+
+
+@pytest.mark.parametrize(
+    "settings",
+    (
+        {"top_k": 0, "min_score": 0.25},
+        {"top_k": -1, "min_score": 0.25},
+        {"top_k": True, "min_score": 0.25},
+        {"top_k": 6, "min_score": -0.1},
+        {"top_k": 6, "min_score": 1.1},
+    ),
+)
+def test_retrieval_settings_rejects_invalid_values(
+    settings: dict[str, int | float | bool],
+) -> None:
+    with pytest.raises(RetrievalConfigurationError):
+        RetrievalSettings(**settings)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "env",
+    (
+        {"RETRIEVAL_TOP_K": "many", "RETRIEVAL_MIN_SCORE": "0.25"},
+        {"RETRIEVAL_TOP_K": "6", "RETRIEVAL_MIN_SCORE": "high"},
+    ),
+)
+def test_load_retrieval_settings_rejects_invalid_text(
+    env: dict[str, str],
+) -> None:
+    with pytest.raises(RetrievalConfigurationError):
+        load_retrieval_settings(env)
