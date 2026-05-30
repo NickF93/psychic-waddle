@@ -222,34 +222,80 @@ Items:
 
 ---
 
-## Milestone 3: Retrieval and Answer Policy
+## Milestone 3: Retrieval and Answerability
 
-**Feature:** retrieve relevant context and decide whether answering is allowed.
+**Feature:** retrieve source-backed public context and deterministically decide
+whether answering is allowed.
 
-### Sprint 3.1: Retrieval
+This milestone builds the read side only. It does not add chat API endpoints,
+final LLM wording, visitor question collection, model-generated facts, or
+schema changes for direct chunk-to-fact references.
 
-Items:
-
-- Implementation: add vector search with `pgvector`.
-- Implementation: add keyword search with PostgreSQL full-text search.
-- Implementation: add a small hybrid ranker.
-- Test: cover employer, skill, project, and thesis retrieval questions.
-- Validation: exact names such as `NAIS` and semantic queries both work.
-- Checkpoint: top results are inspectable and deterministic enough for testing.
-- Final track/doc: retrieval scoring notes.
-
-### Sprint 3.2: Answerability Gate
+### Sprint 3.0: Plan Alignment
 
 Items:
 
-- Implementation: add score thresholds.
-- Implementation: add category/domain allowlist.
-- Implementation: add low-confidence fallback.
-- Implementation: add clarification response for ambiguous questions.
-- Test: cover answer, refuse, and clarify cases.
-- Validation: the LLM never decides truth or answerability alone.
+- Documentation: refine Milestone 3 into retrieval contract, PostgreSQL
+  retrieval, and answerability policy sprints.
+- Documentation: keep grounded answer generation in Milestone 4.
+- Validation: confirm `PLAN.md`, `AGENTS.md`, and `docs/architecture.md` do not
+  contradict the refined scope.
+- Checkpoint: Milestone 3 can be implemented without crossing authority
+  boundaries.
+
+### Sprint 3.1: Retrieval Contract
+
+Items:
+
+- Implementation: add a `Retriever` protocol with async `retrieve()`.
+- Implementation: define retrieval request, result, score, and response models.
+- Implementation: include chunk text, category, source URI, source title,
+  optional source locator, and score metadata in results.
+- Implementation: define explicit retrieval error types.
+- Test: add fake retriever contract tests.
+- Validation: retrieval contract does not generate answers, decide
+  answerability, mutate storage, or expose provider payloads.
+- Checkpoint: retrieval outputs are source-backed and inspectable.
+- Final track/doc: `docs/retrieval.md`.
+
+### Sprint 3.2: PostgreSQL Retrieval
+
+Items:
+
+- Config: support `RETRIEVAL_TOP_K` and `RETRIEVAL_MIN_SCORE`.
+- Implementation: add PostgreSQL retrieval against public chunks only.
+- Implementation: embed visitor questions through `LLMProvider.embed()` only.
+- Implementation: filter chunk embeddings by configured backend and embedding
+  model.
+- Implementation: add exact vector search with `pgvector`.
+- Implementation: add keyword search with PostgreSQL full-text search using the
+  `simple` configuration.
+- Implementation: merge vector and keyword candidates deterministically.
+- Implementation: return ranked source-backed chunks only.
+- Test: add fake-provider and fake-store tests with no network.
+- Test: add optional PostgreSQL retrieval tests gated by `TEST_DATABASE_URL`.
+- Validation: retrieval owns search, ranking, and retrieval diagnostics only.
+- Checkpoint: exact names such as `NAIS` and semantic queries are retrievable.
+- Final track/doc: update `docs/retrieval.md`.
+
+### Sprint 3.3: Answerability Policy
+
+Items:
+
+- Implementation: add an `AnswerPolicy` protocol.
+- Implementation: define deterministic policy request and decision models.
+- Implementation: support `answerable`, `not_answerable`, and
+  `needs_clarification` decisions.
+- Implementation: apply `RETRIEVAL_MIN_SCORE`, retrieved categories, and source
+  support without calling an LLM.
+- Implementation: return approved context references for later answer
+  generation.
+- Test: cover relevant, irrelevant, low-confidence, unsupported, and ambiguous
+  questions.
+- Validation: policy does not call an LLM, search the database, phrase final
+  answers, or persist data.
 - Checkpoint: unsupported questions do not produce invented answers.
-- Final track/doc: answer policy specification.
+- Final track/doc: `docs/answer-policy.md`.
 
 ---
 
