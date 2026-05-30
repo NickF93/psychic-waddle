@@ -30,6 +30,7 @@ database data into the image.
 Runtime build inputs are pinned:
 
 - the Python base image is pinned by digest;
+- the Python build backend is pinned exactly in `pyproject.toml`;
 - PostgreSQL, Ollama, and llama.cpp images are pinned by digest;
 - Python dependencies are constrained by `requirements.lock`;
 - Docker builds do not upgrade `pip` at build time.
@@ -61,6 +62,9 @@ Validate the Compose file:
 ```sh
 docker compose --env-file .env config
 ```
+
+The runtime test suite also renders the default, Ollama, and llama.cpp Compose
+profiles with `.env.example` so interpolation and profile errors fail locally.
 
 Start PostgreSQL:
 
