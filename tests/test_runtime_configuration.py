@@ -1,11 +1,28 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
+import tomllib
 from pathlib import Path
 
+import pytest
 import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_build_system_dependencies_are_exactly_pinned() -> None:
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    requirements = pyproject["build-system"]["requires"]
+
+    assert requirements == ["setuptools==80.9.0"]
+    for requirement in requirements:
+        assert "==" in requirement
+        assert ">=" not in requirement
+        assert "<" not in requirement
+        assert "~=" not in requirement
+        assert "!=" not in requirement
 
 
 def test_dockerfile_uses_pinned_base_and_locked_dependencies() -> None:
@@ -101,6 +118,25 @@ def test_llama_cpp_profile_has_separate_chat_and_embedding_servers() -> None:
     assert "--pooling" in embedding_command
 
 
+def test_docker_compose_config_renders_supported_profiles() -> None:
+    _require_docker_compose()
+
+    rendered = {
+        name: _render_compose_config(args)
+        for name, args in (
+            ("default", ()),
+            ("llama-cpp", ("--profile", "llama-cpp")),
+            ("ollama", ("--profile", "ollama")),
+        )
+    }
+
+    assert "api" in rendered["default"]["services"]
+    assert "db" in rendered["default"]["services"]
+    assert "llama-cpp-chat" in rendered["llama-cpp"]["services"]
+    assert "llama-cpp-embeddings" in rendered["llama-cpp"]["services"]
+    assert "ollama" in rendered["ollama"]["services"]
+
+
 def test_env_example_contains_placeholders_not_real_secrets() -> None:
     values = _load_env_example()
 
@@ -122,6 +158,41 @@ def test_runtime_docs_validate_local_knowledge_without_dependencies() -> None:
 
 def _compose() -> dict[str, object]:
     return yaml.safe_load((ROOT / "compose.yaml").read_text(encoding="utf-8"))
+
+
+def _render_compose_config(profile_args: tuple[str, ...]) -> dict[str, object]:
+    result = subprocess.run(
+        (
+            "docker",
+            "compose",
+            "--env-file",
+            ".env.example",
+            *profile_args,
+            "config",
+        ),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    return yaml.safe_load(result.stdout)
+
+
+def _require_docker_compose() -> None:
+    if shutil.which("docker") is None:
+        pytest.skip("docker is not installed")
+
+    result = subprocess.run(
+        ("docker", "compose", "version"),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        pytest.skip("docker compose is not available")
 
 
 def _load_env_example() -> dict[str, str]:
