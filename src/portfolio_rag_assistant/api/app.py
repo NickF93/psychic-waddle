@@ -34,6 +34,7 @@ class RequestSizeLimitMiddleware:
 
         content_length = _content_length(scope)
         if content_length is not None and content_length > self._max_body_bytes:
+            await _drain_body(receive)
             response = JSONResponse(
                 status_code=413,
                 content={
@@ -74,3 +75,12 @@ def _content_length(scope: Scope) -> int | None:
         return int(raw_value.decode("ascii"))
     except ValueError:
         return None
+
+
+async def _drain_body(receive: Receive) -> None:
+    while True:
+        message = await receive()
+        if message["type"] == "http.disconnect":
+            return
+        if message["type"] == "http.request" and not message.get("more_body", False):
+            return
