@@ -315,6 +315,17 @@ def test_runtime_docs_validate_local_knowledge_without_dependencies() -> None:
 
     assert "run --rm --no-deps" in runtime_docs
     assert "portfolio-rag-assistant runtime smoke" in runtime_docs
+    assert "knowledge/` is ignored by Git" in runtime_docs
+
+
+def test_local_deployment_knowledge_is_git_ignored() -> None:
+    result = subprocess.run(
+        ("git", "check-ignore", "--quiet", "knowledge/profile.json"),
+        cwd=ROOT,
+        check=False,
+    )
+
+    assert result.returncode == 0
 
 
 def test_public_edge_routes_are_mapped_to_internal_api() -> None:
@@ -361,9 +372,34 @@ def test_public_tls_edge_uses_real_certificate_volume_and_redirects_http() -> No
     assert "listen 443 ssl;" in nginx_tls
     assert "ssl_certificate /etc/letsencrypt/live/portfolio-rag-assistant/fullchain.pem;" in nginx_tls
     assert "ssl_certificate_key /etc/letsencrypt/live/portfolio-rag-assistant/privkey.pem;" in nginx_tls
-    assert "return 308 https://$host$request_uri;" in nginx_tls
+    assert "return 308 https://vps.madnick.ovh$uri;" in nginx_tls
+    assert "return 308 https://$host" not in nginx_tls
+    assert "$request_uri" not in nginx_tls
     assert "self-signed" not in nginx_tls
     assert "snakeoil" not in nginx_tls
+
+
+def test_public_edge_privacy_contract_bounds_operational_metadata() -> None:
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    architecture = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+    deployment = (ROOT / "docs" / "public-deployment.md").read_text(
+        encoding="utf-8"
+    )
+
+    for document in (agents, architecture, deployment):
+        normalized_document = " ".join(document.split())
+        assert "redacted operational" in normalized_document
+        assert "raw question" in normalized_document
+        assert "answer text" in normalized_document
+
+    assert "volatile IP-derived key" in " ".join(agents.split())
+    assert "IP-derived rate-limit key only in volatile" in " ".join(
+        architecture.split()
+    )
+    assert "IP-derived key in volatile Nginx memory" in " ".join(deployment.split())
+    assert "must not be logged, exported, persisted, forwarded" in " ".join(
+        deployment.split()
+    )
 
 
 def test_public_edge_logging_is_redacted() -> None:
@@ -393,6 +429,10 @@ def test_public_edge_does_not_forward_visitor_identity_headers() -> None:
 
 
 def test_public_edge_rate_limit_and_bounds_are_configured() -> None:
+    deployment = (ROOT / "docs" / "public-deployment.md").read_text(
+        encoding="utf-8"
+    )
+
     for config in (_nginx_config(), _nginx_config("nginx-tls.conf")):
         assert (
             "limit_req_zone $binary_remote_addr zone=assistant_chat:10m rate=20r/m;"
@@ -403,6 +443,10 @@ def test_public_edge_rate_limit_and_bounds_are_configured() -> None:
         assert "proxy_connect_timeout 5s;" in config
         assert "proxy_send_timeout 90s;" in config
         assert "proxy_read_timeout 120s;" in config
+
+    normalized_deployment = " ".join(deployment.split())
+    assert "volatile Nginx memory" in normalized_deployment
+    assert "must not be logged, exported, persisted, forwarded" in normalized_deployment
 
 
 def _compose() -> dict[str, object]:

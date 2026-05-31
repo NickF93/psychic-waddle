@@ -200,6 +200,10 @@ def test_letsencrypt_scripts_use_explicit_tls_contract() -> None:
 
     assert "configured_value PUBLIC_SERVER_NAME" in setup
     assert "configured_value LETSENCRYPT_EMAIL" in setup
+    assert "configured_value PUBLIC_HTTP_BIND_ADDRESS" in setup
+    assert "configured_value PUBLIC_HTTP_PORT" in setup
+    assert 'PUBLIC_HTTP_BIND_ADDRESS" = "0.0.0.0"' in setup
+    assert 'PUBLIC_HTTP_PORT" = "80"' in setup
     assert "compose_profile_up_wait public nginx" in setup
     assert "compose_profile public run --rm certbot certonly" in setup
     assert "--webroot-path /var/www/certbot" in setup
@@ -212,6 +216,42 @@ def test_letsencrypt_scripts_use_explicit_tls_contract() -> None:
     assert "--webroot-path /var/www/certbot" in renew
     assert "--cert-name portfolio-rag-assistant" in renew
     assert "compose_profile public-tls exec nginx-tls nginx -s reload" in renew
+
+
+def test_letsencrypt_setup_rejects_non_public_http_config(tmp_path: Path) -> None:
+    cases = (
+        (
+            "PUBLIC_HTTP_BIND_ADDRESS=127.0.0.1\nPUBLIC_HTTP_PORT=80\n",
+            "PUBLIC_HTTP_BIND_ADDRESS must be 0.0.0.0",
+        ),
+        (
+            "PUBLIC_HTTP_BIND_ADDRESS=0.0.0.0\nPUBLIC_HTTP_PORT=18080\n",
+            "PUBLIC_HTTP_PORT must be 80",
+        ),
+    )
+
+    for index, (public_config, expected_error) in enumerate(cases):
+        env_file = tmp_path / f"letsencrypt-{index}.env"
+        env_file.write_text(
+            "PUBLIC_SERVER_NAME=vps.madnick.ovh\n"
+            "LETSENCRYPT_EMAIL=ops@example.invalid\n"
+            f"{public_config}",
+            encoding="utf-8",
+        )
+        env = os.environ.copy()
+        env["ENV_FILE"] = str(env_file)
+
+        result = subprocess.run(
+            (str(SCRIPTS / "letsencrypt-setup.sh"),),
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            env=env,
+        )
+
+        assert result.returncode != 0
+        assert expected_error in result.stderr
 
 
 def test_public_scripts_wrap_existing_runtime_authorities() -> None:
