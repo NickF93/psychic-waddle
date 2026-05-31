@@ -9,6 +9,10 @@ The runtime layer does not add CORS, TLS, a reverse proxy, Kubernetes, Swarm,
 automatic model downloads, committed secrets, question collection, or API
 behavior changes.
 
+Public HTTPS exposure belongs to the Milestone 7 deployment boundary. That
+boundary is documented in [Public Deployment Boundary](public-deployment.md) and
+keeps the portfolio frontend in its separate project.
+
 ## Backend Image
 
 Build the API image from the repository root:
@@ -26,6 +30,9 @@ uvicorn portfolio_rag_assistant.api.main:app --host 0.0.0.0 --port 8000
 The image contains application code, migrations, and the dependency lock file.
 It does not bake `.env` files, local model files, curated knowledge files, or
 database data into the image.
+Server-local deployment knowledge under `knowledge/` is ignored by Git and must
+remain untracked unless a future explicit plan creates a reviewed committed
+knowledge dataset.
 
 Runtime build inputs are pinned:
 
@@ -51,8 +58,9 @@ API_BIND_ADDRESS=127.0.0.1
 API_PORT=8000
 ```
 
-Override `API_BIND_ADDRESS` explicitly only when the service must listen on a
-VPN/tun0 address.
+Override `API_BIND_ADDRESS` explicitly only for a documented private-network
+runtime. Public deployment keeps browser traffic behind the Nginx boundary
+defined in Milestone 7.
 
 Use `.env.example` only as a placeholder template. Real values belong in an
 untracked local `.env` file.
@@ -70,6 +78,10 @@ ENV_FILE=/absolute/path/to/.env scripts/runtime/api-start.sh
 For the full zero-to-running server procedure with PostgreSQL, Ollama, API
 startup, knowledge ingestion, embedding indexing, smoke checks, and manual chat
 tests, see [Server Setup Procedure](server-setup.md).
+
+For the planned public `vps.madnick.ovh` deployment with Nginx, free Let's
+Encrypt TLS, CORS, rate limits, and public smoke validation, see
+[Public Deployment Boundary](public-deployment.md).
 
 Setup and start scripts wait for the targeted service to become ready before
 returning. The wait timeout defaults to 120 seconds and can be changed with:
@@ -90,6 +102,8 @@ their own component:
   `ollama-models` volume.
 - llama.cpp cleanup removes only service containers. It never deletes
   bind-mounted model files.
+- Let's Encrypt setup and renewal scripts do not remove certificate, work, or
+  ACME challenge volumes.
 
 Script matrix:
 
@@ -101,6 +115,43 @@ Script matrix:
 | Ollama embeddings | | `ollama-embeddings-setup.sh` | `ollama-embeddings-start.sh` | `ollama-embeddings-stop.sh` | `ollama-embeddings-down.sh` | `ollama-embeddings-cleanup.sh --destroy-models` | |
 | llama.cpp chat | | `llama-cpp-chat-setup.sh` | `llama-cpp-chat-start.sh` | `llama-cpp-chat-stop.sh` | `llama-cpp-chat-down.sh` | `llama-cpp-chat-cleanup.sh` | |
 | llama.cpp embeddings | | `llama-cpp-embeddings-setup.sh` | `llama-cpp-embeddings-start.sh` | `llama-cpp-embeddings-stop.sh` | `llama-cpp-embeddings-down.sh` | `llama-cpp-embeddings-cleanup.sh` | |
+| Let's Encrypt TLS | | `letsencrypt-setup.sh` | | | | | `letsencrypt-renew.sh` |
+| Public deployment | `public-build.sh` | `public-setup.sh` | `public-start.sh` | `public-stop.sh` | `public-down.sh` | `public-cleanup.sh` | `public-migrate.sh`, `public-deploy.sh`, `public-smoke.sh`, `nginx-validate.sh` |
+
+Public deployment scripts are high-level operator wrappers. They call the
+existing API, PostgreSQL, provider, Nginx, and Let's Encrypt scripts instead of
+duplicating those authorities.
+
+`public-setup.sh` prepares API, database, migration, configured local
+providers, and Nginx validation. It does not request a certificate unless the
+operator passes the explicit flag:
+
+```sh
+scripts/runtime/public-setup.sh --issue-certificate
+```
+
+`public-deploy.sh` is the update path after setup. It builds the API image,
+starts PostgreSQL, delegates migration to `postgres-migrate.sh`, starts the
+public HTTPS runtime, and runs `public-smoke.sh`. It does not issue or renew
+certificates.
+
+`public-smoke.sh` defaults to the local HTTP edge:
+
+```sh
+scripts/runtime/public-smoke.sh
+```
+
+The local HTTP edge default is `http://127.0.0.1:18080`.
+
+Production HTTPS smoke uses an explicit base URL:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
+```
+
+`public-cleanup.sh` removes runtime containers and the local API image only. It
+does not delete PostgreSQL data, Ollama model data, llama.cpp model files,
+Let's Encrypt certificates, ACME challenge data, or Let's Encrypt work data.
 
 There is exactly one migration script:
 

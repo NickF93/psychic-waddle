@@ -414,9 +414,8 @@ question, orchestrates existing authorities, and returns a public-safe response.
 It does not retrieve, decide answerability, generate wording, persist knowledge,
 or collect visitor questions itself.
 
-The portfolio website is expected to call this service through a server-side
-proxy over the private OpenVPN/tun0 network. Milestone 5 therefore does not add
-CORS middleware.
+Milestone 5 does not add CORS middleware or a public edge. Public browser
+exposure, route namespacing, TLS, and origin controls belong to Milestone 7.
 
 ### Sprint 5.1: API Plan And Contract
 
@@ -525,8 +524,8 @@ Runtime defaults:
 - PostgreSQL runtime uses `pgvector/pgvector:0.8.2-pg17`.
 - Runtime container images are pinned by digest.
 - Python runtime dependencies are constrained by `requirements.lock`.
-- API port binding defaults to `127.0.0.1` and can be explicitly overridden for
-  VPN/tun0 deployment.
+- API port binding defaults to `127.0.0.1` for server-local operation. Public
+  exposure belongs to a later reverse proxy boundary.
 - Database migrations run explicitly through the PostgreSQL container with
   `psql`; the API container does not run migrations on startup.
 - Optional local LLM services are CPU-only profiles in this milestone.
@@ -682,11 +681,153 @@ Items:
 
 ---
 
-## Milestone 7: Anonymous Question Collection
+## Milestone 7: Public Deployment Boundary
 
-**Feature:** collect useful question signals without visitor tracking.
+**Feature:** make the RAG service deployable on `vps.madnick.ovh` as a public
+HTTPS API consumed by the separate `pigreco.xyz` portfolio project.
 
-### Sprint 7.1: Question Events
+Boundary:
+
+- This repository owns the RAG service, public API contract, reverse proxy
+  runtime, TLS automation, deployment scripts, and production smoke validation
+  for `vps.madnick.ovh`.
+- This repository does not implement the portfolio webpage, chat widget,
+  frontend styling, or deployment of the separate `pigreco.xyz` project.
+- Public browser calls originate only from `https://pigreco.xyz` and
+  `https://www.pigreco.xyz`.
+- Public traffic enters through an Nginx container on `vps.madnick.ovh`.
+- PostgreSQL, Ollama, llama.cpp, and the Python API port are not directly
+  exposed to the public internet.
+- CORS is enforced at the Nginx edge.
+- Public assistant logs are redacted and must not persist IP addresses, user
+  agents, cookies, request bodies, or raw questions.
+- TLS uses free Let's Encrypt certificates managed by Certbot containers.
+
+### Sprint 7.1: Public Deployment Plan
+
+Items:
+
+- Documentation: replace the old Milestone 7 question-collection slot with the
+  public deployment boundary.
+- Documentation: move anonymous question collection to a later milestone.
+- Documentation: remove in-repository portfolio widget implementation from the
+  roadmap and define the portfolio as an external API consumer.
+- Documentation: define the public API host `https://vps.madnick.ovh`.
+- Documentation: define public routes under `/api/assistant`.
+- Documentation: define the allowed portfolio origins.
+- Documentation: define Nginx, Certbot, TLS, logging, rate-limit, and deployment
+  responsibilities.
+- Validation: documentation does not instruct operators to expose PostgreSQL,
+  model services, or the Python API port directly.
+- Validation: documentation is authoritative and does not add code, scripts, or
+  runtime configuration in this sprint.
+- Final track/doc: `docs/public-deployment.md`.
+
+### Sprint 7.2: Public Edge Runtime Configuration
+
+Items:
+
+- Config: add an Nginx public edge container.
+- Config: expose HTTP through the Nginx edge with localhost-safe defaults for
+  local validation.
+- Config: document that production may bind the HTTP edge to port `80`, while
+  HTTPS port `443` is deferred to Sprint 7.3 when certificates exist.
+- Config: route `POST /api/assistant/chat` to API container `POST /chat`.
+- Config: route `GET /api/assistant/health` to API container `GET /health`.
+- Config: route `GET /api/assistant/ready` to API container `GET /ready`.
+- Config: allow CORS only for `https://pigreco.xyz` and
+  `https://www.pigreco.xyz`.
+- Config: add redacted assistant logs that omit IP address, user agent, cookies,
+  request body, and raw question text.
+- Config: add request body size limit and explicit proxy timeout settings.
+- Config: add default edge rate limit of 20 requests per minute with burst 40,
+  and document how to tighten or remove it.
+- Test: structurally validate Compose and Nginx configuration.
+- Test: verify public runtime exposes only intended ports.
+- Documentation: document public edge runtime behavior.
+- Final track/doc: `docs/public-deployment.md`.
+
+### Sprint 7.3: Free TLS Automation
+
+Items:
+
+- Config: add Certbot container support for Let's Encrypt certificates.
+- Config: mount certificate and ACME challenge volumes explicitly.
+- Config: support initial HTTP certificate issue through `nginx` and HTTPS
+  runtime through `nginx-tls` after the certificate exists.
+- Config: require `PUBLIC_SERVER_NAME` and `LETSENCRYPT_EMAIL` from untracked
+  `.env`.
+- Script: add certificate setup command: `letsencrypt-setup.sh`.
+- Script: add certificate renewal command: `letsencrypt-renew.sh`.
+- Script: add Nginx reload flow after renewal.
+- Documentation: define DNS prerequisites for `vps.madnick.ovh`.
+- Documentation: document that Let's Encrypt certificates are free and no paid
+  certificate is required.
+- Test: guard required TLS environment variables, ACME challenge routing,
+  public `443` ownership, and bounded certificate cleanup.
+- Final track/doc: `docs/public-deployment.md`.
+
+### Sprint 7.4: Public Deployment Script Suite
+
+Items:
+
+- Script: add public setup that prepares runtime by default and calls the
+  existing Let's Encrypt setup command only with an explicit
+  `--issue-certificate` flag.
+- Script: add public build, start, stop, down, cleanup, deploy/update, and smoke
+  commands.
+- Script: add Nginx configuration validation.
+- Script: add public migration wrapper that delegates to the single PostgreSQL
+  migration authority.
+- Script: support local HTTP and production HTTPS smoke targets through
+  `PUBLIC_SMOKE_BASE_URL`.
+- Script: ensure cleanup does not destroy DB data, model data, or certificates
+  without explicit destructive flags.
+- Documentation: document first deploy, update deploy, emergency stop, rollback,
+  and cleanup procedures.
+- Test: validate public deployment scripts and destructive-operation guards.
+- Final track/doc: `docs/public-deployment.md`.
+
+### Sprint 7.5: Public Smoke Validation
+
+Items:
+
+- Script: harden public HTTPS smoke validation beyond the Sprint 7.4 smoke
+  script.
+- Validation: check CORS preflight from `https://pigreco.xyz`.
+- Validation: check CORS preflight from `https://www.pigreco.xyz`.
+- Validation: reject unexpected browser origins.
+- Validation: call public `/api/assistant/health`, `/api/assistant/ready`, and
+  `/api/assistant/chat` through Nginx.
+- Validation: confirm the API direct port is not part of public access when
+  `PUBLIC_DIRECT_API_PROBE_URL` is explicitly provided.
+- Test: validate public smoke behavior without real network calls.
+- Documentation: document expected smoke output and troubleshooting.
+- Final track/doc: `docs/public-deployment.md`.
+
+### Sprint 7.6: Public Env Upgrade Remediation
+
+Items:
+
+- Config: require public edge bind and port variables explicitly instead of
+  using hidden Compose defaults.
+- Config: move local public edge defaults to `127.0.0.1:18080` and
+  `127.0.0.1:18443` to avoid common local port conflicts.
+- Script: make Nginx validation fail clearly when public edge variables are
+  missing from `.env`.
+- Test: validate missing public edge variables fail before deployment.
+- Documentation: document the required M7 public block for older server `.env`
+  files.
+- Final track/doc: `docs/public-deployment.md`.
+
+---
+
+## Milestone 8: Anonymous Question Collection
+
+**Feature:** collect useful question signals without visitor tracking after the
+public deployment boundary is stable.
+
+### Sprint 8.1: Question Events
 
 Items:
 
@@ -702,7 +843,7 @@ Items:
 - Checkpoint: question review queue is useful without tracking visitors.
 - Final track/doc: privacy note.
 
-### Sprint 7.2: Review Loop
+### Sprint 8.2: Review Loop
 
 Items:
 
@@ -715,25 +856,6 @@ Items:
 - Validation: visitor questions never auto-promote into the knowledge base.
 - Checkpoint: improvement loop exists without contaminating reviewed truth.
 - Final track/doc: review workflow.
-
----
-
-## Milestone 8: Portfolio Widget
-
-**Feature:** small customer-service-style chat UI.
-
-### Sprint 8.1: Widget Integration
-
-Items:
-
-- Implementation: add floating chat button.
-- Implementation: add compact chat panel.
-- Implementation: add loading, error, answer, fallback, and clarification states.
-- Implementation: add source chips when they improve trust without clutter.
-- Test: add basic UI interaction tests.
-- Validation: widget works on mobile and desktop.
-- Checkpoint: recruiter can ask a question in under five seconds.
-- Final track/doc: frontend integration notes.
 
 ---
 

@@ -189,6 +189,18 @@ or any other answer/request metadata from visitor traffic. Visitor questions
 must be reviewed manually before they influence facts, aliases, or evaluation
 cases.
 
+The public Nginx edge is allowed to persist only redacted operational access
+logs needed to run the public service. Those logs may contain timestamp, HTTP
+method, normalized route path without query string, status code, response byte
+count, request duration, and allowed browser origin. They must not contain IP
+addresses, user agents, cookies, request bodies, raw questions, query strings,
+API keys, source identifiers, retrieval scores, answer status, answer text, or
+any forwarded visitor identity headers.
+
+The public Nginx edge may use an IP-derived rate-limit key only in volatile
+Nginx memory. That key must not be logged, exported, persisted, forwarded to the
+API, or stored in application data.
+
 ## Milestone 0 Acceptance Checklist
 
 - The product goal and non-goals are explicit.

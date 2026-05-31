@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import stat
 import subprocess
@@ -16,6 +17,8 @@ EXPECTED_PUBLIC_SCRIPTS = {
     "api-setup.sh",
     "api-start.sh",
     "api-stop.sh",
+    "letsencrypt-renew.sh",
+    "letsencrypt-setup.sh",
     "llama-cpp-chat-cleanup.sh",
     "llama-cpp-chat-down.sh",
     "llama-cpp-chat-setup.sh",
@@ -42,6 +45,16 @@ EXPECTED_PUBLIC_SCRIPTS = {
     "postgres-setup.sh",
     "postgres-start.sh",
     "postgres-stop.sh",
+    "nginx-validate.sh",
+    "public-build.sh",
+    "public-cleanup.sh",
+    "public-deploy.sh",
+    "public-down.sh",
+    "public-migrate.sh",
+    "public-setup.sh",
+    "public-smoke.sh",
+    "public-start.sh",
+    "public-stop.sh",
 }
 
 
@@ -181,12 +194,237 @@ def test_llama_cpp_scripts_keep_chat_and_embedding_services_separate() -> None:
     )
 
 
+def test_letsencrypt_scripts_use_explicit_tls_contract() -> None:
+    setup = _script("letsencrypt-setup.sh")
+    renew = _script("letsencrypt-renew.sh")
+
+    assert "configured_value PUBLIC_SERVER_NAME" in setup
+    assert "configured_value LETSENCRYPT_EMAIL" in setup
+    assert "configured_value PUBLIC_HTTP_BIND_ADDRESS" in setup
+    assert "configured_value PUBLIC_HTTP_PORT" in setup
+    assert 'PUBLIC_HTTP_BIND_ADDRESS" = "0.0.0.0"' in setup
+    assert 'PUBLIC_HTTP_PORT" = "80"' in setup
+    assert "compose_profile_up_wait public nginx" in setup
+    assert "compose_profile public run --rm certbot certonly" in setup
+    assert "--webroot-path /var/www/certbot" in setup
+    assert "--cert-name portfolio-rag-assistant" in setup
+    assert '-d "$PUBLIC_SERVER_NAME"' in setup
+
+    assert "configured_value PUBLIC_SERVER_NAME" in renew
+    assert "configured_value LETSENCRYPT_EMAIL" in renew
+    assert "compose_profile public-tls run --rm certbot renew" in renew
+    assert "--webroot-path /var/www/certbot" in renew
+    assert "--cert-name portfolio-rag-assistant" in renew
+    assert "compose_profile public-tls exec nginx-tls nginx -s reload" in renew
+
+
+def test_letsencrypt_setup_rejects_non_public_http_config(tmp_path: Path) -> None:
+    cases = (
+        (
+            "PUBLIC_HTTP_BIND_ADDRESS=127.0.0.1\nPUBLIC_HTTP_PORT=80\n",
+            "PUBLIC_HTTP_BIND_ADDRESS must be 0.0.0.0",
+        ),
+        (
+            "PUBLIC_HTTP_BIND_ADDRESS=0.0.0.0\nPUBLIC_HTTP_PORT=18080\n",
+            "PUBLIC_HTTP_PORT must be 80",
+        ),
+    )
+
+    for index, (public_config, expected_error) in enumerate(cases):
+        env_file = tmp_path / f"letsencrypt-{index}.env"
+        env_file.write_text(
+            "PUBLIC_SERVER_NAME=vps.madnick.ovh\n"
+            "LETSENCRYPT_EMAIL=ops@example.invalid\n"
+            f"{public_config}",
+            encoding="utf-8",
+        )
+        env = os.environ.copy()
+        env["ENV_FILE"] = str(env_file)
+
+        result = subprocess.run(
+            (str(SCRIPTS / "letsencrypt-setup.sh"),),
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            env=env,
+        )
+
+        assert result.returncode != 0
+        assert expected_error in result.stderr
+
+
+def test_public_scripts_wrap_existing_runtime_authorities() -> None:
+    assert '"$SCRIPT_DIR/nginx-validate.sh"' in _script("public-build.sh")
+    assert '"$SCRIPT_DIR/api-build.sh"' in _script("public-build.sh")
+    assert _script("public-migrate.sh").count("postgres-migrate.sh") == 1
+    assert "psql" not in _script("public-migrate.sh")
+    assert "/migrations/" not in _script("public-migrate.sh")
+    assert '"$SCRIPT_DIR/public-build.sh"' in _script("public-deploy.sh")
+    assert '"$SCRIPT_DIR/postgres-start.sh"' in _script("public-deploy.sh")
+    assert '"$SCRIPT_DIR/public-migrate.sh"' in _script("public-deploy.sh")
+    assert '"$SCRIPT_DIR/public-start.sh"' in _script("public-deploy.sh")
+    assert '"$SCRIPT_DIR/public-smoke.sh"' in _script("public-deploy.sh")
+    assert "letsencrypt-setup.sh" not in _script("public-deploy.sh")
+    assert "letsencrypt-renew.sh" not in _script("public-deploy.sh")
+
+
+def test_public_setup_requires_explicit_certificate_flag() -> None:
+    setup = _script("public-setup.sh")
+
+    assert "usage: public-setup.sh [--issue-certificate]" in setup
+    assert '[ "$1" = "--issue-certificate" ]' in setup
+    assert "ISSUE_CERTIFICATE=true" in setup
+    assert 'if [ "$ISSUE_CERTIFICATE" = true ]; then' in setup
+    assert '"$SCRIPT_DIR/letsencrypt-setup.sh"' in setup
+    assert "compose_profile public stop nginx" in setup
+    assert "certificate issuance skipped" in setup
+
+
+def test_public_start_stops_bootstrap_edge_before_tls_runtime() -> None:
+    start = _script("public-start.sh")
+
+    assert "compose_profile public stop nginx" in start
+    assert "compose_profile_up_wait public-tls nginx-tls" in start
+    assert start.index("compose_profile public stop nginx") < start.index(
+        "compose_profile_up_wait public-tls nginx-tls"
+    )
+
+
+def test_public_scripts_dispatch_configured_local_providers() -> None:
+    for script_name, verb in (
+        ("public-setup.sh", "setup"),
+        ("public-start.sh", "start"),
+        ("public-stop.sh", "stop"),
+        ("public-down.sh", "down"),
+    ):
+        script = _script(script_name)
+        assert "env_value CHAT_BACKEND" in script
+        assert "env_value EMBEDDING_BACKEND" in script
+        assert f"ollama-chat-{verb}.sh" in script
+        assert f"ollama-embeddings-{verb}.sh" in script
+        assert f"llama-cpp-chat-{verb}.sh" in script
+        assert f"llama-cpp-embeddings-{verb}.sh" in script
+        assert "openai-compatible" in script
+        assert "unsupported CHAT_BACKEND" in script
+        assert "unsupported EMBEDDING_BACKEND" in script
+
+
+def test_public_cleanup_preserves_data_model_and_certificate_volumes() -> None:
+    cleanup = _script("public-cleanup.sh")
+
+    assert '"$SCRIPT_DIR/public-down.sh"' in cleanup
+    assert "remove_docker_image portfolio-rag-assistant:local" in cleanup
+    assert "postgres-cleanup.sh" not in cleanup
+    assert "ollama-chat-cleanup.sh" not in cleanup
+    assert "ollama-embeddings-cleanup.sh" not in cleanup
+    assert "Let's Encrypt" in cleanup
+    assert "preserved" in cleanup
+
+
+def test_public_smoke_supports_local_default_and_public_override() -> None:
+    smoke = _script("public-smoke.sh")
+
+    assert "PUBLIC_SMOKE_BASE_URL=${PUBLIC_SMOKE_BASE_URL:-http://127.0.0.1:18080}" in smoke
+    assert "PUBLIC_SMOKE_ALLOWED_ORIGIN=https://pigreco.xyz" in smoke
+    assert "PUBLIC_SMOKE_ALLOWED_WWW_ORIGIN=https://www.pigreco.xyz" in smoke
+    assert "PUBLIC_SMOKE_REJECTED_ORIGIN=https://example.invalid" in smoke
+    assert "assert_cors_preflight_allowed" in smoke
+    assert "assert_cors_preflight_rejected" in smoke
+    assert "access-control-allow-origin" in smoke
+    assert "access-control-request-method: POST" in smoke
+    assert "/api/assistant/health" in smoke
+    assert "/api/assistant/ready" in smoke
+    assert "/api/assistant/chat" in smoke
+    assert '{"question":"Where did Niccolo work?","language":"en"}' in smoke
+    assert '"answerable", "not_answerable", "needs_clarification"' in smoke
+    assert "PUBLIC_DIRECT_API_PROBE_URL" in smoke
+    assert "2??) fail" in smoke
+    assert "direct API probe skipped" in smoke
+
+
+def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["PUBLIC_DIRECT_API_PROBE_URL"] = "http://public-api-closed:8000/health"
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "cors preflight passed: https://pigreco.xyz" in result.stdout
+    assert "cors preflight passed: https://www.pigreco.xyz" in result.stdout
+    assert "unexpected origin rejected: https://example.invalid" in result.stdout
+    assert "direct API probe passed: http://public-api-closed:8000/health returned 000" in result.stdout
+    assert "public smoke passed: http://127.0.0.1:18080" in result.stdout
+
+    calls = [json.loads(line) for line in fake_curl_log.read_text().splitlines()]
+    assert any("origin: https://pigreco.xyz" in call for call in calls)
+    assert any("origin: https://www.pigreco.xyz" in call for call in calls)
+    assert any("origin: https://example.invalid" in call for call in calls)
+    assert any("http://127.0.0.1:18080/api/assistant/health" in call for call in calls)
+    assert any("http://127.0.0.1:18080/api/assistant/ready" in call for call in calls)
+    assert any("http://127.0.0.1:18080/api/assistant/chat" in call for call in calls)
+    assert any("http://public-api-closed:8000/health" in call for call in calls)
+
+
+def test_public_smoke_fails_when_direct_api_probe_returns_success(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["PUBLIC_DIRECT_API_PROBE_URL"] = "http://public-api-open:8000/health"
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert (
+        "direct API port is publicly reachable: http://public-api-open:8000/health returned 200"
+        in result.stderr
+    )
+
+
+def test_nginx_validate_checks_both_public_edge_configs() -> None:
+    validate = _script("nginx-validate.sh")
+
+    assert "compose_profile public config >/dev/null" in validate
+    assert "compose_profile public-tls config >/dev/null" in validate
+    assert "configured_value PUBLIC_HTTP_BIND_ADDRESS" in validate
+    assert "configured_value PUBLIC_HTTP_PORT" in validate
+    assert "configured_value PUBLIC_HTTPS_BIND_ADDRESS" in validate
+    assert "configured_value PUBLIC_HTTPS_PORT" in validate
+    assert "deploy/nginx/nginx.conf" in validate
+    assert "deploy/nginx/nginx-tls.conf" in validate
+    assert "proxy_pass http://api:8000/chat?;" in validate
+    assert "proxy_pass http://api:8000/health?;" in validate
+    assert "proxy_pass http://api:8000/ready?;" in validate
+    assert "listen 443 ssl;" in validate
+
+
 def test_cleanup_scripts_are_bounded() -> None:
     script_text = _all_script_text()
 
     assert "down --volumes" not in script_text
     assert "down -v" not in script_text
     assert "rm -rf" not in script_text
+    assert "remove_compose_volume letsencrypt-certs" not in script_text
+    assert "remove_compose_volume letsencrypt-work" not in script_text
+    assert "remove_compose_volume acme-challenges" not in script_text
     assert "require_cleanup_flag --destroy-data" in _script("postgres-cleanup.sh")
     assert "require_cleanup_flag --destroy-models" in _script(
         "ollama-chat-cleanup.sh"
@@ -198,6 +436,67 @@ def test_cleanup_scripts_are_bounded() -> None:
     assert "remove_compose_volume" not in _script(
         "llama-cpp-embeddings-cleanup.sh"
     )
+
+
+def _write_fake_curl(tmp_path: Path) -> None:
+    fake_curl = tmp_path / "curl"
+    fake_curl.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+
+
+args = sys.argv[1:]
+with open(os.environ["FAKE_CURL_LOG"], "a", encoding="utf-8") as log:
+    log.write(json.dumps(args) + "\\n")
+
+origin = ""
+for index, arg in enumerate(args[:-1]):
+    if arg == "-H" and args[index + 1].lower().startswith("origin:"):
+        origin = args[index + 1].split(":", 1)[1].strip()
+
+url = ""
+for arg in args:
+    if arg.startswith(("http://", "https://")):
+        url = arg
+
+if url.startswith("http://public-api-open:8000/health"):
+    print("200", end="")
+elif url.startswith("http://public-api-closed:8000/health"):
+    print("000", end="")
+elif "-X" in args and "OPTIONS" in args and url.endswith("/api/assistant/chat"):
+    if origin in {"https://pigreco.xyz", "https://www.pigreco.xyz"}:
+        print("HTTP/1.1 204 No Content")
+        print(f"Access-Control-Allow-Origin: {origin}")
+        print()
+        print("status=204")
+    else:
+        print("HTTP/1.1 403 Forbidden")
+        print()
+        print("status=403")
+elif url.endswith("/api/assistant/health"):
+    print('{"status":"ok"}')
+elif url.endswith("/api/assistant/ready"):
+    print('{"status":"ready"}')
+elif url.endswith("/api/assistant/chat"):
+    print('{"status":"answerable","answer":"OK"}')
+else:
+    print(f"unexpected curl args: {args}", file=sys.stderr)
+    sys.exit(2)
+""",
+        encoding="utf-8",
+    )
+    fake_curl.chmod(fake_curl.stat().st_mode | stat.S_IXUSR)
+
+
+def _fake_curl_env(tmp_path: Path, fake_curl_log: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
+    env["FAKE_CURL_LOG"] = str(fake_curl_log)
+    env.pop("PUBLIC_DIRECT_API_PROBE_URL", None)
+    env.pop("PUBLIC_SMOKE_BASE_URL", None)
+    return env
 
 
 def _script(name: str) -> str:

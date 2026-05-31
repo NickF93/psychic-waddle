@@ -67,6 +67,12 @@ POSTGRES_PASSWORD="$(openssl rand -hex 24)"
 cat > .env <<EOF
 API_BIND_ADDRESS=127.0.0.1
 API_PORT=8000
+PUBLIC_HTTP_BIND_ADDRESS=127.0.0.1
+PUBLIC_HTTP_PORT=18080
+PUBLIC_HTTPS_BIND_ADDRESS=127.0.0.1
+PUBLIC_HTTPS_PORT=18443
+PUBLIC_SERVER_NAME=vps.madnick.ovh
+LETSENCRYPT_EMAIL=replace-with-letsencrypt-email
 
 POSTGRES_DB=portfolio_rag_assistant
 POSTGRES_USER=portfolio_rag_assistant
@@ -92,14 +98,20 @@ LLAMA_CPP_EMBEDDING_POOLING=mean
 EOF
 ```
 
+If this server already had an older `.env`, verify that the complete public
+deployment block above is present. Compose intentionally fails when public edge
+variables are missing instead of silently defaulting to an occupied port.
+
 Validate the Compose configuration:
 
 ```sh
 docker compose --env-file .env config
 docker compose --env-file .env --profile ollama config
+docker compose --env-file .env --profile public config
+docker compose --env-file .env --profile public-tls config
 ```
 
-Both commands must render successfully before continuing.
+All Compose configuration commands must render successfully before continuing.
 
 ## 3. Build The Backend Image
 
@@ -195,7 +207,9 @@ JSON
 ```
 
 This file is only a functional test. Replace it with real reviewed public facts
-before using the service for recruiters.
+before using the service for recruiters. The local `knowledge/` directory is
+ignored by Git; server-created deployment knowledge files must remain untracked
+unless a future explicit plan creates a reviewed committed knowledge dataset.
 
 ## 7. Validate, Ingest, And Index Knowledge
 
@@ -373,6 +387,117 @@ Destroy Ollama model data only when intentionally deleting downloaded models:
 scripts/runtime/ollama-chat-cleanup.sh --destroy-models
 ```
 
-The API is still local-only in this setup. Public exposure belongs to a later
-deployment step with reverse proxy, TLS, CORS/origin controls, rate limits, and
-production knowledge data.
+The API is still local-only at this point. Public exposure belongs to the
+Milestone 7 public deployment boundary with reverse proxy, free Let's Encrypt
+TLS, CORS/origin controls, rate limits, and production knowledge data.
+
+## 12. Public TLS Startup On `vps.madnick.ovh`
+
+Run this section only after the local setup, readiness, smoke, and chat checks
+above pass with the production knowledge base.
+
+DNS must point `vps.madnick.ovh` to the service VPS:
+
+```text
+IPv4: 195.88.87.3
+IPv6: 2a02:c207:2259:619::1
+```
+
+The VPS firewall and provider firewall must allow inbound TCP `80` and `443`.
+The Python API port stays private; do not expose `8000` publicly.
+
+Edit `.env` for public certificate issuance and HTTPS runtime:
+
+```env
+PUBLIC_HTTP_BIND_ADDRESS=0.0.0.0
+PUBLIC_HTTP_PORT=80
+PUBLIC_HTTPS_BIND_ADDRESS=0.0.0.0
+PUBLIC_HTTPS_PORT=443
+PUBLIC_SERVER_NAME=vps.madnick.ovh
+LETSENCRYPT_EMAIL=your-real-letsencrypt-contact-email
+```
+
+`LETSENCRYPT_EMAIL` is used only by Let's Encrypt for account and renewal
+notices. Do not commit a real email address.
+
+Validate the public profiles and Nginx configs:
+
+```sh
+scripts/runtime/nginx-validate.sh
+```
+
+Run first public setup and request the free certificate explicitly:
+
+```sh
+scripts/runtime/public-setup.sh --issue-certificate
+```
+
+This setup path builds the API image, starts PostgreSQL, runs the migration
+wrapper, prepares configured local providers, starts the HTTP/bootstrap edge for
+ACME, calls `letsencrypt-setup.sh`, and then stops the bootstrap edge.
+Certificate issuance intentionally refuses loopback/local HTTP settings:
+`PUBLIC_HTTP_BIND_ADDRESS` must be `0.0.0.0` and `PUBLIC_HTTP_PORT` must be
+`80`.
+
+Start the HTTPS runtime edge:
+
+```sh
+scripts/runtime/public-start.sh
+```
+
+Check the public HTTPS routes through the high-level smoke script:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
+```
+
+Expected output without the optional direct API-port probe:
+
+```text
+cors preflight passed: https://pigreco.xyz
+cors preflight passed: https://www.pigreco.xyz
+unexpected origin rejected: https://example.invalid
+direct API probe skipped: set PUBLIC_DIRECT_API_PROBE_URL to check public port 8000
+public smoke passed: https://vps.madnick.ovh
+```
+
+On the public server, also probe the public IP for accidental FastAPI exposure:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh \
+PUBLIC_DIRECT_API_PROBE_URL=http://195.88.87.3:8000/health \
+scripts/runtime/public-smoke.sh
+```
+
+This direct probe must not return `2xx`. If it fails, remove public exposure of
+port `8000`; the public deployment path must be Nginx on `443`.
+
+For later code/config updates after the certificate exists, use:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-deploy.sh
+```
+
+The public smoke script checks both portfolio CORS origins, rejection of an
+unexpected origin, health, readiness, and the chat route. A direct manual chat
+request is still useful when checking answer text:
+
+```sh
+curl -s -X POST https://vps.madnick.ovh/api/assistant/chat \
+  -H 'content-type: application/json' \
+  -H 'origin: https://pigreco.xyz' \
+  -d '{"question":"Where did Niccolo work?","language":"en"}'
+```
+
+Renew certificates with:
+
+```sh
+scripts/runtime/letsencrypt-renew.sh
+```
+
+Renewal expects `nginx-tls` to be running because the ACME HTTP challenge is
+served by the HTTPS runtime profile on port `80`. The renewal script reloads
+`nginx-tls` after Certbot succeeds.
+
+For the complete public deployment boundary, see
+[Public Deployment Boundary](public-deployment.md).

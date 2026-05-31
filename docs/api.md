@@ -13,13 +13,49 @@ authorities.
 
 ## Network Assumption
 
-The portfolio website calls this service through a server-side proxy over the
-private OpenVPN/tun0 network. Browser JavaScript should call the portfolio
-origin, not this API directly.
+The application exposes local API routes inside the service container. The
+public deployment boundary is owned by the reverse proxy runtime documented in
+`docs/public-deployment.md`.
 
-Milestone 5 does not add CORS middleware. If a future deployment exposes the
-API directly to browsers, that change must add explicit allowed-origin
-configuration without wildcard defaults.
+For production, browser JavaScript in the separate portfolio project calls the
+public HTTPS API on `vps.madnick.ovh`:
+
+```text
+https://vps.madnick.ovh/api/assistant/chat
+```
+
+Nginx maps that public route to the local API route:
+
+```text
+http://api:8000/chat
+```
+
+Allowed browser origins are only:
+
+```text
+https://pigreco.xyz
+https://www.pigreco.xyz
+```
+
+CORS is enforced at the Nginx edge for public deployment. The FastAPI
+application does not add wildcard CORS defaults or duplicate edge CORS policy.
+
+The HTTP/bootstrap Nginx edge keeps localhost-safe defaults for local
+validation:
+
+```text
+http://127.0.0.1:18080/api/assistant/chat
+```
+
+The HTTPS runtime edge is enabled after Let's Encrypt certificate setup and
+terminates public traffic on port `443`.
+
+Use the public smoke script after deployment to verify the edge route, CORS
+preflight, readiness, and chat response shape:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
+```
 
 The ASGI entrypoint is:
 
@@ -82,11 +118,12 @@ Request fields:
 - `question`: non-empty visitor question, up to 1000 characters.
 - `language`: explicit answer language, either `en` or `it`.
 
-Example proxied call:
+Example public call:
 
 ```sh
-curl -X POST https://pigreco.xyz/chat \
+curl -X POST https://vps.madnick.ovh/api/assistant/chat \
   -H 'content-type: application/json' \
+  -H 'origin: https://pigreco.xyz' \
   -d '{"question":"Where did Niccolo work?","language":"en"}'
 ```
 

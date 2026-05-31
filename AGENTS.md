@@ -48,6 +48,15 @@ same change.
   visitor-derived data.
 - Do not store per-question language, answer status, source kinds, retrieval
   scores, or any other answer/request metadata from visitor traffic.
+- The public Nginx edge may keep redacted operational access logs containing
+  only timestamp, HTTP method, normalized route path without query string,
+  status code, response byte count, request duration, and allowed browser
+  origin. These logs must never include visitor identity, request bodies, raw
+  questions, query strings, user agents, cookies, API keys, source IDs,
+  retrieval scores, answer status, or answer text.
+- The public Nginx edge may use a volatile IP-derived key in memory only for
+  rate-limit enforcement. It must not log, export, persist, or forward that
+  value.
 
 ## Git-Flow Rules
 
