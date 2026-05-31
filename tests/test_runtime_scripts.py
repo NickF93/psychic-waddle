@@ -220,6 +220,7 @@ def test_public_scripts_wrap_existing_runtime_authorities() -> None:
     assert "psql" not in _script("public-migrate.sh")
     assert "/migrations/" not in _script("public-migrate.sh")
     assert '"$SCRIPT_DIR/public-build.sh"' in _script("public-deploy.sh")
+    assert '"$SCRIPT_DIR/postgres-start.sh"' in _script("public-deploy.sh")
     assert '"$SCRIPT_DIR/public-migrate.sh"' in _script("public-deploy.sh")
     assert '"$SCRIPT_DIR/public-start.sh"' in _script("public-deploy.sh")
     assert '"$SCRIPT_DIR/public-smoke.sh"' in _script("public-deploy.sh")
@@ -235,7 +236,18 @@ def test_public_setup_requires_explicit_certificate_flag() -> None:
     assert "ISSUE_CERTIFICATE=true" in setup
     assert 'if [ "$ISSUE_CERTIFICATE" = true ]; then' in setup
     assert '"$SCRIPT_DIR/letsencrypt-setup.sh"' in setup
+    assert "compose_profile public stop nginx" in setup
     assert "certificate issuance skipped" in setup
+
+
+def test_public_start_stops_bootstrap_edge_before_tls_runtime() -> None:
+    start = _script("public-start.sh")
+
+    assert "compose_profile public stop nginx" in start
+    assert "compose_profile_up_wait public-tls nginx-tls" in start
+    assert start.index("compose_profile public stop nginx") < start.index(
+        "compose_profile_up_wait public-tls nginx-tls"
+    )
 
 
 def test_public_scripts_dispatch_configured_local_providers() -> None:

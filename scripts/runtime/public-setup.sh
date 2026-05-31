@@ -42,6 +42,7 @@ setup_embedding_backend
 
 if [ "$ISSUE_CERTIFICATE" = true ]; then
     "$SCRIPT_DIR/letsencrypt-setup.sh"
+    compose_profile public stop nginx
 else
     info "certificate issuance skipped; run public-setup.sh --issue-certificate to call letsencrypt-setup.sh"
 fi

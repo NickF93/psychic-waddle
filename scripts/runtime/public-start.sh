@@ -28,4 +28,5 @@ start_chat_backend
 start_embedding_backend
 "$SCRIPT_DIR/postgres-start.sh"
 "$SCRIPT_DIR/api-start.sh"
+compose_profile public stop nginx
 compose_profile_up_wait public-tls nginx-tls
