@@ -16,6 +16,8 @@ EXPECTED_PUBLIC_SCRIPTS = {
     "api-setup.sh",
     "api-start.sh",
     "api-stop.sh",
+    "letsencrypt-renew.sh",
+    "letsencrypt-setup.sh",
     "llama-cpp-chat-cleanup.sh",
     "llama-cpp-chat-down.sh",
     "llama-cpp-chat-setup.sh",
@@ -181,12 +183,35 @@ def test_llama_cpp_scripts_keep_chat_and_embedding_services_separate() -> None:
     )
 
 
+def test_letsencrypt_scripts_use_explicit_tls_contract() -> None:
+    setup = _script("letsencrypt-setup.sh")
+    renew = _script("letsencrypt-renew.sh")
+
+    assert "configured_value PUBLIC_SERVER_NAME" in setup
+    assert "configured_value LETSENCRYPT_EMAIL" in setup
+    assert "compose_profile_up_wait public nginx" in setup
+    assert "compose_profile public run --rm certbot certonly" in setup
+    assert "--webroot-path /var/www/certbot" in setup
+    assert "--cert-name portfolio-rag-assistant" in setup
+    assert '-d "$PUBLIC_SERVER_NAME"' in setup
+
+    assert "configured_value PUBLIC_SERVER_NAME" in renew
+    assert "configured_value LETSENCRYPT_EMAIL" in renew
+    assert "compose_profile public-tls run --rm certbot renew" in renew
+    assert "--webroot-path /var/www/certbot" in renew
+    assert "--cert-name portfolio-rag-assistant" in renew
+    assert "compose_profile public-tls exec nginx-tls nginx -s reload" in renew
+
+
 def test_cleanup_scripts_are_bounded() -> None:
     script_text = _all_script_text()
 
     assert "down --volumes" not in script_text
     assert "down -v" not in script_text
     assert "rm -rf" not in script_text
+    assert "remove_compose_volume letsencrypt-certs" not in script_text
+    assert "remove_compose_volume letsencrypt-work" not in script_text
+    assert "remove_compose_volume acme-challenges" not in script_text
     assert "require_cleanup_flag --destroy-data" in _script("postgres-cleanup.sh")
     assert "require_cleanup_flag --destroy-models" in _script(
         "ollama-chat-cleanup.sh"
