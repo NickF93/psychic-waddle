@@ -753,24 +753,25 @@ Items:
 
 - Config: add Certbot container support for Let's Encrypt certificates.
 - Config: mount certificate and ACME challenge volumes explicitly.
-- Config: support initial HTTP certificate issue and HTTPS runtime after the
-  certificate exists.
-- Config: require `LETSENCRYPT_EMAIL` from untracked `.env`.
-- Script: add certificate setup command.
-- Script: add certificate renewal command.
+- Config: support initial HTTP certificate issue through `nginx` and HTTPS
+  runtime through `nginx-tls` after the certificate exists.
+- Config: require `PUBLIC_SERVER_NAME` and `LETSENCRYPT_EMAIL` from untracked
+  `.env`.
+- Script: add certificate setup command: `letsencrypt-setup.sh`.
+- Script: add certificate renewal command: `letsencrypt-renew.sh`.
 - Script: add Nginx reload flow after renewal.
 - Documentation: define DNS prerequisites for `vps.madnick.ovh`.
 - Documentation: document that Let's Encrypt certificates are free and no paid
   certificate is required.
-- Test: guard required TLS environment variables and bounded certificate
-  cleanup.
+- Test: guard required TLS environment variables, ACME challenge routing,
+  public `443` ownership, and bounded certificate cleanup.
 - Final track/doc: `docs/public-deployment.md`.
 
 ### Sprint 7.4: Public Deployment Script Suite
 
 Items:
 
-- Script: add full public setup.
+- Script: add full public setup using the existing Let's Encrypt setup command.
 - Script: add public build, start, stop, down, cleanup, deploy/update, and smoke
   commands.
 - Script: add Nginx configuration validation.

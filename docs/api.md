@@ -40,14 +40,15 @@ https://www.pigreco.xyz
 CORS is enforced at the Nginx edge for public deployment. The FastAPI
 application does not add wildcard CORS defaults or duplicate edge CORS policy.
 
-During Sprint 7.2, the Nginx edge is HTTP-only with localhost-safe defaults for
-local validation:
+The HTTP/bootstrap Nginx edge keeps localhost-safe defaults for local
+validation:
 
 ```text
 http://127.0.0.1:8080/api/assistant/chat
 ```
 
-HTTPS and port `443` are added by the later Let's Encrypt automation sprint.
+The HTTPS runtime edge is enabled after Let's Encrypt certificate setup and
+terminates public traffic on port `443`.
 
 The ASGI entrypoint is:
 

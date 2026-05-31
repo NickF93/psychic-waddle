@@ -99,6 +99,8 @@ their own component:
   `ollama-models` volume.
 - llama.cpp cleanup removes only service containers. It never deletes
   bind-mounted model files.
+- Let's Encrypt setup and renewal scripts do not remove certificate, work, or
+  ACME challenge volumes.
 
 Script matrix:
 
@@ -110,6 +112,7 @@ Script matrix:
 | Ollama embeddings | | `ollama-embeddings-setup.sh` | `ollama-embeddings-start.sh` | `ollama-embeddings-stop.sh` | `ollama-embeddings-down.sh` | `ollama-embeddings-cleanup.sh --destroy-models` | |
 | llama.cpp chat | | `llama-cpp-chat-setup.sh` | `llama-cpp-chat-start.sh` | `llama-cpp-chat-stop.sh` | `llama-cpp-chat-down.sh` | `llama-cpp-chat-cleanup.sh` | |
 | llama.cpp embeddings | | `llama-cpp-embeddings-setup.sh` | `llama-cpp-embeddings-start.sh` | `llama-cpp-embeddings-stop.sh` | `llama-cpp-embeddings-down.sh` | `llama-cpp-embeddings-cleanup.sh` | |
+| Let's Encrypt TLS | | `letsencrypt-setup.sh` | | | | | `letsencrypt-renew.sh` |
 
 There is exactly one migration script:
 

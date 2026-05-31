@@ -141,15 +141,69 @@ LETSENCRYPT_EMAIL=your-email@example.com
 and account notices. It belongs only in the untracked server `.env`; do not
 commit a real personal email address.
 
-The certificate flow for later implementation:
+The deployment has two explicit Nginx modes:
+
+| Mode | Compose profile | Service | Purpose |
+| --- | --- | --- | --- |
+| HTTP/bootstrap | `public` | `nginx` | serve ACME HTTP challenges and local edge checks before certificates exist |
+| HTTPS runtime | `public-tls` | `nginx-tls` | terminate TLS after certificates exist |
+
+The HTTP/bootstrap service must not load TLS certificate paths. The HTTPS
+runtime service must not start until the certificate exists in the shared
+certificate volume.
+
+The certificate flow is:
 
 1. DNS points `vps.madnick.ovh` to `195.88.87.3` and
    `2a02:c207:2259:619::1`.
 2. Ports `80` and `443` are reachable on the VPS.
-3. Nginx starts with an HTTP challenge configuration.
-4. Certbot requests the certificate through the shared ACME challenge volume.
-5. Nginx starts or reloads the HTTPS configuration.
-6. Renewal reuses the same certificate volume and reloads Nginx after success.
+3. `.env` configures the public HTTP edge on port `80`:
+
+   ```env
+   PUBLIC_HTTP_BIND_ADDRESS=0.0.0.0
+   PUBLIC_HTTP_PORT=80
+   ```
+
+4. The HTTP/bootstrap edge starts:
+
+   ```sh
+   docker compose --env-file .env --profile public up --wait nginx
+   ```
+
+5. Certbot requests the certificate through the shared ACME challenge volume:
+
+   ```sh
+   scripts/runtime/letsencrypt-setup.sh
+   ```
+
+6. The operator stops the bootstrap edge when switching to HTTPS runtime:
+
+   ```sh
+   docker compose --env-file .env --profile public stop nginx
+   ```
+
+7. `.env` configures the public HTTPS edge:
+
+   ```env
+   PUBLIC_HTTPS_BIND_ADDRESS=0.0.0.0
+   PUBLIC_HTTPS_PORT=443
+   ```
+
+8. The HTTPS runtime edge starts:
+
+   ```sh
+   docker compose --env-file .env --profile public-tls up --wait nginx-tls
+   ```
+
+9. Renewal reuses the same certificate volume and reloads Nginx after success:
+
+   ```sh
+   scripts/runtime/letsencrypt-renew.sh
+   ```
+
+Certbot stores the service certificate under the fixed certificate name
+`portfolio-rag-assistant`, so Nginx can use stable certificate paths while the
+requested public DNS name remains explicit in `PUBLIC_SERVER_NAME`.
 
 Certificate cleanup must require an explicit destructive flag. Normal public
 `down` or `stop` operations must not delete certificates.
@@ -211,12 +265,16 @@ still publish on `127.0.0.1` for local operator tests.
 
 Add Certbot-based Let's Encrypt automation:
 
-- certificate setup command;
-- certificate renewal command;
+- profile-gated Certbot service;
+- bounded certificate, Certbot work, and ACME challenge volumes;
+- HTTP/bootstrap Nginx ACME challenge routing;
+- HTTPS runtime Nginx config;
+- certificate setup command: `scripts/runtime/letsencrypt-setup.sh`;
+- certificate renewal command: `scripts/runtime/letsencrypt-renew.sh`;
 - Nginx reload after renewal;
-- required `LETSENCRYPT_EMAIL` validation;
-- bounded certificate volumes;
-- tests for required environment and destructive cleanup guards.
+- required `PUBLIC_SERVER_NAME` and `LETSENCRYPT_EMAIL` validation;
+- tests for required environment, public `443` ownership, ACME routing, and
+  destructive cleanup guards.
 
 ### Sprint 7.4: Public Deployment Script Suite
 
@@ -233,12 +291,14 @@ public-deploy.sh
 public-migrate.sh
 public-smoke.sh
 nginx-validate.sh
-letsencrypt-setup.sh
-letsencrypt-renew.sh
 ```
 
 `public-migrate.sh` must delegate to the single PostgreSQL migration authority
 instead of duplicating migration logic.
+
+The Let's Encrypt setup and renewal scripts are already delivered by Sprint 7.3.
+Sprint 7.4 may call them from higher-level public setup or deploy scripts, but
+must not duplicate certificate issuance or renewal logic.
 
 Cleanup scripts must not delete PostgreSQL data, model data, or certificates
 without explicit destructive flags.

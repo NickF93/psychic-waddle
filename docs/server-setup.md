@@ -67,6 +67,12 @@ POSTGRES_PASSWORD="$(openssl rand -hex 24)"
 cat > .env <<EOF
 API_BIND_ADDRESS=127.0.0.1
 API_PORT=8000
+PUBLIC_HTTP_BIND_ADDRESS=127.0.0.1
+PUBLIC_HTTP_PORT=8080
+PUBLIC_HTTPS_BIND_ADDRESS=127.0.0.1
+PUBLIC_HTTPS_PORT=8443
+PUBLIC_SERVER_NAME=vps.madnick.ovh
+LETSENCRYPT_EMAIL=replace-with-letsencrypt-email
 
 POSTGRES_DB=portfolio_rag_assistant
 POSTGRES_USER=portfolio_rag_assistant
@@ -97,9 +103,11 @@ Validate the Compose configuration:
 ```sh
 docker compose --env-file .env config
 docker compose --env-file .env --profile ollama config
+docker compose --env-file .env --profile public config
+docker compose --env-file .env --profile public-tls config
 ```
 
-Both commands must render successfully before continuing.
+All Compose configuration commands must render successfully before continuing.
 
 ## 3. Build The Backend Image
 
@@ -373,7 +381,91 @@ Destroy Ollama model data only when intentionally deleting downloaded models:
 scripts/runtime/ollama-chat-cleanup.sh --destroy-models
 ```
 
-The API is still local-only in this setup. Public exposure belongs to the
+The API is still local-only at this point. Public exposure belongs to the
 Milestone 7 public deployment boundary with reverse proxy, free Let's Encrypt
-TLS, CORS/origin controls, rate limits, and production knowledge data. See
+TLS, CORS/origin controls, rate limits, and production knowledge data.
+
+## 12. Public TLS Startup On `vps.madnick.ovh`
+
+Run this section only after the local setup, readiness, smoke, and chat checks
+above pass with the production knowledge base.
+
+DNS must point `vps.madnick.ovh` to the service VPS:
+
+```text
+IPv4: 195.88.87.3
+IPv6: 2a02:c207:2259:619::1
+```
+
+The VPS firewall and provider firewall must allow inbound TCP `80` and `443`.
+The Python API port stays private; do not expose `8000` publicly.
+
+Edit `.env` for public certificate issuance and HTTPS runtime:
+
+```env
+PUBLIC_HTTP_BIND_ADDRESS=0.0.0.0
+PUBLIC_HTTP_PORT=80
+PUBLIC_HTTPS_BIND_ADDRESS=0.0.0.0
+PUBLIC_HTTPS_PORT=443
+PUBLIC_SERVER_NAME=vps.madnick.ovh
+LETSENCRYPT_EMAIL=your-real-letsencrypt-contact-email
+```
+
+`LETSENCRYPT_EMAIL` is used only by Let's Encrypt for account and renewal
+notices. Do not commit a real email address.
+
+Validate the public profiles:
+
+```sh
+docker compose --env-file .env --profile public config
+docker compose --env-file .env --profile public-tls config
+```
+
+Start the HTTP/bootstrap Nginx edge for ACME challenge traffic:
+
+```sh
+docker compose --env-file .env --profile public up --wait nginx
+```
+
+Issue the free Let's Encrypt certificate:
+
+```sh
+scripts/runtime/letsencrypt-setup.sh
+```
+
+Stop the bootstrap edge before starting the HTTPS runtime edge on the same HTTP
+port:
+
+```sh
+docker compose --env-file .env --profile public stop nginx
+```
+
+Start the HTTPS runtime edge:
+
+```sh
+docker compose --env-file .env --profile public-tls up --wait nginx-tls
+```
+
+Check the public HTTPS routes:
+
+```sh
+curl -s https://vps.madnick.ovh/api/assistant/health
+curl -s https://vps.madnick.ovh/api/assistant/ready
+curl -s -X POST https://vps.madnick.ovh/api/assistant/chat \
+  -H 'content-type: application/json' \
+  -H 'origin: https://pigreco.xyz' \
+  -d '{"question":"Where did Niccolo work?","language":"en"}'
+```
+
+Renew certificates with:
+
+```sh
+scripts/runtime/letsencrypt-renew.sh
+```
+
+Renewal expects `nginx-tls` to be running because the ACME HTTP challenge is
+served by the HTTPS runtime profile on port `80`. The renewal script reloads
+`nginx-tls` after Certbot succeeds.
+
+For the complete public deployment boundary, see
 [Public Deployment Boundary](public-deployment.md).
