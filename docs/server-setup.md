@@ -373,6 +373,7 @@ Destroy Ollama model data only when intentionally deleting downloaded models:
 scripts/runtime/ollama-chat-cleanup.sh --destroy-models
 ```
 
-The API is still local-only in this setup. Public exposure belongs to a later
-deployment step with reverse proxy, TLS, CORS/origin controls, rate limits, and
-production knowledge data.
+The API is still local-only in this setup. Public exposure belongs to the
+Milestone 7 public deployment boundary with reverse proxy, free Let's Encrypt
+TLS, CORS/origin controls, rate limits, and production knowledge data. See
+[Public Deployment Boundary](public-deployment.md).

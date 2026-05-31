@@ -9,6 +9,10 @@ The runtime layer does not add CORS, TLS, a reverse proxy, Kubernetes, Swarm,
 automatic model downloads, committed secrets, question collection, or API
 behavior changes.
 
+Public HTTPS exposure belongs to the Milestone 7 deployment boundary. That
+boundary is documented in [Public Deployment Boundary](public-deployment.md) and
+keeps the portfolio frontend in its separate project.
+
 ## Backend Image
 
 Build the API image from the repository root:
@@ -51,8 +55,9 @@ API_BIND_ADDRESS=127.0.0.1
 API_PORT=8000
 ```
 
-Override `API_BIND_ADDRESS` explicitly only when the service must listen on a
-VPN/tun0 address.
+Override `API_BIND_ADDRESS` explicitly only for a documented private-network
+runtime. Public deployment keeps browser traffic behind the Nginx boundary
+defined in Milestone 7.
 
 Use `.env.example` only as a placeholder template. Real values belong in an
 untracked local `.env` file.
@@ -70,6 +75,10 @@ ENV_FILE=/absolute/path/to/.env scripts/runtime/api-start.sh
 For the full zero-to-running server procedure with PostgreSQL, Ollama, API
 startup, knowledge ingestion, embedding indexing, smoke checks, and manual chat
 tests, see [Server Setup Procedure](server-setup.md).
+
+For the planned public `vps.madnick.ovh` deployment with Nginx, free Let's
+Encrypt TLS, CORS, rate limits, and public smoke validation, see
+[Public Deployment Boundary](public-deployment.md).
 
 Setup and start scripts wait for the targeted service to become ready before
 returning. The wait timeout defaults to 120 seconds and can be changed with:
