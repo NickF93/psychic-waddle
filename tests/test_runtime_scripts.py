@@ -44,6 +44,16 @@ EXPECTED_PUBLIC_SCRIPTS = {
     "postgres-setup.sh",
     "postgres-start.sh",
     "postgres-stop.sh",
+    "nginx-validate.sh",
+    "public-build.sh",
+    "public-cleanup.sh",
+    "public-deploy.sh",
+    "public-down.sh",
+    "public-migrate.sh",
+    "public-setup.sh",
+    "public-smoke.sh",
+    "public-start.sh",
+    "public-stop.sh",
 }
 
 
@@ -201,6 +211,89 @@ def test_letsencrypt_scripts_use_explicit_tls_contract() -> None:
     assert "--webroot-path /var/www/certbot" in renew
     assert "--cert-name portfolio-rag-assistant" in renew
     assert "compose_profile public-tls exec nginx-tls nginx -s reload" in renew
+
+
+def test_public_scripts_wrap_existing_runtime_authorities() -> None:
+    assert '"$SCRIPT_DIR/nginx-validate.sh"' in _script("public-build.sh")
+    assert '"$SCRIPT_DIR/api-build.sh"' in _script("public-build.sh")
+    assert _script("public-migrate.sh").count("postgres-migrate.sh") == 1
+    assert "psql" not in _script("public-migrate.sh")
+    assert "/migrations/" not in _script("public-migrate.sh")
+    assert '"$SCRIPT_DIR/public-build.sh"' in _script("public-deploy.sh")
+    assert '"$SCRIPT_DIR/public-migrate.sh"' in _script("public-deploy.sh")
+    assert '"$SCRIPT_DIR/public-start.sh"' in _script("public-deploy.sh")
+    assert '"$SCRIPT_DIR/public-smoke.sh"' in _script("public-deploy.sh")
+    assert "letsencrypt-setup.sh" not in _script("public-deploy.sh")
+    assert "letsencrypt-renew.sh" not in _script("public-deploy.sh")
+
+
+def test_public_setup_requires_explicit_certificate_flag() -> None:
+    setup = _script("public-setup.sh")
+
+    assert "usage: public-setup.sh [--issue-certificate]" in setup
+    assert '[ "$1" = "--issue-certificate" ]' in setup
+    assert "ISSUE_CERTIFICATE=true" in setup
+    assert 'if [ "$ISSUE_CERTIFICATE" = true ]; then' in setup
+    assert '"$SCRIPT_DIR/letsencrypt-setup.sh"' in setup
+    assert "certificate issuance skipped" in setup
+
+
+def test_public_scripts_dispatch_configured_local_providers() -> None:
+    for script_name, verb in (
+        ("public-setup.sh", "setup"),
+        ("public-start.sh", "start"),
+        ("public-stop.sh", "stop"),
+        ("public-down.sh", "down"),
+    ):
+        script = _script(script_name)
+        assert "env_value CHAT_BACKEND" in script
+        assert "env_value EMBEDDING_BACKEND" in script
+        assert f"ollama-chat-{verb}.sh" in script
+        assert f"ollama-embeddings-{verb}.sh" in script
+        assert f"llama-cpp-chat-{verb}.sh" in script
+        assert f"llama-cpp-embeddings-{verb}.sh" in script
+        assert "openai-compatible" in script
+        assert "unsupported CHAT_BACKEND" in script
+        assert "unsupported EMBEDDING_BACKEND" in script
+
+
+def test_public_cleanup_preserves_data_model_and_certificate_volumes() -> None:
+    cleanup = _script("public-cleanup.sh")
+
+    assert '"$SCRIPT_DIR/public-down.sh"' in cleanup
+    assert "remove_docker_image portfolio-rag-assistant:local" in cleanup
+    assert "postgres-cleanup.sh" not in cleanup
+    assert "ollama-chat-cleanup.sh" not in cleanup
+    assert "ollama-embeddings-cleanup.sh" not in cleanup
+    assert "Let's Encrypt" in cleanup
+    assert "preserved" in cleanup
+
+
+def test_public_smoke_supports_local_default_and_public_override() -> None:
+    smoke = _script("public-smoke.sh")
+
+    assert "PUBLIC_SMOKE_BASE_URL=${PUBLIC_SMOKE_BASE_URL:-http://127.0.0.1:8080}" in smoke
+    assert "PUBLIC_SMOKE_ORIGIN=${PUBLIC_SMOKE_ORIGIN:-https://pigreco.xyz}" in smoke
+    assert "curl -fsS -X OPTIONS" in smoke
+    assert "access-control-request-method: POST" in smoke
+    assert "/api/assistant/health" in smoke
+    assert "/api/assistant/ready" in smoke
+    assert "/api/assistant/chat" in smoke
+    assert '{"question":"Where did Niccolo work?","language":"en"}' in smoke
+    assert '"answerable", "not_answerable", "needs_clarification"' in smoke
+
+
+def test_nginx_validate_checks_both_public_edge_configs() -> None:
+    validate = _script("nginx-validate.sh")
+
+    assert "compose_profile public config >/dev/null" in validate
+    assert "compose_profile public-tls config >/dev/null" in validate
+    assert "deploy/nginx/nginx.conf" in validate
+    assert "deploy/nginx/nginx-tls.conf" in validate
+    assert "proxy_pass http://api:8000/chat?;" in validate
+    assert "proxy_pass http://api:8000/health?;" in validate
+    assert "proxy_pass http://api:8000/ready?;" in validate
+    assert "listen 443 ssl;" in validate
 
 
 def test_cleanup_scripts_are_bounded() -> None:
