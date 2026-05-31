@@ -253,12 +253,63 @@ Production smoke must make the public target explicit:
 PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
 ```
 
+The smoke script validates:
+
+- CORS preflight acceptance for `https://pigreco.xyz`;
+- CORS preflight acceptance for `https://www.pigreco.xyz`;
+- CORS preflight rejection for an unexpected origin;
+- `GET /api/assistant/health` through Nginx;
+- `GET /api/assistant/ready` through Nginx;
+- `POST /api/assistant/chat` through Nginx;
+- optional direct API-port exposure through `PUBLIC_DIRECT_API_PROBE_URL`.
+
+Expected output for a normal production smoke run without the optional direct
+API probe:
+
+```text
+cors preflight passed: https://pigreco.xyz
+cors preflight passed: https://www.pigreco.xyz
+unexpected origin rejected: https://example.invalid
+direct API probe skipped: set PUBLIC_DIRECT_API_PROBE_URL to check public port 8000
+public smoke passed: https://vps.madnick.ovh
+```
+
+To confirm that public traffic cannot bypass Nginx and reach FastAPI on port
+`8000`, set the probe URL explicitly:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh \
+PUBLIC_DIRECT_API_PROBE_URL=http://195.88.87.3:8000/health \
+scripts/runtime/public-smoke.sh
+```
+
+The direct API probe fails only when that URL returns a `2xx` response. Refused,
+timed out, unreachable, or non-`2xx` responses pass because FastAPI is not
+publicly usable there.
+
 `public-deploy.sh` intentionally does not issue or renew certificates. Use
 `public-setup.sh --issue-certificate` for first certificate issuance and
 `letsencrypt-renew.sh` for renewal.
 
 `public-cleanup.sh` must not delete PostgreSQL data, model volumes, certificate
 volumes, ACME challenge data, or Let's Encrypt work data.
+
+## Public Smoke Troubleshooting
+
+- CORS preflight failure for `https://pigreco.xyz` or
+  `https://www.pigreco.xyz`: validate `deploy/nginx/nginx-tls.conf` and restart
+  `nginx-tls`; the allowed origins are fixed and must not include the portfolio
+  server IP.
+- Unexpected origin not rejected: stop deployment and fix the Nginx CORS map
+  before exposing the service.
+- Health failure: verify the `nginx-tls` and `api` containers are running and
+  that the public route maps to internal `/health`.
+- Readiness failure: run `portfolio-rag-assistant runtime smoke` inside the API
+  runtime path to check database, embeddings, and provider reachability.
+- Chat failure: confirm the knowledge base is ingested and indexed, then inspect
+  API logs; do not expose the service until chat returns a valid public status.
+- Direct API probe failure: remove public exposure of port `8000`; the public
+  deployment path must be Nginx on `443`, not FastAPI directly.
 
 ## M7 Sprint Breakdown
 

@@ -442,14 +442,36 @@ Check the public HTTPS routes through the high-level smoke script:
 PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
 ```
 
+Expected output without the optional direct API-port probe:
+
+```text
+cors preflight passed: https://pigreco.xyz
+cors preflight passed: https://www.pigreco.xyz
+unexpected origin rejected: https://example.invalid
+direct API probe skipped: set PUBLIC_DIRECT_API_PROBE_URL to check public port 8000
+public smoke passed: https://vps.madnick.ovh
+```
+
+On the public server, also probe the public IP for accidental FastAPI exposure:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh \
+PUBLIC_DIRECT_API_PROBE_URL=http://195.88.87.3:8000/health \
+scripts/runtime/public-smoke.sh
+```
+
+This direct probe must not return `2xx`. If it fails, remove public exposure of
+port `8000`; the public deployment path must be Nginx on `443`.
+
 For later code/config updates after the certificate exists, use:
 
 ```sh
 PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-deploy.sh
 ```
 
-The public smoke script checks CORS preflight, health, readiness, and the chat
-route. A direct manual chat request is still useful when checking answer text:
+The public smoke script checks both portfolio CORS origins, rejection of an
+unexpected origin, health, readiness, and the chat route. A direct manual chat
+request is still useful when checking answer text:
 
 ```sh
 curl -s -X POST https://vps.madnick.ovh/api/assistant/chat \

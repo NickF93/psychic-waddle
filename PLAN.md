@@ -794,9 +794,14 @@ Items:
 
 - Script: harden public HTTPS smoke validation beyond the Sprint 7.4 smoke
   script.
+- Validation: check CORS preflight from `https://pigreco.xyz`.
 - Validation: check CORS preflight from `https://www.pigreco.xyz`.
 - Validation: reject unexpected browser origins.
-- Validation: confirm the API direct port is not part of public access.
+- Validation: call public `/api/assistant/health`, `/api/assistant/ready`, and
+  `/api/assistant/chat` through Nginx.
+- Validation: confirm the API direct port is not part of public access when
+  `PUBLIC_DIRECT_API_PROBE_URL` is explicitly provided.
+- Test: validate public smoke behavior without real network calls.
 - Documentation: document expected smoke output and troubleshooting.
 - Final track/doc: `docs/public-deployment.md`.
 
