@@ -207,7 +207,9 @@ JSON
 ```
 
 This file is only a functional test. Replace it with real reviewed public facts
-before using the service for recruiters.
+before using the service for recruiters. The local `knowledge/` directory is
+ignored by Git; server-created deployment knowledge files must remain untracked
+unless a future explicit plan creates a reviewed committed knowledge dataset.
 
 ## 7. Validate, Ingest, And Index Knowledge
 

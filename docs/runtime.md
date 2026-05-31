@@ -30,6 +30,9 @@ uvicorn portfolio_rag_assistant.api.main:app --host 0.0.0.0 --port 8000
 The image contains application code, migrations, and the dependency lock file.
 It does not bake `.env` files, local model files, curated knowledge files, or
 database data into the image.
+Server-local deployment knowledge under `knowledge/` is ignored by Git and must
+remain untracked unless a future explicit plan creates a reviewed committed
+knowledge dataset.
 
 Runtime build inputs are pinned:
 
