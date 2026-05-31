@@ -138,6 +138,8 @@ certificates.
 scripts/runtime/public-smoke.sh
 ```
 
+The local HTTP edge default is `http://127.0.0.1:18080`.
+
 Production HTTPS smoke uses an explicit base URL:
 
 ```sh

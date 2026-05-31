@@ -74,8 +74,13 @@ The Sprint 7.2 local default is intentionally bound to loopback:
 
 ```env
 PUBLIC_HTTP_BIND_ADDRESS=127.0.0.1
-PUBLIC_HTTP_PORT=8080
+PUBLIC_HTTP_PORT=18080
 ```
+
+Older server `.env` files from before M7 must be updated with the public
+deployment variables. Public edge ports are intentionally explicit so stale
+configuration fails validation instead of silently binding to an occupied
+default port.
 
 On `vps.madnick.ovh`, after operator validation and before certificate setup,
 the HTTP edge may be bound publicly for ACME and smoke preparation:
@@ -331,7 +336,7 @@ Add the Nginx public edge container and configuration:
 
 - profile-gated service: `nginx` under the `public` Compose profile;
 - HTTP edge only in this sprint;
-- local default binding: `127.0.0.1:8080`;
+- local default binding: `127.0.0.1:18080`;
 - production HTTP binding: `0.0.0.0:80`;
 - HTTPS port `443` deferred to Sprint 7.3;
 - internal upstream: `http://api:8000`;
@@ -348,14 +353,14 @@ Manual local validation before the public script suite exists:
 ```sh
 docker compose --env-file .env --profile public config
 docker compose --env-file .env --profile public up --wait nginx
-curl -s http://127.0.0.1:8080/api/assistant/health
-curl -s http://127.0.0.1:8080/api/assistant/ready
+curl -s http://127.0.0.1:18080/api/assistant/health
+curl -s http://127.0.0.1:18080/api/assistant/ready
 ```
 
 Chat calls through the edge use:
 
 ```sh
-curl -s -X POST http://127.0.0.1:8080/api/assistant/chat \
+curl -s -X POST http://127.0.0.1:18080/api/assistant/chat \
   -H 'content-type: application/json' \
   -H 'origin: https://pigreco.xyz' \
   -d '{"question":"Where did Niccolo work?","language":"en"}'

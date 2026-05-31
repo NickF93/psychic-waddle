@@ -44,7 +44,7 @@ The HTTP/bootstrap Nginx edge keeps localhost-safe defaults for local
 validation:
 
 ```text
-http://127.0.0.1:8080/api/assistant/chat
+http://127.0.0.1:18080/api/assistant/chat
 ```
 
 The HTTPS runtime edge is enabled after Let's Encrypt certificate setup and

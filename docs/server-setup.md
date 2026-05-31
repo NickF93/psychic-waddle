@@ -68,9 +68,9 @@ cat > .env <<EOF
 API_BIND_ADDRESS=127.0.0.1
 API_PORT=8000
 PUBLIC_HTTP_BIND_ADDRESS=127.0.0.1
-PUBLIC_HTTP_PORT=8080
+PUBLIC_HTTP_PORT=18080
 PUBLIC_HTTPS_BIND_ADDRESS=127.0.0.1
-PUBLIC_HTTPS_PORT=8443
+PUBLIC_HTTPS_PORT=18443
 PUBLIC_SERVER_NAME=vps.madnick.ovh
 LETSENCRYPT_EMAIL=replace-with-letsencrypt-email
 
@@ -97,6 +97,10 @@ LLAMA_CPP_EMBEDDING_MODEL_PATH=/models/replace-with-embedding-model.gguf
 LLAMA_CPP_EMBEDDING_POOLING=mean
 EOF
 ```
+
+If this server already had an older `.env`, verify that the complete public
+deployment block above is present. Compose intentionally fails when public edge
+variables are missing instead of silently defaulting to an occupied port.
 
 Validate the Compose configuration:
 

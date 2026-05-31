@@ -805,6 +805,21 @@ Items:
 - Documentation: document expected smoke output and troubleshooting.
 - Final track/doc: `docs/public-deployment.md`.
 
+### Sprint 7.6: Public Env Upgrade Remediation
+
+Items:
+
+- Config: require public edge bind and port variables explicitly instead of
+  using hidden Compose defaults.
+- Config: move local public edge defaults to `127.0.0.1:18080` and
+  `127.0.0.1:18443` to avoid common local port conflicts.
+- Script: make Nginx validation fail clearly when public edge variables are
+  missing from `.env`.
+- Test: validate missing public edge variables fail before deployment.
+- Documentation: document the required M7 public block for older server `.env`
+  files.
+- Final track/doc: `docs/public-deployment.md`.
+
 ---
 
 ## Milestone 8: Anonymous Question Collection
