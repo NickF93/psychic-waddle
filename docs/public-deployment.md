@@ -109,16 +109,17 @@ Default chat rate limit:
 20 requests per minute, burst 40
 ```
 
-The rate limit protects local model and provider resources. Future docs must
-show how to tighten this value for stricter protection and how to remove it for
-temporary controlled testing. Rate limiting may use the remote address in
-Nginx memory for enforcement, but assistant access logs must not persist IP
-addresses.
+The rate limit protects local model and provider resources. It may use an
+IP-derived key in volatile Nginx memory for enforcement. That key must not be
+logged, exported, persisted, forwarded to the API, or stored in application
+data.
 
-Assistant logs must use a redacted format. The format may include method, path
-without query string, status, response size, request time, and allowed origin.
+Assistant access logs must use a redacted operational format. The format may
+include timestamp, HTTP method, normalized route path without query string,
+status code, response byte count, request duration, and allowed browser origin.
 It must not include IP address, user agent, cookies, request body, query string,
-raw question text, or API keys.
+raw question text, API keys, source identifiers, retrieval scores, answer
+status, answer text, or forwarded visitor identity headers.
 
 If an edge error log path can include visitor identity, it must not be persisted
 for assistant traffic. Deployment documentation must make log retention explicit
