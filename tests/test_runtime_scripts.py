@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import stat
 import subprocess
@@ -285,14 +286,77 @@ def test_public_smoke_supports_local_default_and_public_override() -> None:
     smoke = _script("public-smoke.sh")
 
     assert "PUBLIC_SMOKE_BASE_URL=${PUBLIC_SMOKE_BASE_URL:-http://127.0.0.1:8080}" in smoke
-    assert "PUBLIC_SMOKE_ORIGIN=${PUBLIC_SMOKE_ORIGIN:-https://pigreco.xyz}" in smoke
-    assert "curl -fsS -X OPTIONS" in smoke
+    assert "PUBLIC_SMOKE_ALLOWED_ORIGIN=https://pigreco.xyz" in smoke
+    assert "PUBLIC_SMOKE_ALLOWED_WWW_ORIGIN=https://www.pigreco.xyz" in smoke
+    assert "PUBLIC_SMOKE_REJECTED_ORIGIN=https://example.invalid" in smoke
+    assert "assert_cors_preflight_allowed" in smoke
+    assert "assert_cors_preflight_rejected" in smoke
+    assert "access-control-allow-origin" in smoke
     assert "access-control-request-method: POST" in smoke
     assert "/api/assistant/health" in smoke
     assert "/api/assistant/ready" in smoke
     assert "/api/assistant/chat" in smoke
     assert '{"question":"Where did Niccolo work?","language":"en"}' in smoke
     assert '"answerable", "not_answerable", "needs_clarification"' in smoke
+    assert "PUBLIC_DIRECT_API_PROBE_URL" in smoke
+    assert "2??) fail" in smoke
+    assert "direct API probe skipped" in smoke
+
+
+def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["PUBLIC_DIRECT_API_PROBE_URL"] = "http://public-api-closed:8000/health"
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "cors preflight passed: https://pigreco.xyz" in result.stdout
+    assert "cors preflight passed: https://www.pigreco.xyz" in result.stdout
+    assert "unexpected origin rejected: https://example.invalid" in result.stdout
+    assert "direct API probe passed: http://public-api-closed:8000/health returned 000" in result.stdout
+    assert "public smoke passed: http://127.0.0.1:8080" in result.stdout
+
+    calls = [json.loads(line) for line in fake_curl_log.read_text().splitlines()]
+    assert any("origin: https://pigreco.xyz" in call for call in calls)
+    assert any("origin: https://www.pigreco.xyz" in call for call in calls)
+    assert any("origin: https://example.invalid" in call for call in calls)
+    assert any("http://127.0.0.1:8080/api/assistant/health" in call for call in calls)
+    assert any("http://127.0.0.1:8080/api/assistant/ready" in call for call in calls)
+    assert any("http://127.0.0.1:8080/api/assistant/chat" in call for call in calls)
+    assert any("http://public-api-closed:8000/health" in call for call in calls)
+
+
+def test_public_smoke_fails_when_direct_api_probe_returns_success(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["PUBLIC_DIRECT_API_PROBE_URL"] = "http://public-api-open:8000/health"
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert (
+        "direct API port is publicly reachable: http://public-api-open:8000/health returned 200"
+        in result.stderr
+    )
 
 
 def test_nginx_validate_checks_both_public_edge_configs() -> None:
@@ -328,6 +392,67 @@ def test_cleanup_scripts_are_bounded() -> None:
     assert "remove_compose_volume" not in _script(
         "llama-cpp-embeddings-cleanup.sh"
     )
+
+
+def _write_fake_curl(tmp_path: Path) -> None:
+    fake_curl = tmp_path / "curl"
+    fake_curl.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+
+
+args = sys.argv[1:]
+with open(os.environ["FAKE_CURL_LOG"], "a", encoding="utf-8") as log:
+    log.write(json.dumps(args) + "\\n")
+
+origin = ""
+for index, arg in enumerate(args[:-1]):
+    if arg == "-H" and args[index + 1].lower().startswith("origin:"):
+        origin = args[index + 1].split(":", 1)[1].strip()
+
+url = ""
+for arg in args:
+    if arg.startswith(("http://", "https://")):
+        url = arg
+
+if url.startswith("http://public-api-open:8000/health"):
+    print("200", end="")
+elif url.startswith("http://public-api-closed:8000/health"):
+    print("000", end="")
+elif "-X" in args and "OPTIONS" in args and url.endswith("/api/assistant/chat"):
+    if origin in {"https://pigreco.xyz", "https://www.pigreco.xyz"}:
+        print("HTTP/1.1 204 No Content")
+        print(f"Access-Control-Allow-Origin: {origin}")
+        print()
+        print("status=204")
+    else:
+        print("HTTP/1.1 403 Forbidden")
+        print()
+        print("status=403")
+elif url.endswith("/api/assistant/health"):
+    print('{"status":"ok"}')
+elif url.endswith("/api/assistant/ready"):
+    print('{"status":"ready"}')
+elif url.endswith("/api/assistant/chat"):
+    print('{"status":"answerable","answer":"OK"}')
+else:
+    print(f"unexpected curl args: {args}", file=sys.stderr)
+    sys.exit(2)
+""",
+        encoding="utf-8",
+    )
+    fake_curl.chmod(fake_curl.stat().st_mode | stat.S_IXUSR)
+
+
+def _fake_curl_env(tmp_path: Path, fake_curl_log: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
+    env["FAKE_CURL_LOG"] = str(fake_curl_log)
+    env.pop("PUBLIC_DIRECT_API_PROBE_URL", None)
+    env.pop("PUBLIC_SMOKE_BASE_URL", None)
+    return env
 
 
 def _script(name: str) -> str:
