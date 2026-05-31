@@ -728,7 +728,10 @@ Items:
 Items:
 
 - Config: add an Nginx public edge container.
-- Config: expose only ports `80` and `443` publicly.
+- Config: expose HTTP through the Nginx edge with localhost-safe defaults for
+  local validation.
+- Config: document that production may bind the HTTP edge to port `80`, while
+  HTTPS port `443` is deferred to Sprint 7.3 when certificates exist.
 - Config: route `POST /api/assistant/chat` to API container `POST /chat`.
 - Config: route `GET /api/assistant/health` to API container `GET /health`.
 - Config: route `GET /api/assistant/ready` to API container `GET /ready`.

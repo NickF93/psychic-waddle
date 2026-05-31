@@ -66,7 +66,24 @@ privacy-safe logging. Nginx must not modify question text, answer text,
 retrieval behavior, provider payloads, or database state.
 
 PostgreSQL, Ollama, llama.cpp, and the Python API port are not public services.
-Only Nginx publishes public ports `80` and `443`.
+Only Nginx publishes browser-facing ports. Sprint 7.2 provides the HTTP edge
+runtime only; HTTPS port `443` is added in Sprint 7.3 after Let's Encrypt
+certificate automation exists.
+
+The Sprint 7.2 local default is intentionally bound to loopback:
+
+```env
+PUBLIC_HTTP_BIND_ADDRESS=127.0.0.1
+PUBLIC_HTTP_PORT=8080
+```
+
+On `vps.madnick.ovh`, after operator validation and before certificate setup,
+the HTTP edge may be bound publicly for ACME and smoke preparation:
+
+```env
+PUBLIC_HTTP_BIND_ADDRESS=0.0.0.0
+PUBLIC_HTTP_PORT=80
+```
 
 ## Edge Policy
 
@@ -155,7 +172,11 @@ or runtime behavior changes belong in Sprint 7.1.
 
 Add the Nginx public edge container and configuration:
 
-- public ports: `80:80` and `443:443`;
+- profile-gated service: `nginx` under the `public` Compose profile;
+- HTTP edge only in this sprint;
+- local default binding: `127.0.0.1:8080`;
+- production HTTP binding: `0.0.0.0:80`;
+- HTTPS port `443` deferred to Sprint 7.3;
 - internal upstream: `http://api:8000`;
 - public route namespace: `/api/assistant`;
 - strict CORS allowlist;
@@ -164,6 +185,27 @@ Add the Nginx public edge container and configuration:
 - proxy timeouts;
 - default rate limit `20/minute` with burst `40`;
 - tests that render Compose and validate the Nginx config structure.
+
+Manual local validation before the public script suite exists:
+
+```sh
+docker compose --env-file .env --profile public config
+docker compose --env-file .env --profile public up --wait nginx
+curl -s http://127.0.0.1:8080/api/assistant/health
+curl -s http://127.0.0.1:8080/api/assistant/ready
+```
+
+Chat calls through the edge use:
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/api/assistant/chat \
+  -H 'content-type: application/json' \
+  -H 'origin: https://pigreco.xyz' \
+  -d '{"question":"Where did Niccolo work?","language":"en"}'
+```
+
+Direct public exposure of the Python API port remains out of scope. The API may
+still publish on `127.0.0.1` for local operator tests.
 
 ### Sprint 7.3: Free TLS Automation
 
