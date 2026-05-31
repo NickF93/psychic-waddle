@@ -614,6 +614,72 @@ Items:
 - Validation: `docker compose config`, profile rendering, Docker build, and the
   full test suite pass.
 
+### Sprint 6.6: Runtime Script Contract, API, and Database
+
+Items:
+
+- Implementation: add shared runtime script helpers under `scripts/runtime`.
+- Implementation: add API scripts for build, setup, start, stop, down, and
+  cleanup.
+- Implementation: add PostgreSQL scripts for setup, start, stop, down, cleanup,
+  and migration.
+- Implementation: keep `postgres-migrate.sh` as the only migration script.
+- Implementation: make service `down` stop and remove only the targeted service.
+- Implementation: require `--destroy-data` before deleting the PostgreSQL data
+  volume.
+- Validation: API setup does not run migrations implicitly.
+- Validation: scripts use `.env` by default and allow `ENV_FILE` override.
+
+### Sprint 6.7: Local Model Runtime Scripts
+
+Items:
+
+- Implementation: add Ollama chat scripts for setup, start, stop, down, and
+  cleanup.
+- Implementation: add Ollama embedding scripts for setup, start, stop, down,
+  and cleanup.
+- Implementation: pull the configured Ollama model explicitly during setup when
+  the matching backend is `ollama`.
+- Implementation: require `--destroy-models` before deleting the Ollama model
+  volume.
+- Implementation: add llama.cpp chat scripts for setup, start, stop, down, and
+  cleanup.
+- Implementation: add llama.cpp embedding scripts for setup, start, stop, down,
+  and cleanup.
+- Implementation: validate configured llama.cpp model files before startup.
+- Validation: llama.cpp cleanup never deletes bind-mounted model files.
+
+### Sprint 6.8: Runtime Script Guards and Documentation
+
+Items:
+
+- Test: verify every runtime script exists, is executable, and passes shell
+  syntax validation.
+- Test: verify scripts use expected Compose services and profiles.
+- Test: verify no script uses deprecated configuration names.
+- Test: verify cleanup scripts avoid broad Compose volume removal and recursive
+  filesystem deletion.
+- Test: verify only `postgres-migrate.sh` runs migrations.
+- Documentation: document the full runtime script matrix.
+- Documentation: document setup order for external, Ollama, llama.cpp, and
+  mixed provider deployments.
+- Validation: full test suite passes.
+
+### Sprint 6.9: Runtime Script Readiness Remediation
+
+Items:
+
+- Implementation: add health checks for Ollama and separate llama.cpp chat and
+  embedding services.
+- Implementation: make setup and start scripts wait for targeted service
+  readiness.
+- Implementation: make PostgreSQL migration fail on SQL errors.
+- Test: guard readiness waits, strict migration failure, and local model health
+  checks.
+- Documentation: make runtime scripts the primary documented setup path and
+  document shared Ollama service behavior.
+- Validation: Compose renders supported profiles and the full test suite passes.
+
 ---
 
 ## Milestone 7: Anonymous Question Collection
