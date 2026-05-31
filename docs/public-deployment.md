@@ -186,6 +186,9 @@ The certificate flow is:
    migration wrapper, prepares the configured local providers, starts the
    HTTP/bootstrap edge for ACME, calls `letsencrypt-setup.sh`, then stops the
    bootstrap edge so port `80` is free for the HTTPS runtime edge.
+   Certificate issuance intentionally refuses loopback/local HTTP settings:
+   `PUBLIC_HTTP_BIND_ADDRESS` must be `0.0.0.0` and `PUBLIC_HTTP_PORT` must be
+   `80`.
 
 6. Start the HTTPS runtime edge:
 

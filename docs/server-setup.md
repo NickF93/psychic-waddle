@@ -433,6 +433,9 @@ scripts/runtime/public-setup.sh --issue-certificate
 This setup path builds the API image, starts PostgreSQL, runs the migration
 wrapper, prepares configured local providers, starts the HTTP/bootstrap edge for
 ACME, calls `letsencrypt-setup.sh`, and then stops the bootstrap edge.
+Certificate issuance intentionally refuses loopback/local HTTP settings:
+`PUBLIC_HTTP_BIND_ADDRESS` must be `0.0.0.0` and `PUBLIC_HTTP_PORT` must be
+`80`.
 
 Start the HTTPS runtime edge:
 
