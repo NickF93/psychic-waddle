@@ -50,6 +50,13 @@ http://127.0.0.1:8080/api/assistant/chat
 The HTTPS runtime edge is enabled after Let's Encrypt certificate setup and
 terminates public traffic on port `443`.
 
+Use the public smoke script after deployment to verify the edge route, CORS
+preflight, readiness, and chat response shape:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
+```
+
 The ASGI entrypoint is:
 
 ```text

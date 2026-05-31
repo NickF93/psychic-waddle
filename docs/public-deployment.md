@@ -164,35 +164,39 @@ The certificate flow is:
    PUBLIC_HTTP_PORT=80
    ```
 
-4. The HTTP/bootstrap edge starts:
+4. Validate public Compose profiles and both Nginx configs:
 
    ```sh
-   docker compose --env-file .env --profile public up --wait nginx
+   scripts/runtime/nginx-validate.sh
    ```
 
-5. Certbot requests the certificate through the shared ACME challenge volume:
+5. Run first public setup and issue the certificate explicitly:
 
    ```sh
-   scripts/runtime/letsencrypt-setup.sh
+   scripts/runtime/public-setup.sh --issue-certificate
    ```
 
-6. The operator stops the bootstrap edge when switching to HTTPS runtime:
+   The setup command builds the API image, starts PostgreSQL, runs the single
+   migration wrapper, prepares the configured local providers, starts the
+   HTTP/bootstrap edge for ACME, calls `letsencrypt-setup.sh`, then stops the
+   bootstrap edge so port `80` is free for the HTTPS runtime edge.
+
+6. Start the HTTPS runtime edge:
 
    ```sh
-   docker compose --env-file .env --profile public stop nginx
+   scripts/runtime/public-start.sh
    ```
 
-7. `.env` configures the public HTTPS edge:
-
-   ```env
-   PUBLIC_HTTPS_BIND_ADDRESS=0.0.0.0
-   PUBLIC_HTTPS_PORT=443
-   ```
-
-8. The HTTPS runtime edge starts:
+7. Run public smoke validation:
 
    ```sh
-   docker compose --env-file .env --profile public-tls up --wait nginx-tls
+   PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
+   ```
+
+8. Later update deploys use the non-certificate deployment path:
+
+   ```sh
+   PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-deploy.sh
    ```
 
 9. Renewal reuses the same certificate volume and reloads Nginx after success:
@@ -207,6 +211,54 @@ requested public DNS name remains explicit in `PUBLIC_SERVER_NAME`.
 
 Certificate cleanup must require an explicit destructive flag. Normal public
 `down` or `stop` operations must not delete certificates.
+
+## Public Operation Scripts
+
+The high-level public scripts are operator wrappers around the existing
+component scripts. They do not duplicate migration SQL, certificate issuance,
+provider setup, or API build behavior.
+
+| Script | Purpose |
+| --- | --- |
+| `public-build.sh` | validate public Nginx/Compose config and build the API image |
+| `public-setup.sh` | setup API, PostgreSQL, migration, configured local providers, and Nginx validation |
+| `public-setup.sh --issue-certificate` | run setup plus the explicit first Let's Encrypt issuance path |
+| `public-start.sh` | start configured local providers, PostgreSQL, API, stop bootstrap Nginx if present, and start `nginx-tls` |
+| `public-stop.sh` | stop public edge, API, configured local providers, and PostgreSQL without deleting data |
+| `public-down.sh` | remove runtime containers without deleting volumes |
+| `public-cleanup.sh` | remove runtime containers and the local API image only |
+| `public-deploy.sh` | build, start PostgreSQL, migrate, start HTTPS runtime, and smoke-test |
+| `public-migrate.sh` | delegate to `postgres-migrate.sh` |
+| `public-smoke.sh` | call public health, ready, CORS preflight, and chat routes through the edge |
+| `nginx-validate.sh` | validate public and public-tls Compose rendering plus required Nginx directives |
+
+Provider setup and start behavior is selected from `.env`:
+
+- `CHAT_BACKEND=ollama` starts the Ollama chat path.
+- `CHAT_BACKEND=llama-cpp` starts the llama.cpp chat path.
+- `CHAT_BACKEND=openai-compatible` starts no local chat service.
+- `EMBEDDING_BACKEND=ollama` starts the Ollama embedding path.
+- `EMBEDDING_BACKEND=llama-cpp` starts the llama.cpp embedding path.
+- `EMBEDDING_BACKEND=openai-compatible` starts no local embedding service.
+
+`public-smoke.sh` defaults to the local HTTP edge:
+
+```sh
+scripts/runtime/public-smoke.sh
+```
+
+Production smoke must make the public target explicit:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
+```
+
+`public-deploy.sh` intentionally does not issue or renew certificates. Use
+`public-setup.sh --issue-certificate` for first certificate issuance and
+`letsencrypt-renew.sh` for renewal.
+
+`public-cleanup.sh` must not delete PostgreSQL data, model volumes, certificate
+volumes, ACME challenge data, or Let's Encrypt work data.
 
 ## M7 Sprint Breakdown
 
@@ -297,15 +349,17 @@ nginx-validate.sh
 instead of duplicating migration logic.
 
 The Let's Encrypt setup and renewal scripts are already delivered by Sprint 7.3.
-Sprint 7.4 may call them from higher-level public setup or deploy scripts, but
-must not duplicate certificate issuance or renewal logic.
+Sprint 7.4 may call `letsencrypt-setup.sh` only through the explicit
+`public-setup.sh --issue-certificate` path. It must not duplicate certificate
+issuance or renewal logic, and `public-deploy.sh` must not issue or renew
+certificates.
 
 Cleanup scripts must not delete PostgreSQL data, model data, or certificates
 without explicit destructive flags.
 
 ### Sprint 7.5: Public Smoke Validation
 
-Add public HTTPS smoke validation:
+Harden public HTTPS smoke validation beyond the Sprint 7.4 smoke script:
 
 - `GET https://vps.madnick.ovh/api/assistant/health`;
 - `GET https://vps.madnick.ovh/api/assistant/ready`;

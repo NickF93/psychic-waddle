@@ -414,43 +414,44 @@ LETSENCRYPT_EMAIL=your-real-letsencrypt-contact-email
 `LETSENCRYPT_EMAIL` is used only by Let's Encrypt for account and renewal
 notices. Do not commit a real email address.
 
-Validate the public profiles:
+Validate the public profiles and Nginx configs:
 
 ```sh
-docker compose --env-file .env --profile public config
-docker compose --env-file .env --profile public-tls config
+scripts/runtime/nginx-validate.sh
 ```
 
-Start the HTTP/bootstrap Nginx edge for ACME challenge traffic:
+Run first public setup and request the free certificate explicitly:
 
 ```sh
-docker compose --env-file .env --profile public up --wait nginx
+scripts/runtime/public-setup.sh --issue-certificate
 ```
 
-Issue the free Let's Encrypt certificate:
-
-```sh
-scripts/runtime/letsencrypt-setup.sh
-```
-
-Stop the bootstrap edge before starting the HTTPS runtime edge on the same HTTP
-port:
-
-```sh
-docker compose --env-file .env --profile public stop nginx
-```
+This setup path builds the API image, starts PostgreSQL, runs the migration
+wrapper, prepares configured local providers, starts the HTTP/bootstrap edge for
+ACME, calls `letsencrypt-setup.sh`, and then stops the bootstrap edge.
 
 Start the HTTPS runtime edge:
 
 ```sh
-docker compose --env-file .env --profile public-tls up --wait nginx-tls
+scripts/runtime/public-start.sh
 ```
 
-Check the public HTTPS routes:
+Check the public HTTPS routes through the high-level smoke script:
 
 ```sh
-curl -s https://vps.madnick.ovh/api/assistant/health
-curl -s https://vps.madnick.ovh/api/assistant/ready
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
+```
+
+For later code/config updates after the certificate exists, use:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-deploy.sh
+```
+
+The public smoke script checks CORS preflight, health, readiness, and the chat
+route. A direct manual chat request is still useful when checking answer text:
+
+```sh
 curl -s -X POST https://vps.madnick.ovh/api/assistant/chat \
   -H 'content-type: application/json' \
   -H 'origin: https://pigreco.xyz' \

@@ -771,12 +771,16 @@ Items:
 
 Items:
 
-- Script: add full public setup using the existing Let's Encrypt setup command.
+- Script: add public setup that prepares runtime by default and calls the
+  existing Let's Encrypt setup command only with an explicit
+  `--issue-certificate` flag.
 - Script: add public build, start, stop, down, cleanup, deploy/update, and smoke
   commands.
 - Script: add Nginx configuration validation.
 - Script: add public migration wrapper that delegates to the single PostgreSQL
   migration authority.
+- Script: support local HTTP and production HTTPS smoke targets through
+  `PUBLIC_SMOKE_BASE_URL`.
 - Script: ensure cleanup does not destroy DB data, model data, or certificates
   without explicit destructive flags.
 - Documentation: document first deploy, update deploy, emergency stop, rollback,
@@ -788,11 +792,8 @@ Items:
 
 Items:
 
-- Script: add public HTTPS smoke validation.
-- Validation: check public `/api/assistant/health`.
-- Validation: check public `/api/assistant/ready`.
-- Validation: check public `/api/assistant/chat`.
-- Validation: check CORS preflight from `https://pigreco.xyz`.
+- Script: harden public HTTPS smoke validation beyond the Sprint 7.4 smoke
+  script.
 - Validation: check CORS preflight from `https://www.pigreco.xyz`.
 - Validation: reject unexpected browser origins.
 - Validation: confirm the API direct port is not part of public access.
