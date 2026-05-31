@@ -102,7 +102,7 @@ def test_compose_public_bootstrap_edge_is_profile_gated_and_http_only() -> None:
     assert nginx["profiles"] == ["public"]
     assert nginx["depends_on"] == {"api": {"condition": "service_healthy"}}
     assert nginx["ports"] == [
-        "${PUBLIC_HTTP_BIND_ADDRESS:-127.0.0.1}:${PUBLIC_HTTP_PORT:-8080}:80"
+        "${PUBLIC_HTTP_BIND_ADDRESS:?missing PUBLIC_HTTP_BIND_ADDRESS}:${PUBLIC_HTTP_PORT:?missing PUBLIC_HTTP_PORT}:80"
     ]
     assert "443" not in "\n".join(nginx["ports"])
     assert nginx["volumes"] == [
@@ -120,8 +120,8 @@ def test_compose_public_tls_edge_is_profile_gated_and_owns_443() -> None:
     assert nginx_tls["profiles"] == ["public-tls"]
     assert nginx_tls["depends_on"] == {"api": {"condition": "service_healthy"}}
     assert nginx_tls["ports"] == [
-        "${PUBLIC_HTTP_BIND_ADDRESS:-127.0.0.1}:${PUBLIC_HTTP_PORT:-8080}:80",
-        "${PUBLIC_HTTPS_BIND_ADDRESS:-127.0.0.1}:${PUBLIC_HTTPS_PORT:-8443}:443",
+        "${PUBLIC_HTTP_BIND_ADDRESS:?missing PUBLIC_HTTP_BIND_ADDRESS}:${PUBLIC_HTTP_PORT:?missing PUBLIC_HTTP_PORT}:80",
+        "${PUBLIC_HTTPS_BIND_ADDRESS:?missing PUBLIC_HTTPS_BIND_ADDRESS}:${PUBLIC_HTTPS_PORT:?missing PUBLIC_HTTPS_PORT}:443",
     ]
     assert nginx_tls["volumes"] == [
         "./deploy/nginx/nginx-tls.conf:/etc/nginx/nginx.conf:ro",
@@ -233,7 +233,7 @@ def test_docker_compose_config_renders_supported_profiles() -> None:
             "mode": "ingress",
             "host_ip": "127.0.0.1",
             "target": 80,
-            "published": "8080",
+            "published": "18080",
             "protocol": "tcp",
         }
     ]
@@ -242,26 +242,63 @@ def test_docker_compose_config_renders_supported_profiles() -> None:
             "mode": "ingress",
             "host_ip": "127.0.0.1",
             "target": 80,
-            "published": "8080",
+            "published": "18080",
             "protocol": "tcp",
         },
         {
             "mode": "ingress",
             "host_ip": "127.0.0.1",
             "target": 443,
-            "published": "8443",
+            "published": "18443",
             "protocol": "tcp",
         },
     ]
+
+
+def test_public_edge_env_vars_are_required(tmp_path: Path) -> None:
+    _require_docker_compose()
+    env_without_public_edge = "\n".join(
+        line
+        for line in (ROOT / ".env.example").read_text(encoding="utf-8").splitlines()
+        if not line.startswith(
+            (
+                "PUBLIC_HTTP_BIND_ADDRESS=",
+                "PUBLIC_HTTP_PORT=",
+                "PUBLIC_HTTPS_BIND_ADDRESS=",
+                "PUBLIC_HTTPS_PORT=",
+            )
+        )
+    )
+    env_path = tmp_path / "missing-public-edge.env"
+    env_path.write_text(f"{env_without_public_edge}\n", encoding="utf-8")
+
+    result = subprocess.run(
+        (
+            "docker",
+            "compose",
+            "--env-file",
+            str(env_path),
+            "--profile",
+            "public",
+            "config",
+        ),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "PUBLIC_HTTP_BIND_ADDRESS" in f"{result.stdout}\n{result.stderr}"
 
 
 def test_env_example_contains_placeholders_not_real_secrets() -> None:
     values = _load_env_example()
 
     assert values["PUBLIC_HTTP_BIND_ADDRESS"] == "127.0.0.1"
-    assert values["PUBLIC_HTTP_PORT"] == "8080"
+    assert values["PUBLIC_HTTP_PORT"] == "18080"
     assert values["PUBLIC_HTTPS_BIND_ADDRESS"] == "127.0.0.1"
-    assert values["PUBLIC_HTTPS_PORT"] == "8443"
+    assert values["PUBLIC_HTTPS_PORT"] == "18443"
     assert values["PUBLIC_SERVER_NAME"] == "vps.madnick.ovh"
     assert values["LETSENCRYPT_EMAIL"] == "replace-with-letsencrypt-email"
     assert values["POSTGRES_PASSWORD"] == "replace-with-local-password"

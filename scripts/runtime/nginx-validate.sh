@@ -5,6 +5,10 @@ SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 . "$SCRIPT_DIR/_common.sh"
 
 require_command grep
+configured_value PUBLIC_HTTP_BIND_ADDRESS >/dev/null
+configured_value PUBLIC_HTTP_PORT >/dev/null
+configured_value PUBLIC_HTTPS_BIND_ADDRESS >/dev/null
+configured_value PUBLIC_HTTPS_PORT >/dev/null
 
 BOOTSTRAP_CONFIG="$ROOT_DIR/deploy/nginx/nginx.conf"
 TLS_CONFIG="$ROOT_DIR/deploy/nginx/nginx-tls.conf"

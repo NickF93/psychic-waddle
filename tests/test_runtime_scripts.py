@@ -285,7 +285,7 @@ def test_public_cleanup_preserves_data_model_and_certificate_volumes() -> None:
 def test_public_smoke_supports_local_default_and_public_override() -> None:
     smoke = _script("public-smoke.sh")
 
-    assert "PUBLIC_SMOKE_BASE_URL=${PUBLIC_SMOKE_BASE_URL:-http://127.0.0.1:8080}" in smoke
+    assert "PUBLIC_SMOKE_BASE_URL=${PUBLIC_SMOKE_BASE_URL:-http://127.0.0.1:18080}" in smoke
     assert "PUBLIC_SMOKE_ALLOWED_ORIGIN=https://pigreco.xyz" in smoke
     assert "PUBLIC_SMOKE_ALLOWED_WWW_ORIGIN=https://www.pigreco.xyz" in smoke
     assert "PUBLIC_SMOKE_REJECTED_ORIGIN=https://example.invalid" in smoke
@@ -323,15 +323,15 @@ def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> N
     assert "cors preflight passed: https://www.pigreco.xyz" in result.stdout
     assert "unexpected origin rejected: https://example.invalid" in result.stdout
     assert "direct API probe passed: http://public-api-closed:8000/health returned 000" in result.stdout
-    assert "public smoke passed: http://127.0.0.1:8080" in result.stdout
+    assert "public smoke passed: http://127.0.0.1:18080" in result.stdout
 
     calls = [json.loads(line) for line in fake_curl_log.read_text().splitlines()]
     assert any("origin: https://pigreco.xyz" in call for call in calls)
     assert any("origin: https://www.pigreco.xyz" in call for call in calls)
     assert any("origin: https://example.invalid" in call for call in calls)
-    assert any("http://127.0.0.1:8080/api/assistant/health" in call for call in calls)
-    assert any("http://127.0.0.1:8080/api/assistant/ready" in call for call in calls)
-    assert any("http://127.0.0.1:8080/api/assistant/chat" in call for call in calls)
+    assert any("http://127.0.0.1:18080/api/assistant/health" in call for call in calls)
+    assert any("http://127.0.0.1:18080/api/assistant/ready" in call for call in calls)
+    assert any("http://127.0.0.1:18080/api/assistant/chat" in call for call in calls)
     assert any("http://public-api-closed:8000/health" in call for call in calls)
 
 
@@ -364,6 +364,10 @@ def test_nginx_validate_checks_both_public_edge_configs() -> None:
 
     assert "compose_profile public config >/dev/null" in validate
     assert "compose_profile public-tls config >/dev/null" in validate
+    assert "configured_value PUBLIC_HTTP_BIND_ADDRESS" in validate
+    assert "configured_value PUBLIC_HTTP_PORT" in validate
+    assert "configured_value PUBLIC_HTTPS_BIND_ADDRESS" in validate
+    assert "configured_value PUBLIC_HTTPS_PORT" in validate
     assert "deploy/nginx/nginx.conf" in validate
     assert "deploy/nginx/nginx-tls.conf" in validate
     assert "proxy_pass http://api:8000/chat?;" in validate

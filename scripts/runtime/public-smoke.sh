@@ -7,7 +7,7 @@ SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 require_command curl
 require_command python3
 
-PUBLIC_SMOKE_BASE_URL=${PUBLIC_SMOKE_BASE_URL:-http://127.0.0.1:8080}
+PUBLIC_SMOKE_BASE_URL=${PUBLIC_SMOKE_BASE_URL:-http://127.0.0.1:18080}
 PUBLIC_SMOKE_ALLOWED_ORIGIN=https://pigreco.xyz
 PUBLIC_SMOKE_ALLOWED_WWW_ORIGIN=https://www.pigreco.xyz
 PUBLIC_SMOKE_REJECTED_ORIGIN=https://example.invalid
