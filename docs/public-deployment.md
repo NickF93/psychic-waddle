@@ -284,6 +284,17 @@ The smoke script validates:
   `PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=true`;
 - optional direct API-port exposure through `PUBLIC_DIRECT_API_PROBE_URL`.
 
+Milestone 9 must harden this smoke path so it also detects answerability
+regressions against tracked knowledge:
+
+- a known workplace question, such as "Where did Niccolo work?", returns
+  `answerable`;
+- the workplace answer contains source-backed employer evidence from the tracked
+  profile;
+- an unsupported personal question remains `not_answerable`;
+- question collection notice validation stays opt-in because it intentionally
+  records an unanswered question.
+
 Expected output for a normal production smoke run without the optional direct
 API probe:
 

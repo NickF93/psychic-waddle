@@ -89,3 +89,14 @@ When changing the tracked knowledge:
 3. Run the tracked knowledge tests.
 4. Deploy with `scripts/runtime/public-upgrade.sh` so PostgreSQL and embeddings
    match the committed file.
+
+Milestone 9 requires embedding freshness for changed knowledge. After a public
+fact changes, the generated public chunk text changes too. Embedding indexing
+must treat any embedding created from the old chunk text as stale for the
+configured backend and model, regenerate it, and leave other backend/model
+embedding pairs intact.
+
+`scripts/runtime/public-load-knowledge.sh` and
+`scripts/runtime/public-upgrade.sh` are the supported operator paths for this
+refresh. Destroying PostgreSQL data must not be required just to pick up a
+changed tracked profile.

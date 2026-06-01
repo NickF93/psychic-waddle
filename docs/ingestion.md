@@ -91,19 +91,25 @@ EMBEDDING_MODEL=nomic-embed-text \
   portfolio-rag-assistant knowledge index-embeddings
 ```
 
-The command reads public chunks that do not already have an embedding for the
-selected backend and model. It calls only `EmbeddingProvider.embed()` and
+The command reads public chunks that do not already have a current embedding for
+the selected backend and model. It calls only `EmbeddingProvider.embed()` and
 stores:
 
 - `chunk_id`.
 - `embedding_backend`.
 - `embedding_model`.
 - `embedding_dimension`.
+- a stable hash of the chunk text used to produce the embedding.
 - `embedding`.
 
-Rerunning the command for the same backend and model skips already indexed
-chunks. Running it with a different backend or model creates separate embedding
-rows for the same chunks.
+Rerunning the command for the same backend and model skips chunks whose stored
+embedding hash still matches the current public chunk text. If the chunk text
+changed after a knowledge update, the embedding is stale and must be regenerated
+for that backend and model.
+
+Running the command with a different backend or model creates separate
+embedding rows for the same chunks. Refreshing stale embeddings for one
+backend/model pair must not delete or rewrite embeddings for other pairs.
 
 ## Boundary
 

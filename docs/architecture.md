@@ -60,13 +60,34 @@ The normal request flow is fixed:
 
 1. The API receives a visitor question.
 2. The `Retriever` searches reviewed knowledge through `KnowledgeStore`.
-3. The `AnswerPolicy` decides whether the retrieved context is answerable.
+3. The `AnswerPolicy` decides whether the retrieved context is answerable and
+   intent-complete.
 4. The `AnswerGenerator` asks a `ChatProvider` to phrase only approved context.
 5. The API returns the answer, refusal, or clarification response.
 6. If enabled, `QuestionCollector` stores only an anonymous improvement signal.
 
 The LLM must never bypass retrieval, write facts, choose truth, or decide that a
 question is answerable.
+
+## Milestone 9 Remediation Target
+
+Milestone 9 makes answerability reliable for natural recruiter questions without
+expanding the assistant beyond Niccolo's reviewed public profile.
+
+The target architecture separates candidate generation from answerability:
+
+- Retrieval gathers plausible public context with vector search, full-text
+  search, and deterministic recruiter-intent expansion.
+- Policy decides whether the gathered context actually answers the question.
+- Generation receives only approved context and must not decide that missing
+  context is sufficient.
+- Embedding indexing treats changed chunk text as stale and refreshes embeddings
+  for the configured backend and model.
+
+Natural questions such as "Where did Niccolo work?" must be answerable when
+tracked reviewed knowledge contains workplace evidence. Unsupported personal or
+off-topic questions must remain not answerable even if retrieval finds strong
+but unrelated context.
 
 ## Authority Boundaries
 
@@ -96,8 +117,23 @@ Owns verified facts, chunks, sources, and embeddings only.
 
 - Stores reviewed sources, facts, chunks, metadata, and embedding vectors.
 - Serves persistence operations requested by ingestion and retrieval.
+- Stores enough embedding metadata for indexing to detect whether a stored
+  embedding belongs to the current chunk text.
 - Must not rank results, generate answers, call chat models, or collect visitor
   signals.
+
+### `QuestionIntentProfile`
+
+Owns bounded recruiter-intent definitions only.
+
+- Defines deterministic trigger terms, accepted knowledge categories, lexical
+  expansion terms, and required evidence terms for supported recruiter intents.
+- Covered v1 intents are workplaces and work history, current role, skills,
+  education, publications, projects and repositories, and public contact links.
+- May be read by retrieval for deterministic query expansion.
+- May be read by policy for deterministic evidence-completeness checks.
+- Must not call providers, search PostgreSQL, rank chunks, generate answers,
+  persist data, collect questions, or inspect request metadata.
 
 ### `Retriever`
 
@@ -105,6 +141,10 @@ Owns search, ranking, and retrieval diagnostics only.
 
 - Performs vector search, keyword search, and hybrid ranking over reviewed
   knowledge.
+- May use `QuestionIntentProfile` definitions to add deterministic lexical
+  expansion for supported recruiter intents.
+- Must treat vector scores and text-rank scores as different diagnostic scales
+  unless a rank-fusion algorithm combines their result ordering.
 - Returns ranked context with scores and minimal diagnostics needed by policy.
 - Must not generate final wording, decide final answerability, call chat models,
   or mutate the knowledge base.
@@ -115,6 +155,10 @@ Owns answerability decisions only.
 
 - Decides answer, refuse, or clarify from question domain, retrieval scores,
   source support, and ambiguity.
+- Uses `QuestionIntentProfile` definitions to require intent-complete evidence
+  for common recruiter intents.
+- Must not approve an answer solely because retrieved context has a matching
+  broad category.
 - Produces deterministic decision metadata for tests and diagnostics.
 - Must not call LLMs, search stores, generate polished prose, or persist data.
 
@@ -125,6 +169,8 @@ Owns final wording only.
 - Converts an approved policy decision and approved retrieved context into a
   concise recruiter-facing answer.
 - Preserves the visitor's language when supported by the prompt contract.
+- Must return a consistent not-answerable response if the provider indicates
+  that approved context is insufficient.
 - Must not add facts absent from approved context, override policy, retrieve
   additional data, or store question signals.
 
@@ -149,6 +195,8 @@ Owns anonymous question improvement signals only.
 - Policy code must not call a model or database search directly.
 - Generation code must not fetch more context or decide whether answering is
   allowed.
+- Intent-profile code must not call providers, search stores, rank chunks,
+  generate answers, or persist data.
 - Question collection must not write reviewed facts or chunks.
 - Storage code must not contain ranking, policy, generation, or provider
   payload logic.

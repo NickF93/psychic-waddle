@@ -19,6 +19,7 @@ It may use:
 - retrieval scores;
 - reviewed source references;
 - bounded knowledge categories.
+- bounded `QuestionIntentProfile` definitions shared with retrieval.
 
 It must not:
 
@@ -57,9 +58,9 @@ The default policy uses only local, inspectable signals:
   - `skills`
   - `contact`
 - If a domain is inferred, approved context is limited to that domain.
-- For common recruiter intents, matching category alone is not sufficient. The
-  approved context must also contain deterministic intent evidence for workplace,
-  current role, skills, education, publications, projects, or contact/profile
+- For common recruiter intents, matching category alone is not sufficient.
+  Shared intent profiles define the required evidence for workplace, current
+  role, skills, education, publications, projects, or contact/profile
   questions.
 - If the question is broad and the usable context spans multiple domains, the
   policy asks for clarification.

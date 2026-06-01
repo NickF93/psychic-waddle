@@ -46,12 +46,18 @@ records may be returned by concrete retrieval implementations.
 Scores are diagnostics for ranking and answer policy. They are not visitor
 analytics and must not be stored as visitor-derived data.
 
+Milestone 9 changes the target meaning of `combined_score`: it must represent a
+deterministic fused ranking signal, not a direct comparison between raw vector
+similarity and PostgreSQL text-rank values. Raw vector and keyword scores remain
+diagnostics because their numeric scales are not equivalent confidence values.
+
 ## Boundaries
 
 Retrieval may:
 
 - Read reviewed knowledge through the knowledge store.
 - Use `EmbeddingProvider.embed()` to embed the visitor question.
+- Use bounded question-intent profiles for deterministic lexical expansion.
 - Rank public chunks.
 - Return source metadata needed by answer policy and later answer generation.
 
@@ -92,14 +98,34 @@ The retriever:
 - Runs keyword search with PostgreSQL full-text search using
   `websearch_to_tsquery('english', question)` and the matching English text
   vector.
-- Merges vector and keyword candidates by chunk id.
-- Ranks deterministically by combined score, vector score, keyword score, and
-  chunk id.
+- Runs intent-expanded lexical search for detected supported recruiter intents.
+- Merges vector, keyword, and intent-expanded candidates by chunk id.
+- Ranks deterministically with rank fusion over candidate ordering, then stable
+  score and chunk-id tie-breakers.
 - Returns only source-backed `RetrievedContext` records.
 
-The combined score is the highest available score for the chunk across vector
-and keyword search. This keeps scoring simple and inspectable for the later
-answerability policy.
+The Milestone 9 target is reciprocal rank fusion or an equivalent deterministic
+rank-fusion strategy. Retrieval must not treat raw vector similarity and
+`ts_rank_cd` as directly comparable confidence scores. Retrieval gathers
+candidate evidence; `AnswerPolicy` decides whether that evidence is
+intent-complete and answerable.
+
+## Question Intent Expansion
+
+Question-intent expansion is bounded to supported recruiter intents:
+
+- workplaces and work history;
+- current role;
+- skills and technologies;
+- education;
+- publications and research outputs;
+- projects and repositories;
+- public contact links.
+
+Each intent profile supplies trigger terms, accepted knowledge categories,
+lexical expansion terms, and required evidence terms. Retrieval may use trigger
+and expansion terms to improve recall. Policy must use the same profile
+definitions to verify evidence completeness.
 
 ## Sprint 3.2 Scope
 
