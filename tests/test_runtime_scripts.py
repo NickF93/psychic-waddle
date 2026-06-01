@@ -422,7 +422,7 @@ def test_public_setup_requires_explicit_certificate_flag() -> None:
 def test_public_reset_requires_destructive_flags() -> None:
     reset = _script("public-reset-and-setup.sh")
 
-    assert "usage: public-reset-and-setup.sh --destroy-db" in reset
+    assert "usage: public-reset-and-setup.sh (--destroy-db|--destroy-models|--destroy-certs)" in reset
     assert "reset requires at least one explicit destructive flag" in reset
     assert "DESTROY_DB=false" in reset
     assert "DESTROY_MODELS=false" in reset

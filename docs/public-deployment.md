@@ -239,7 +239,7 @@ provider setup, or API build behavior.
 | `public-stop.sh` | stop public edge, API, configured local providers, and PostgreSQL without deleting data |
 | `public-down.sh` | remove runtime containers without deleting volumes |
 | `public-cleanup.sh` | remove runtime containers and the local API image only |
-| `public-deploy.sh` | legacy low-level update wrapper: build, migrate, start HTTPS runtime, and smoke-test |
+| `public-deploy.sh` | lower-level update wrapper: build, migrate, start HTTPS runtime, and smoke-test |
 | `public-validate-env.sh` | validate the explicit public runtime `.env` contract |
 | `public-load-knowledge.sh` | validate, ingest, and index committed `knowledge/profile.json` |
 | `public-reset-and-setup.sh` | destructive fresh setup with explicit data/model/certificate flags |

@@ -319,17 +319,27 @@ def test_runtime_docs_validate_local_knowledge_without_dependencies() -> None:
 
     assert "run --rm --no-deps" in runtime_docs
     assert "portfolio-rag-assistant runtime smoke" in runtime_docs
-    assert "knowledge/` is ignored by Git" in runtime_docs
+    assert "knowledge/profile.json" in runtime_docs
+    assert "loaded into PostgreSQL by an explicit operator command" in runtime_docs
 
 
-def test_local_deployment_knowledge_is_git_ignored() -> None:
-    result = subprocess.run(
+def test_canonical_profile_knowledge_is_tracked() -> None:
+    not_ignored = subprocess.run(
         ("git", "check-ignore", "--quiet", "knowledge/profile.json"),
         cwd=ROOT,
         check=False,
     )
+    tracked = subprocess.run(
+        ("git", "ls-files", "--error-unmatch", "knowledge/profile.json"),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
 
-    assert result.returncode == 0
+    assert not_ignored.returncode == 1
+    assert tracked.returncode == 0
+    assert tracked.stdout.strip() == "knowledge/profile.json"
 
 
 def test_public_edge_routes_are_mapped_to_internal_api() -> None:

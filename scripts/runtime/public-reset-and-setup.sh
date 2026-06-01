@@ -12,7 +12,7 @@ TLS_RUNTIME=false
 
 usage() {
     cat <<'USAGE'
-usage: public-reset-and-setup.sh --destroy-db [--destroy-models] [--destroy-certs] [--issue-certificate|--tls-runtime]
+usage: public-reset-and-setup.sh (--destroy-db|--destroy-models|--destroy-certs) [--issue-certificate|--tls-runtime]
 
 Stop old runtime containers, remove selected persistent state with explicit
 destructive flags, rebuild, migrate, load tracked knowledge, start the public
