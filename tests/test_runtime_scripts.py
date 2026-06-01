@@ -57,6 +57,7 @@ EXPECTED_PUBLIC_SCRIPTS = {
     "public-smoke.sh",
     "public-start.sh",
     "public-stop.sh",
+    "public-upgrade.sh",
     "public-validate-env.sh",
 }
 
@@ -398,6 +399,27 @@ def test_public_reset_fails_before_docker_without_destructive_flags() -> None:
 
     assert result.returncode != 0
     assert "reset requires at least one explicit destructive flag" in result.stderr
+
+
+def test_public_upgrade_preserves_runtime_state_and_refreshes_knowledge() -> None:
+    upgrade = _script("public-upgrade.sh")
+
+    assert "usage: public-upgrade.sh [--skip-knowledge-refresh] [--tls-runtime]" in upgrade
+    assert "SKIP_KNOWLEDGE_REFRESH=false" in upgrade
+    assert "TLS_RUNTIME=false" in upgrade
+    assert '"$SCRIPT_DIR/public-validate-env.sh"' in upgrade
+    assert '"$SCRIPT_DIR/public-setup.sh"' in upgrade
+    assert '"$SCRIPT_DIR/public-load-knowledge.sh"' in upgrade
+    assert "knowledge refresh skipped" in upgrade
+    assert '"$SCRIPT_DIR/public-start.sh"' in upgrade
+    assert "compose_profile_up_wait public nginx" in upgrade
+    assert "compose_provider_run api portfolio-rag-assistant runtime smoke" in upgrade
+    assert '"$SCRIPT_DIR/public-smoke.sh"' in upgrade
+    assert "cleanup.sh" not in upgrade
+    assert "remove_compose_volume" not in upgrade
+    assert "--destroy-data" not in upgrade
+    assert "--destroy-models" not in upgrade
+    assert "--destroy-certs" not in upgrade
 
 
 def test_public_start_stops_bootstrap_edge_before_tls_runtime() -> None:
