@@ -28,11 +28,9 @@ uvicorn portfolio_rag_assistant.api.main:app --host 0.0.0.0 --port 8000
 ```
 
 The image contains application code, migrations, and the dependency lock file.
-It does not bake `.env` files, local model files, curated knowledge files, or
-database data into the image.
-Server-local deployment knowledge under `knowledge/` is ignored by Git and must
-remain untracked unless a future explicit plan creates a reviewed committed
-knowledge dataset.
+It does not bake `.env` files, local model files, or database data into the
+image. Reviewed public knowledge is tracked in Git at `knowledge/profile.json`
+and is loaded into PostgreSQL by an explicit operator command.
 
 Runtime build inputs are pinned:
 
@@ -119,8 +117,8 @@ Script matrix:
 | Ollama embeddings | | `ollama-embeddings-setup.sh` | `ollama-embeddings-start.sh` | `ollama-embeddings-stop.sh` | `ollama-embeddings-down.sh` | `ollama-embeddings-cleanup.sh --destroy-models` | |
 | llama.cpp chat | | `llama-cpp-chat-setup.sh` | `llama-cpp-chat-start.sh` | `llama-cpp-chat-stop.sh` | `llama-cpp-chat-down.sh` | `llama-cpp-chat-cleanup.sh` | |
 | llama.cpp embeddings | | `llama-cpp-embeddings-setup.sh` | `llama-cpp-embeddings-start.sh` | `llama-cpp-embeddings-stop.sh` | `llama-cpp-embeddings-down.sh` | `llama-cpp-embeddings-cleanup.sh` | |
-| Let's Encrypt TLS | | `letsencrypt-setup.sh` | | | | | `letsencrypt-renew.sh` |
-| Public deployment | `public-build.sh` | `public-setup.sh` | `public-start.sh` | `public-stop.sh` | `public-down.sh` | `public-cleanup.sh` | `public-migrate.sh`, `public-deploy.sh`, `public-smoke.sh`, `nginx-validate.sh` |
+| Let's Encrypt TLS | | `letsencrypt-setup.sh` | | | | | `letsencrypt-renew.sh`, `public-certbot-status.sh`, `public-certbot-test-renewal.sh`, `public-certbot-install-timer.sh` |
+| Public deployment | `public-build.sh` | `public-setup.sh` | `public-start.sh` | `public-stop.sh` | `public-down.sh` | `public-cleanup.sh` | `public-validate-env.sh`, `public-load-knowledge.sh`, `public-reset-and-setup.sh`, `public-upgrade.sh`, `public-migrate.sh`, `public-deploy.sh`, `public-smoke.sh`, `nginx-validate.sh` |
 
 Public deployment scripts are high-level operator wrappers. They call the
 existing API, PostgreSQL, provider, Nginx, and Let's Encrypt scripts instead of
@@ -134,10 +132,25 @@ operator passes the explicit flag:
 scripts/runtime/public-setup.sh --issue-certificate
 ```
 
-`public-deploy.sh` is the update path after setup. It builds the API image,
-starts PostgreSQL, delegates migration to `postgres-migrate.sh`, starts the
-public HTTPS runtime, and runs `public-smoke.sh`. It does not issue or renew
-certificates.
+`public-deploy.sh` is a lower-level HTTPS deploy wrapper kept for direct edge
+operations. It builds the API image, starts PostgreSQL, delegates migration to
+`postgres-migrate.sh`, starts the public HTTPS runtime, and runs
+`public-smoke.sh`. It does not issue or renew certificates. Prefer
+`public-upgrade.sh` for normal preserving updates because it also refreshes
+committed knowledge.
+
+`public-reset-and-setup.sh` is the explicit destructive setup path for a test or
+fresh deployment server. It refuses to run unless the operator selects the
+persistent state to destroy, such as `--destroy-db`, `--destroy-models`, or
+`--destroy-certs`.
+
+`public-upgrade.sh` is the preserving update path. It rebuilds the API image,
+runs migrations, refreshes committed `knowledge/profile.json` by default,
+restarts the public edge, and runs smoke checks without deleting data, model, or
+certificate volumes.
+
+`public-load-knowledge.sh` validates, ingests, and indexes the committed
+knowledge file. It is safe to run after reviewed knowledge changes.
 
 `public-smoke.sh` defaults to the local HTTP edge:
 

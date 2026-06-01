@@ -205,7 +205,7 @@ The certificate flow is:
 8. Later update deploys use the non-certificate deployment path:
 
    ```sh
-   PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-deploy.sh
+   PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-upgrade.sh --tls-runtime
    ```
 
 9. Renewal reuses the same certificate volume and reloads Nginx after success:
@@ -213,6 +213,9 @@ The certificate flow is:
    ```sh
    scripts/runtime/letsencrypt-renew.sh
    ```
+
+   The renewal script uses a Certbot deploy-hook marker and reloads Nginx only
+   when a certificate was actually renewed.
 
 Certbot stores the service certificate under the fixed certificate name
 `portfolio-rag-assistant`, so Nginx can use stable certificate paths while the
@@ -236,9 +239,16 @@ provider setup, or API build behavior.
 | `public-stop.sh` | stop public edge, API, configured local providers, and PostgreSQL without deleting data |
 | `public-down.sh` | remove runtime containers without deleting volumes |
 | `public-cleanup.sh` | remove runtime containers and the local API image only |
-| `public-deploy.sh` | build, start PostgreSQL, migrate, start HTTPS runtime, and smoke-test |
+| `public-deploy.sh` | legacy low-level update wrapper: build, migrate, start HTTPS runtime, and smoke-test |
+| `public-validate-env.sh` | validate the explicit public runtime `.env` contract |
+| `public-load-knowledge.sh` | validate, ingest, and index committed `knowledge/profile.json` |
+| `public-reset-and-setup.sh` | destructive fresh setup with explicit data/model/certificate flags |
+| `public-upgrade.sh` | preserving upgrade path that rebuilds and refreshes committed knowledge |
 | `public-migrate.sh` | delegate to `postgres-migrate.sh` |
 | `public-smoke.sh` | call public health, ready, CORS preflight, and chat routes through the edge |
+| `public-certbot-status.sh` | show Certbot certificate status from the certificate volume |
+| `public-certbot-test-renewal.sh` | run a Certbot renewal dry run |
+| `public-certbot-install-timer.sh` | install the host systemd renewal timer |
 | `nginx-validate.sh` | validate public and public-tls Compose rendering plus required Nginx directives |
 
 Provider setup and start behavior is selected from `.env`:
@@ -310,12 +320,49 @@ The direct API probe fails only when that URL returns a `2xx` response. Refused,
 timed out, unreachable, or non-`2xx` responses pass because FastAPI is not
 publicly usable there.
 
-`public-deploy.sh` intentionally does not issue or renew certificates. Use
-`public-setup.sh --issue-certificate` for first certificate issuance and
-`letsencrypt-renew.sh` for renewal.
+Fresh destructive setup on a test server requires explicit state-selection
+flags:
+
+```sh
+RUNTIME_WAIT_TIMEOUT_SECONDS=600 \
+scripts/runtime/public-reset-and-setup.sh --destroy-db --destroy-models
+```
+
+Add `--destroy-certs` only when the Let's Encrypt and ACME volumes should be
+discarded. The reset script starts the HTTP/bootstrap edge by default. Use
+`--tls-runtime` when certificates already exist, or `--issue-certificate` when
+the server is configured for public ACME issuance on `0.0.0.0:80`.
+
+Preserving upgrades keep database data, model volumes, certificates, and ACME
+state:
+
+```sh
+RUNTIME_WAIT_TIMEOUT_SECONDS=600 scripts/runtime/public-upgrade.sh
+```
+
+The upgrade script refreshes committed `knowledge/profile.json` by default. Use
+`--skip-knowledge-refresh` only for an emergency deploy where the database
+knowledge must be left untouched.
+
+`public-deploy.sh` intentionally does not issue or renew certificates. Prefer
+`public-upgrade.sh` for normal updates, use `public-setup.sh
+--issue-certificate` for first certificate issuance, and use
+`letsencrypt-renew.sh` or the `public-certbot-*` wrappers for renewal
+operations.
 
 `public-cleanup.sh` must not delete PostgreSQL data, model volumes, certificate
 volumes, ACME challenge data, or Let's Encrypt work data.
+
+Install automatic free certificate renewal on the VPS after first issuance:
+
+```sh
+scripts/runtime/public-certbot-test-renewal.sh
+scripts/runtime/public-certbot-install-timer.sh --dry-run
+scripts/runtime/public-certbot-install-timer.sh
+```
+
+Use `public-certbot-status.sh` to inspect the certificate state stored in the
+Compose certificate volume.
 
 ## Public Smoke Troubleshooting
 
@@ -397,7 +444,7 @@ Add Certbot-based Let's Encrypt automation:
 - HTTPS runtime Nginx config;
 - certificate setup command: `scripts/runtime/letsencrypt-setup.sh`;
 - certificate renewal command: `scripts/runtime/letsencrypt-renew.sh`;
-- Nginx reload after renewal;
+- Nginx reload only when Certbot actually renews a certificate;
 - required `PUBLIC_SERVER_NAME` and `LETSENCRYPT_EMAIL` validation;
 - tests for required environment, public `443` ownership, ACME routing, and
   destructive cleanup guards.
@@ -413,9 +460,16 @@ public-start.sh
 public-stop.sh
 public-down.sh
 public-cleanup.sh
+public-validate-env.sh
+public-load-knowledge.sh
+public-reset-and-setup.sh
+public-upgrade.sh
 public-deploy.sh
 public-migrate.sh
 public-smoke.sh
+public-certbot-status.sh
+public-certbot-test-renewal.sh
+public-certbot-install-timer.sh
 nginx-validate.sh
 ```
 

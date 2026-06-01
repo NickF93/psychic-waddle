@@ -124,6 +124,27 @@ scripts/runtime/api-setup.sh
 
 Expected result: Docker builds `portfolio-rag-assistant:local`.
 
+For a fresh public test server where old containers or test data may exist, the
+high-level destructive setup path is:
+
+```sh
+RUNTIME_WAIT_TIMEOUT_SECONDS=600 \
+scripts/runtime/public-reset-and-setup.sh --destroy-db --destroy-models
+```
+
+This stops/removes runtime containers, removes only the explicitly selected
+PostgreSQL and Ollama volumes, rebuilds, migrates, loads the committed
+knowledge file, starts the local HTTP public edge, and runs smoke checks. Add
+`--destroy-certs` only when the Let's Encrypt and ACME volumes must also be
+discarded.
+
+For later code updates that must preserve database, models, and certificates,
+use the preserving upgrade path instead:
+
+```sh
+RUNTIME_WAIT_TIMEOUT_SECONDS=600 scripts/runtime/public-upgrade.sh
+```
+
 ## 4. Start PostgreSQL And Run Migrations
 
 Start PostgreSQL with `pgvector`:
@@ -170,51 +191,31 @@ docker compose --env-file .env --profile ollama exec ollama ollama list
 
 Expected result: `llama3.2` and `nomic-embed-text` are listed.
 
-## 6. Create A First Knowledge File
+## 6. Use The Reviewed Knowledge File
 
-Create a minimal test knowledge file:
+The reviewed public profile knowledge is committed at:
 
-```sh
-mkdir -p knowledge
-
-cat > knowledge/profile.json <<'JSON'
-{
-  "schema_version": 1,
-  "sources": [
-    {
-      "source_uri": "cv://niccolo/main",
-      "title": "Niccolo Ferrari CV",
-      "reviewed_at": "2026-05-31T00:00:00+00:00"
-    }
-  ],
-  "facts": [
-    {
-      "source_uri": "cv://niccolo/main",
-      "category": "experience",
-      "fact_text": "Niccolo worked at NAIS s.r.l.",
-      "source_locator": "Experience section",
-      "public_visible": true
-    },
-    {
-      "source_uri": "cv://niccolo/main",
-      "category": "experience",
-      "fact_text": "Niccolo worked at Bonfiglioli.",
-      "source_locator": "Experience section",
-      "public_visible": true
-    }
-  ]
-}
-JSON
+```text
+knowledge/profile.json
 ```
 
-This file is only a functional test. Replace it with real reviewed public facts
-before using the service for recruiters. The local `knowledge/` directory is
-ignored by Git; server-created deployment knowledge files must remain untracked
-unless a future explicit plan creates a reviewed committed knowledge dataset.
+Do not create a server-local replacement for this file unless a reviewed source
+change requires it. The committed file is the canonical public facts dataset
+used by the deployment scripts.
 
 ## 7. Validate, Ingest, And Index Knowledge
 
-Validate the local knowledge file without starting dependencies:
+The high-level loader validates, ingests, and indexes the committed knowledge
+file:
+
+```sh
+scripts/runtime/public-load-knowledge.sh
+```
+
+It delegates to the existing CLI commands. Manual equivalent commands are below
+for debugging.
+
+Validate the knowledge file without starting dependencies:
 
 ```sh
 docker compose --env-file .env run --rm --no-deps \
@@ -237,7 +238,9 @@ docker compose --env-file .env --profile ollama run --rm \
   api portfolio-rag-assistant knowledge index-embeddings
 ```
 
-Expected result: the command indexes embeddings for the ingested chunks.
+Expected result: the command indexes embeddings for the ingested chunks. The
+current reviewed profile file validates as one source with more than one hundred
+public facts and matching chunks.
 
 Changing `EMBEDDING_BACKEND` or `EMBEDDING_MODEL` requires re-indexing before
 readiness can pass for the new embedding pair.
@@ -487,7 +490,7 @@ port `8000`; the public deployment path must be Nginx on `443`.
 For later code/config updates after the certificate exists, use:
 
 ```sh
-PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-deploy.sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-upgrade.sh --tls-runtime
 ```
 
 The public smoke script checks both portfolio CORS origins, rejection of an
@@ -508,9 +511,28 @@ Renew certificates with:
 scripts/runtime/letsencrypt-renew.sh
 ```
 
+Check certificate status:
+
+```sh
+scripts/runtime/public-certbot-status.sh
+```
+
+Test renewal without changing certificates:
+
+```sh
+scripts/runtime/public-certbot-test-renewal.sh
+```
+
+Install the host systemd renewal timer after first certificate issuance:
+
+```sh
+scripts/runtime/public-certbot-install-timer.sh --dry-run
+scripts/runtime/public-certbot-install-timer.sh
+```
+
 Renewal expects `nginx-tls` to be running because the ACME HTTP challenge is
 served by the HTTPS runtime profile on port `80`. The renewal script reloads
-`nginx-tls` after Certbot succeeds.
+`nginx-tls` only when Certbot reports that a certificate was actually renewed.
 
 For the complete public deployment boundary, see
 [Public Deployment Boundary](public-deployment.md).
