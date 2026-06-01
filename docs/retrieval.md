@@ -46,10 +46,10 @@ records may be returned by concrete retrieval implementations.
 Scores are diagnostics for ranking and answer policy. They are not visitor
 analytics and must not be stored as visitor-derived data.
 
-Milestone 9 changes the target meaning of `combined_score`: it must represent a
-deterministic fused ranking signal, not a direct comparison between raw vector
-similarity and PostgreSQL text-rank values. Raw vector and keyword scores remain
-diagnostics because their numeric scales are not equivalent confidence values.
+`combined_score` is a deterministic fused ranking signal. It is not a direct
+comparison between raw vector similarity and PostgreSQL text-rank values. Raw
+vector and keyword scores remain diagnostics because their numeric scales are
+not equivalent confidence values.
 
 ## Boundaries
 
@@ -100,15 +100,17 @@ The retriever:
   vector.
 - Runs intent-expanded lexical search for detected supported recruiter intents.
 - Merges vector, keyword, and intent-expanded candidates by chunk id.
-- Ranks deterministically with rank fusion over candidate ordering, then stable
-  score and chunk-id tie-breakers.
+- Ranks deterministically with reciprocal rank fusion over candidate ordering,
+  then stable raw-score and chunk-id tie-breakers.
 - Returns only source-backed `RetrievedContext` records.
 
-The Milestone 9 target is reciprocal rank fusion or an equivalent deterministic
-rank-fusion strategy. Retrieval must not treat raw vector similarity and
-`ts_rank_cd` as directly comparable confidence scores. Retrieval gathers
-candidate evidence; `AnswerPolicy` decides whether that evidence is
-intent-complete and answerable.
+RRF uses a fixed internal rank constant of `60`. The raw RRF sum is normalized
+to the existing `0..1` `combined_score` contract by dividing by the maximum
+possible RRF score for the channels attempted by that request. This preserves
+rank-fusion ordering while keeping `RETRIEVAL_MIN_SCORE` in the documented
+range. Retrieval must not treat raw vector similarity and `ts_rank_cd` as
+directly comparable confidence scores. Retrieval gathers candidate evidence;
+`AnswerPolicy` decides whether that evidence is intent-complete and answerable.
 
 ## Question Intent Expansion
 
@@ -124,12 +126,10 @@ Question-intent expansion is bounded to supported recruiter intents:
 
 Each intent profile supplies trigger terms, accepted knowledge categories,
 lexical expansion terms, and required evidence terms. Retrieval may use trigger
-and expansion terms to improve recall. Policy must use the same profile
-definitions to verify evidence completeness.
-
-Sprint 9.2 introduces the shared profile definitions. Sprint 9.3 wires the
-retriever to the profile expansion terms for intent-expanded lexical search and
-rank fusion.
+and expansion terms to improve recall. Detected intent expansion is bounded to
+the original question plus the matching profiles' lexical expansion terms and
+searches only those profiles' accepted knowledge categories. Policy uses the
+same profile definitions to verify evidence completeness.
 
 ## Sprint 3.2 Scope
 
