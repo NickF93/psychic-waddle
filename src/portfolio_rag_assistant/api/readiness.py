@@ -35,6 +35,7 @@ class DatabaseReadinessService:
         connection: ReadinessConnection,
         embedding_backend: str,
         embedding_model: str,
+        question_collection_enabled: bool,
     ) -> None:
         self._connection = connection
         self._embedding_backend = _require_text(
@@ -42,12 +43,18 @@ class DatabaseReadinessService:
             "embedding_backend",
         )
         self._embedding_model = _require_text(embedding_model, "embedding_model")
+        self._question_collection_enabled = _require_bool(
+            question_collection_enabled,
+            "question_collection_enabled",
+        )
 
     async def check(self) -> None:
         """Raise when the database is not ready for public answers."""
 
         try:
             _require_schema(self._connection)
+            if self._question_collection_enabled:
+                _require_question_collection_schema(self._connection)
             _require_embedding_availability(
                 self._connection,
                 embedding_backend=self._embedding_backend,
@@ -71,6 +78,14 @@ def _require_schema(connection: ReadinessConnection) -> None:
     ).fetchone()
     if row != (True, True, True, True):
         raise ReadinessCheckError("knowledge schema is not ready")
+
+
+def _require_question_collection_schema(connection: ReadinessConnection) -> None:
+    row = connection.execute(
+        "SELECT to_regclass('public.question_events') IS NOT NULL"
+    ).fetchone()
+    if row != (True,):
+        raise ReadinessCheckError("question collection schema is not ready")
 
 
 def _require_embedding_availability(
@@ -100,3 +115,9 @@ def _require_text(value: str, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ReadinessCheckError(f"{field_name} must be set")
     return value.strip()
+
+
+def _require_bool(value: bool, field_name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ReadinessCheckError(f"{field_name} must be a boolean")
+    return value

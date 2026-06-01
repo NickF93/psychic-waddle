@@ -106,6 +106,7 @@ def test_runtime_smoke_checks_database_and_providers(monkeypatch) -> None:
             "EMBEDDING_BACKEND": "ollama",
             "EMBEDDING_BASE_URL": "http://localhost:11434/api",
             "EMBEDDING_MODEL": "nomic-embed-text",
+            "QUESTION_COLLECTION_ENABLED": "false",
         },
         stdout=stdout,
     )

@@ -147,5 +147,6 @@ def build_runtime_services(
             connection=connection,
             embedding_backend=embedding_settings.backend,
             embedding_model=embedding_settings.model,
+            question_collection_enabled=question_collection_settings.enabled,
         ),
     )
