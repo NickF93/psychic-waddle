@@ -18,6 +18,8 @@ from portfolio_rag_assistant.api.readiness import (
 from portfolio_rag_assistant.api.schemas import (
     MAX_QUESTION_LENGTH,
     MAX_REQUEST_BODY_BYTES,
+    ChatNoticeBody,
+    ChatNoticeCode,
     ChatRequestBody,
     ChatResponseBody,
     ChatSourceBody,
@@ -30,6 +32,8 @@ from portfolio_rag_assistant.api.service import ChatServiceError, PublicChatServ
 __all__ = [
     "MAX_QUESTION_LENGTH",
     "MAX_REQUEST_BODY_BYTES",
+    "ChatNoticeBody",
+    "ChatNoticeCode",
     "ChatRequestBody",
     "ChatResponseBody",
     "ChatSourceBody",

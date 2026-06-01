@@ -21,6 +21,7 @@ services:
       EMBEDDING_MODEL: ${EMBEDDING_MODEL}
       RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K}
       RETRIEVAL_MIN_SCORE: ${RETRIEVAL_MIN_SCORE}
+      QUESTION_COLLECTION_ENABLED: ${QUESTION_COLLECTION_ENABLED}
     depends_on:
       db:
         condition: service_healthy

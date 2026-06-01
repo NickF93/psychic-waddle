@@ -83,6 +83,10 @@ For the planned public `vps.madnick.ovh` deployment with Nginx, free Let's
 Encrypt TLS, CORS, rate limits, and public smoke validation, see
 [Public Deployment Boundary](public-deployment.md).
 
+If unanswered-question collection is enabled, operator review commands and the
+manual deletion workflow are documented in
+[Question Review Workflow](question-review.md).
+
 Setup and start scripts wait for the targeted service to become ready before
 returning. The wait timeout defaults to 120 seconds and can be changed with:
 
@@ -149,6 +153,15 @@ Production HTTPS smoke uses an explicit base URL:
 PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
 ```
 
+Question collection notice validation is opt-in because it writes one pending
+review record:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh \
+PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=true \
+scripts/runtime/public-smoke.sh
+```
+
 `public-cleanup.sh` removes runtime containers and the local API image only. It
 does not delete PostgreSQL data, Ollama model data, llama.cpp model files,
 Let's Encrypt certificates, ACME challenge data, or Let's Encrypt work data.
@@ -158,6 +171,11 @@ There is exactly one migration script:
 ```sh
 scripts/runtime/postgres-migrate.sh
 ```
+
+The migration script records applied files in `schema_migrations` and validates
+their SHA-256 checksums before skipping them. It refuses to run against a
+database that already has application tables but no migration ledger, because
+guessing applied migrations would hide schema drift.
 
 Provider scripts do not run database migrations. API scripts also do not run
 database migrations.
@@ -241,7 +259,9 @@ curl http://127.0.0.1:8000/ready
 
 `/health` is liveness only. It confirms the API process answers HTTP requests.
 `/ready` confirms database access, the expected knowledge schema, and at least
-one public embedding for the configured embedding backend and model.
+one public embedding for the configured embedding backend and model. When
+`QUESTION_COLLECTION_ENABLED=true`, `/ready` also requires the
+`question_events` schema.
 
 Before exposing the service to recruiters, run the explicit smoke check:
 
@@ -250,8 +270,9 @@ docker compose --env-file .env run --rm api portfolio-rag-assistant runtime smok
 ```
 
 The smoke check verifies readiness and calls both configured provider
-capabilities once. This is intentionally not part of the periodic Docker
-healthcheck because provider calls can be slow, metered, or model-loading.
+capabilities once. If `QUESTION_COLLECTION_ENABLED=true`, readiness includes the
+question collection schema. This is intentionally not part of the periodic
+Docker healthcheck because provider calls can be slow, metered, or model-loading.
 
 ## Knowledge Commands
 

@@ -292,6 +292,7 @@ def connect_database(
         dbname=name,
         user=user,
         password=password,
+        autocommit=True,
     )
 
 

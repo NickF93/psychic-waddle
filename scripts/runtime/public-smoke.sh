@@ -11,7 +11,14 @@ PUBLIC_SMOKE_BASE_URL=${PUBLIC_SMOKE_BASE_URL:-http://127.0.0.1:18080}
 PUBLIC_SMOKE_ALLOWED_ORIGIN=https://pigreco.xyz
 PUBLIC_SMOKE_ALLOWED_WWW_ORIGIN=https://www.pigreco.xyz
 PUBLIC_SMOKE_REJECTED_ORIGIN=https://example.invalid
+PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=${PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION:-false}
 CHAT_BODY='{"question":"Where did Niccolo work?","language":"en"}'
+QUESTION_COLLECTION_BODY='{"question":"What is Niccolo favorite pizza topping?","language":"en"}'
+
+case "$PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION" in
+    true|false) ;;
+    *) fail "PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION must be true or false" ;;
+esac
 
 json_status_is() {
     EXPECTED_STATUS=$1
@@ -20,6 +27,16 @@ json_status_is() {
 
 json_chat_status_is_public() {
     python3 -c 'import json, sys; data = json.load(sys.stdin); assert data.get("status") in {"answerable", "not_answerable", "needs_clarification"}, data; assert isinstance(data.get("answer"), str), data'
+}
+
+json_question_collection_notice_is_present() {
+    python3 -c 'import json, sys
+data = json.load(sys.stdin)
+assert data.get("status") == "not_answerable", data
+assert isinstance(data.get("answer"), str), data
+notices = data.get("notices")
+assert isinstance(notices, list), data
+assert {"code": "question_recorded"} in notices, data'
 }
 
 curl_headers_status() {
@@ -94,6 +111,17 @@ CHAT_RESPONSE=$(curl -fsS -X POST "$PUBLIC_SMOKE_BASE_URL/api/assistant/chat" \
     -H "origin: $PUBLIC_SMOKE_ALLOWED_ORIGIN" \
     -d "$CHAT_BODY")
 printf '%s\n' "$CHAT_RESPONSE" | json_chat_status_is_public
+
+if [ "$PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION" = true ]; then
+    QUESTION_COLLECTION_RESPONSE=$(curl -fsS -X POST "$PUBLIC_SMOKE_BASE_URL/api/assistant/chat" \
+        -H "content-type: application/json" \
+        -H "origin: $PUBLIC_SMOKE_ALLOWED_ORIGIN" \
+        -d "$QUESTION_COLLECTION_BODY")
+    printf '%s\n' "$QUESTION_COLLECTION_RESPONSE" | json_question_collection_notice_is_present
+    info "question collection smoke passed"
+else
+    info "question collection smoke skipped: set PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=true to record and verify one unanswered question"
+fi
 
 assert_direct_api_not_public
 

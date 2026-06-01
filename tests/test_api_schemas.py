@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from portfolio_rag_assistant.api import (
     MAX_QUESTION_LENGTH,
+    ChatNoticeBody,
     ChatRequestBody,
     ChatResponseBody,
     ChatSourceBody,
@@ -68,6 +69,7 @@ def test_chat_response_exposes_only_public_source_fields() -> None:
                 "locator": "Experience section",
             }
         ],
+        "notices": [],
     }
 
     with pytest.raises(ValidationError):
@@ -95,6 +97,21 @@ def test_chat_response_sources_are_answerable_only() -> None:
             answer="Please clarify.",
             sources=(ChatSourceBody(title="Niccolo Ferrari CV"),),
         )
+
+
+def test_chat_response_accepts_question_recorded_notice() -> None:
+    response = ChatResponseBody(
+        status="not_answerable",
+        answer="I do not have verified public context.",
+        notices=(ChatNoticeBody(code="question_recorded"),),
+    )
+
+    assert response.model_dump(mode="json")["notices"] == [
+        {"code": "question_recorded"}
+    ]
+
+    with pytest.raises(ValidationError):
+        ChatNoticeBody(code="unknown")  # type: ignore[arg-type]
 
 
 def test_request_size_guard_rejects_oversized_body() -> None:

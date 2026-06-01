@@ -270,6 +270,8 @@ The smoke script validates:
 - `GET /api/assistant/health` through Nginx;
 - `GET /api/assistant/ready` through Nginx;
 - `POST /api/assistant/chat` through Nginx;
+- optional question collection notice validation through
+  `PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=true`;
 - optional direct API-port exposure through `PUBLIC_DIRECT_API_PROBE_URL`.
 
 Expected output for a normal production smoke run without the optional direct
@@ -282,6 +284,18 @@ unexpected origin rejected: https://example.invalid
 direct API probe skipped: set PUBLIC_DIRECT_API_PROBE_URL to check public port 8000
 public smoke passed: https://vps.madnick.ovh
 ```
+
+To validate the M8 question collection notice path, opt in explicitly:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh \
+PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=true \
+scripts/runtime/public-smoke.sh
+```
+
+This sends one unsupported public chat question and expects
+`{"code":"question_recorded"}` in the response notices. It intentionally creates
+one pending question review record that the operator can inspect or delete.
 
 To confirm that public traffic cannot bypass Nginx and reach FastAPI on port
 `8000`, set the probe URL explicitly:
@@ -427,6 +441,7 @@ Harden public HTTPS smoke validation beyond the Sprint 7.4 smoke script:
 - CORS preflight from `https://pigreco.xyz`;
 - CORS preflight from `https://www.pigreco.xyz`;
 - rejection of an unexpected origin;
+- optional question collection notice validation;
 - confirmation that direct public access to the API container port is not part
   of the deployment path.
 

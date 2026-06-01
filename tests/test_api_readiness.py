@@ -15,6 +15,7 @@ def test_database_readiness_accepts_schema_and_configured_embeddings() -> None:
         connection=connection,
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        question_collection_enabled=False,
     )
 
     asyncio.run(service.check())
@@ -27,6 +28,7 @@ def test_database_readiness_rejects_missing_schema() -> None:
         connection=FakeReadinessConnection(schema_ready=False, embeddings_ready=True),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        question_collection_enabled=False,
     )
 
     with pytest.raises(ReadinessCheckError, match="knowledge schema is not ready"):
@@ -38,6 +40,7 @@ def test_database_readiness_rejects_missing_configured_embeddings() -> None:
         connection=FakeReadinessConnection(schema_ready=True, embeddings_ready=False),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        question_collection_enabled=False,
     )
 
     with pytest.raises(ReadinessCheckError, match="configured embeddings"):
@@ -49,10 +52,45 @@ def test_database_readiness_wraps_database_failures() -> None:
         connection=FailingReadinessConnection(),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        question_collection_enabled=False,
     )
 
     with pytest.raises(ReadinessCheckError, match="runtime readiness check failed"):
         asyncio.run(service.check())
+
+
+def test_database_readiness_requires_question_schema_when_collection_enabled() -> None:
+    service = DatabaseReadinessService(
+        connection=FakeReadinessConnection(
+            schema_ready=True,
+            embeddings_ready=True,
+            question_schema_ready=False,
+        ),
+        embedding_backend="ollama",
+        embedding_model="nomic-embed-text",
+        question_collection_enabled=True,
+    )
+
+    with pytest.raises(ReadinessCheckError, match="question collection schema"):
+        asyncio.run(service.check())
+
+
+def test_database_readiness_accepts_question_schema_when_collection_enabled() -> None:
+    connection = FakeReadinessConnection(
+        schema_ready=True,
+        embeddings_ready=True,
+        question_schema_ready=True,
+    )
+    service = DatabaseReadinessService(
+        connection=connection,
+        embedding_backend="ollama",
+        embedding_model="nomic-embed-text",
+        question_collection_enabled=True,
+    )
+
+    asyncio.run(service.check())
+
+    assert any("question_events" in query for query, _params in connection.calls)
 
 
 class FakeCursor:
@@ -64,9 +102,16 @@ class FakeCursor:
 
 
 class FakeReadinessConnection:
-    def __init__(self, *, schema_ready: bool, embeddings_ready: bool) -> None:
+    def __init__(
+        self,
+        *,
+        schema_ready: bool,
+        embeddings_ready: bool,
+        question_schema_ready: bool = True,
+    ) -> None:
         self._schema_ready = schema_ready
         self._embeddings_ready = embeddings_ready
+        self._question_schema_ready = question_schema_ready
         self.calls: list[tuple[str, tuple[object, ...]]] = []
 
     def execute(
@@ -75,6 +120,8 @@ class FakeReadinessConnection:
         params: Sequence[object] = (),
     ) -> FakeCursor:
         self.calls.append((query, tuple(params)))
+        if "question_events" in query:
+            return FakeCursor((self._question_schema_ready,))
         if "to_regclass" in query:
             return FakeCursor((True, True, True, True) if self._schema_ready else None)
         if "FROM chunk_embeddings" in query:

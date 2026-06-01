@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
+from contextlib import AbstractContextManager
+from types import TracebackType
 from typing import Any
 
 import httpx
@@ -57,6 +59,7 @@ def test_runtime_api_composition_uses_separate_chat_and_embedding_authorities() 
         "status": "not_answerable",
         "answer": "I do not have verified public context to answer that reliably.",
         "sources": [],
+        "notices": [],
     }
     assert chat_settings == [
         ChatProviderSettings(
@@ -92,6 +95,31 @@ def test_runtime_api_composition_uses_separate_chat_and_embedding_authorities() 
     assert chat_provider.chat_requests == ()
     assert len(connection.calls) == 2
     assert "access-control-allow-origin" not in response.headers
+
+
+def test_runtime_api_composition_collects_unanswered_questions_when_enabled() -> None:
+    connection = FakeRetrievalConnection()
+    env = _env()
+    env["QUESTION_COLLECTION_ENABLED"] = "true"
+
+    app = create_runtime_api_app(
+        env=env,
+        chat_provider_factory=lambda settings: FakeChatProvider("unused"),
+        embedding_provider_factory=lambda settings: FakeEmbeddingProvider(
+            embeddings=((0.0, 0.0),)
+        ),
+        connection_factory=lambda settings: connection,
+    )
+
+    response = _post_chat(app)
+
+    assert response.status_code == 200
+    assert response.json()["notices"] == [{"code": "question_recorded"}]
+    assert any(
+        "INSERT INTO question_events (raw_question_text)" in query
+        and params == ("Where did Niccolo work?",)
+        for query, params in connection.calls
+    )
 
 
 def test_runtime_api_composition_requires_database_settings() -> None:
@@ -182,12 +210,32 @@ def _env() -> dict[str, str]:
         "EMBEDDING_MODEL": "nomic-embed-text",
         "RETRIEVAL_TOP_K": "2",
         "RETRIEVAL_MIN_SCORE": "0.25",
+        "QUESTION_COLLECTION_ENABLED": "false",
     }
 
 
 class FakeCursor:
+    def __init__(self, row: tuple[Any, ...] | None = None) -> None:
+        self._row = row
+
     def fetchall(self) -> list[tuple[Any, ...]]:
         return []
+
+    def fetchone(self) -> tuple[Any, ...] | None:
+        return self._row
+
+
+class FakeTransaction(AbstractContextManager[object]):
+    def __enter__(self) -> object:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        return None
 
 
 class FakeRetrievalConnection:
@@ -200,7 +248,12 @@ class FakeRetrievalConnection:
         params: Sequence[object] = (),
     ) -> FakeCursor:
         self.calls.append((query, tuple(params)))
+        if "INSERT INTO question_events" in query:
+            return FakeCursor((101,))
         return FakeCursor()
+
+    def transaction(self) -> FakeTransaction:
+        return FakeTransaction()
 
 
 class FakeChatProvider:

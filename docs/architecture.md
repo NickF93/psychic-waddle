@@ -132,11 +132,15 @@ Owns final wording only.
 
 Owns anonymous question improvement signals only.
 
-- Stores only redacted question text when collection is enabled.
-- Supports later review of gaps, aliases, and evaluation cases. Review state is
-  admin-owned workflow data, not collected visitor metadata.
-- Must not store visitor identity, raw transcripts, or promote questions into
-  knowledge automatically.
+- Stores raw text only for questions that are not answerable from verified
+  context when collection is enabled.
+- Supports later review of gaps, aliases, and evaluation cases. Review state,
+  category, note, and timestamps are admin-owned workflow data, not runtime
+  visitor metadata.
+- Must not store visitor identity outside the raw question text, answer text,
+  answer status, source identifiers, source kinds, retrieval scores,
+  per-question language, request metadata, or promote questions into knowledge
+  automatically.
 
 ## Forbidden Ownership Mixing
 
@@ -178,13 +182,19 @@ example environment files belong to later implementation milestones.
 
 Visitor questions are improvement signals only.
 
-The system must not store IP addresses, user agents, cookies, session IDs,
-emails, phone numbers, names, company names, photos, raw transcripts, or any
-other visitor identity.
+The system must not store visitor identity or request metadata outside the raw
+question text explicitly submitted by the visitor.
 
 If anonymous question collection is enabled, stored visitor-derived data is
-limited to redacted question text only. The system must not store per-question
-language, answer status, source kinds, retrieval scores, raw request metadata,
+limited to raw text from questions that are not answerable from verified
+context. The raw text may contain personal data typed by the visitor; the
+operator must review and manually delete records that are not useful or should
+not be retained.
+
+Question review metadata is limited to admin-owned state, category, note, and
+timestamps. The system must not store IP addresses, user agents, cookies,
+session IDs, frontend identifiers, per-question language, answer status, answer
+text, source identifiers, source kinds, retrieval scores, raw request metadata,
 or any other answer/request metadata from visitor traffic. Visitor questions
 must be reviewed manually before they influence facts, aliases, or evaluation
 cases.

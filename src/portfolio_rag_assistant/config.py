@@ -122,6 +122,19 @@ class RetrievalSettings:
             )
 
 
+@dataclass(frozen=True, slots=True)
+class QuestionCollectionSettings:
+    """Validated anonymous question collection settings."""
+
+    enabled: bool
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.enabled, bool):
+            raise RuntimeConfigurationError(
+                "QUESTION_COLLECTION_ENABLED must be true or false"
+            )
+
+
 def load_chat_provider_settings(
     env: Mapping[str, str] | None = None,
 ) -> ChatProviderSettings:
@@ -180,6 +193,20 @@ def load_retrieval_settings(env: Mapping[str, str] | None = None) -> RetrievalSe
             source.get("RETRIEVAL_MIN_SCORE"),
             "RETRIEVAL_MIN_SCORE",
         ),
+    )
+
+
+def load_question_collection_settings(
+    env: Mapping[str, str] | None = None,
+) -> QuestionCollectionSettings:
+    """Load question collection settings from exact environment variable names."""
+
+    source = os.environ if env is None else env
+    return QuestionCollectionSettings(
+        enabled=_require_runtime_bool(
+            source.get("QUESTION_COLLECTION_ENABLED"),
+            "QUESTION_COLLECTION_ENABLED",
+        )
     )
 
 
@@ -263,6 +290,15 @@ def _require_runtime_int(value: str | None, field_name: str) -> int:
         return int(text)
     except ValueError as exc:
         raise RuntimeConfigurationError(f"{field_name} must be an integer") from exc
+
+
+def _require_runtime_bool(value: str | None, field_name: str) -> bool:
+    text = _require_runtime_text(value, field_name).lower()
+    if text == "true":
+        return True
+    if text == "false":
+        return False
+    raise RuntimeConfigurationError(f"{field_name} must be true or false")
 
 
 def _require_retrieval_int(value: str | None, field_name: str) -> int:

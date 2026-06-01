@@ -41,13 +41,18 @@ same change.
 - The reviewed knowledge base is the only source of truth.
 - Visitor questions are improvement signals only.
 - Visitor questions must never be automatically promoted into facts.
-- Store no visitor identity.
-- Do not store IP addresses, user agents, cookies, session identifiers, email
-  addresses, phone numbers, names, company names, photos, or raw transcripts.
-- If question collection is implemented, store only redacted question text as
-  visitor-derived data.
-- Do not store per-question language, answer status, source kinds, retrieval
-  scores, or any other answer/request metadata from visitor traffic.
+- Store no visitor identity outside the submitted question text.
+- Do not store IP addresses, user agents, cookies, session identifiers,
+  frontend identifiers, answer text, answer status, source identifiers,
+  retrieval scores, source kinds, per-question language, or request metadata
+  from visitor traffic.
+- If question collection is implemented, store raw text only for questions that
+  are not answerable from verified context. The raw text may contain personal
+  data typed by the visitor; it must be reviewed and manually deleted by the
+  operator when it is not useful or should not be retained.
+- Question review metadata is limited to admin-owned state, category, note, and
+  timestamps. Review metadata must not be derived from runtime answer,
+  retrieval, provider, browser, session, or network metadata.
 - The public Nginx edge may keep redacted operational access logs containing
   only timestamp, HTTP method, normalized route path without query string,
   status code, response byte count, request duration, and allowed browser

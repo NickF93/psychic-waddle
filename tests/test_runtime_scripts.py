@@ -125,7 +125,31 @@ def test_postgres_scripts_own_database_lifecycle_and_migration() -> None:
     assert "remove_compose_volume postgres-data" in _script("postgres-cleanup.sh")
     assert "psql" in _script("postgres-migrate.sh")
     assert "--set ON_ERROR_STOP=1" in _script("postgres-migrate.sh")
-    assert "/migrations/0001_knowledge_schema.sql" in _script("postgres-migrate.sh")
+    assert "for migration in /migrations/*.sql" in _script("postgres-migrate.sh")
+    assert "schema_migrations" in _script("postgres-migrate.sh")
+    assert "checksum_sha256" in _script("postgres-migrate.sh")
+    assert "sha256sum" in _script("postgres-migrate.sh")
+    assert "BEGIN;" in _script("postgres-migrate.sh")
+    assert "COMMIT;" in _script("postgres-migrate.sh")
+    assert "refusing to guess applied migrations" in _script("postgres-migrate.sh")
+    old_replay_command = (
+        'psql --set ON_ERROR_STOP=1 -U "$POSTGRES_USER" '
+        '-d "$POSTGRES_DB" -f "$migration"'
+    )
+    assert old_replay_command not in _script("postgres-migrate.sh")
+
+
+def test_postgres_migration_script_tracks_applied_files_once() -> None:
+    migrate = _script("postgres-migrate.sh")
+
+    assert "CREATE TABLE IF NOT EXISTS schema_migrations" in migrate
+    assert "SELECT checksum_sha256" in migrate
+    assert "migration already applied" in migrate
+    assert "migration checksum mismatch" in migrate
+    assert "INSERT INTO schema_migrations" in migrate
+    assert migrate.index("\\i $migration") < migrate.index(
+        "INSERT INTO schema_migrations"
+    )
 
 
 def test_migration_command_is_not_duplicated() -> None:
@@ -337,6 +361,9 @@ def test_public_smoke_supports_local_default_and_public_override() -> None:
     assert "/api/assistant/ready" in smoke
     assert "/api/assistant/chat" in smoke
     assert '{"question":"Where did Niccolo work?","language":"en"}' in smoke
+    assert "PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION" in smoke
+    assert '{"question":"What is Niccolo favorite pizza topping?","language":"en"}' in smoke
+    assert '{"code": "question_recorded"}' in smoke
     assert '"answerable", "not_answerable", "needs_clarification"' in smoke
     assert "PUBLIC_DIRECT_API_PROBE_URL" in smoke
     assert "2??) fail" in smoke
@@ -373,6 +400,33 @@ def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> N
     assert any("http://127.0.0.1:18080/api/assistant/ready" in call for call in calls)
     assert any("http://127.0.0.1:18080/api/assistant/chat" in call for call in calls)
     assert any("http://public-api-closed:8000/health" in call for call in calls)
+
+
+def test_public_smoke_can_validate_question_collection_notice(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION"] = "true"
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "question collection smoke passed" in result.stdout
+
+    calls = [json.loads(line) for line in fake_curl_log.read_text().splitlines()]
+    assert any(
+        any("What is Niccolo favorite pizza topping?" in part for part in call)
+        for call in calls
+    )
 
 
 def test_public_smoke_fails_when_direct_api_probe_returns_success(
@@ -461,6 +515,11 @@ for arg in args:
     if arg.startswith(("http://", "https://")):
         url = arg
 
+body = ""
+for index, arg in enumerate(args[:-1]):
+    if arg == "-d":
+        body = args[index + 1]
+
 if url.startswith("http://public-api-open:8000/health"):
     print("200", end="")
 elif url.startswith("http://public-api-closed:8000/health"):
@@ -480,7 +539,10 @@ elif url.endswith("/api/assistant/health"):
 elif url.endswith("/api/assistant/ready"):
     print('{"status":"ready"}')
 elif url.endswith("/api/assistant/chat"):
-    print('{"status":"answerable","answer":"OK"}')
+    if "favorite pizza topping" in body:
+        print('{"status":"not_answerable","answer":"No verified context.","notices":[{"code":"question_recorded"}]}')
+    else:
+        print('{"status":"answerable","answer":"OK","notices":[]}')
 else:
     print(f"unexpected curl args: {args}", file=sys.stderr)
     sys.exit(2)
