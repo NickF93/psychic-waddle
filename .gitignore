@@ -157,8 +157,10 @@ ENV/
 env.bak/
 venv.bak/
 
-# Local deployment knowledge files
-/knowledge/
+# Reviewed public knowledge
+/knowledge/*
+!/knowledge/README.md
+!/knowledge/profile.json
 
 # Spyder project settings
 .spyderproject
