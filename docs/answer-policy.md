@@ -18,7 +18,7 @@ It may use:
 - public `RetrievedContext` records returned by `Retriever`;
 - retrieval scores;
 - reviewed source references;
-- bounded knowledge categories.
+- bounded knowledge categories;
 - bounded `QuestionIntentProfile` definitions shared with retrieval.
 
 It must not:
@@ -55,6 +55,12 @@ The default policy uses only local, inspectable signals:
   projects, and contact/profile questions.
 - Detected profiles map to their accepted knowledge categories and required
   evidence terms.
+- Required evidence may be a normalized word or an exact normalized phrase,
+  such as `worked at`, `work history`, `current role`, or `current employer`.
+- Category labels and chunk prefixes alone are not evidence. A chunk such as
+  `education: Niccolo has public profile information` does not satisfy an
+  education question unless it also contains degree, university, Ph.D.,
+  master's, bachelor's, study, completion, or equivalent profile evidence.
 - When no shared profile matches, the question domain is inferred with a
   bounded category keyword map for:
   - `experience`
@@ -67,6 +73,10 @@ The default policy uses only local, inspectable signals:
 - For common recruiter intents, matching category alone is not sufficient.
   Shared intent profiles define the required evidence and the policy rejects
   category-only support.
+- Workplace/work-history questions require explicit employment evidence such
+  as employer, company, workplace, internship, `worked at`, or `work history`.
+- Current-role questions require current/present role or employer evidence,
+  not merely a previous role in the experience category.
 - If the question is broad and the usable context spans multiple domains, the
   policy asks for clarification.
 - If no domain is inferred and the question is not a broad profile question,
