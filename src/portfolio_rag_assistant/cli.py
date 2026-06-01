@@ -100,6 +100,8 @@ def run(
                 return _run_questions_delete(args.event_id, environment, output)
             if args.questions_command == "export":
                 return _run_questions_export(args, environment, output)
+            if args.questions_command == "review":
+                return _run_questions_review(environment)
         parser.print_help(file=errors)
         return 2
     except (
@@ -207,6 +209,12 @@ def _run_questions_export(
         events = store.export_events(state=args.state)
     for event in events:
         print(json.dumps(_question_event_json(event), ensure_ascii=False), file=stdout)
+    return 0
+
+
+def _run_questions_review(env: Mapping[str, str]) -> int:
+    with _question_review_store(env) as store:
+        _run_question_review_tui(store)
     return 0
 
 
@@ -333,6 +341,8 @@ def _build_parser() -> argparse.ArgumentParser:
     export_questions = question_subcommands.add_parser("export")
     export_questions.add_argument("--state", choices=sorted(QUESTION_REVIEW_STATES))
     export_questions.add_argument("--format", choices=("jsonl",), default="jsonl")
+
+    question_subcommands.add_parser("review")
     return parser
 
 
@@ -364,6 +374,12 @@ class _QuestionReviewStoreContext:
 
 def _question_review_store(env: Mapping[str, str]) -> _QuestionReviewStoreContext:
     return _QuestionReviewStoreContext(env)
+
+
+def _run_question_review_tui(store: QuestionReviewStore) -> None:
+    from portfolio_rag_assistant.questions.tui import run_question_review_tui
+
+    run_question_review_tui(store)
 
 
 def _print_question_table(events: tuple[QuestionEvent, ...], stdout: TextIO) -> None:
