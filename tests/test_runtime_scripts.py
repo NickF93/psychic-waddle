@@ -126,7 +126,30 @@ def test_postgres_scripts_own_database_lifecycle_and_migration() -> None:
     assert "psql" in _script("postgres-migrate.sh")
     assert "--set ON_ERROR_STOP=1" in _script("postgres-migrate.sh")
     assert "for migration in /migrations/*.sql" in _script("postgres-migrate.sh")
-    assert '-f "$migration"' in _script("postgres-migrate.sh")
+    assert "schema_migrations" in _script("postgres-migrate.sh")
+    assert "checksum_sha256" in _script("postgres-migrate.sh")
+    assert "sha256sum" in _script("postgres-migrate.sh")
+    assert "BEGIN;" in _script("postgres-migrate.sh")
+    assert "COMMIT;" in _script("postgres-migrate.sh")
+    assert "refusing to guess applied migrations" in _script("postgres-migrate.sh")
+    old_replay_command = (
+        'psql --set ON_ERROR_STOP=1 -U "$POSTGRES_USER" '
+        '-d "$POSTGRES_DB" -f "$migration"'
+    )
+    assert old_replay_command not in _script("postgres-migrate.sh")
+
+
+def test_postgres_migration_script_tracks_applied_files_once() -> None:
+    migrate = _script("postgres-migrate.sh")
+
+    assert "CREATE TABLE IF NOT EXISTS schema_migrations" in migrate
+    assert "SELECT checksum_sha256" in migrate
+    assert "migration already applied" in migrate
+    assert "migration checksum mismatch" in migrate
+    assert "INSERT INTO schema_migrations" in migrate
+    assert migrate.index("\\i $migration") < migrate.index(
+        "INSERT INTO schema_migrations"
+    )
 
 
 def test_migration_command_is_not_duplicated() -> None:
