@@ -328,7 +328,7 @@ class FakeSmokeConnection:
         params: tuple[object, ...] = (),
     ) -> FakeCursor:
         if "to_regclass" in query:
-            return FakeCursor((True, True, True, True))
+            return FakeCursor((True, True, True, True, True))
         if "FROM chunk_embeddings" in query:
             return FakeCursor((True,))
         raise AssertionError(query)
