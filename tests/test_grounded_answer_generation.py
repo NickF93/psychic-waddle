@@ -82,6 +82,41 @@ def test_grounded_generator_prompt_uses_only_approved_context() -> None:
     assert "0.91" not in user_prompt
     assert "cv://niccolo/main" not in user_prompt
     assert "Do not add citations or source labels" in system_prompt
+    assert "INSUFFICIENT_APPROVED_CONTEXT" in system_prompt
+    assert "available verified context is not enough" not in system_prompt
+
+
+@pytest.mark.parametrize(
+    "provider_answer",
+    (
+        "INSUFFICIENT_APPROVED_CONTEXT",
+        "The approved context is insufficient to answer that.",
+        "The available verified context is not enough to determine that.",
+        "Non ho contesto pubblico verificato per rispondere.",
+    ),
+)
+def test_grounded_generator_demotes_insufficient_answerable_output(
+    provider_answer: str,
+) -> None:
+    provider = FakeProvider(provider_answer)
+    generator = GroundedAnswerGenerator(provider, "chat-model")
+
+    response = _run(
+        generator.generate(
+            AnswerGenerationRequest(
+                question="Where did Niccolo work?",
+                decision=_answerable_decision(),
+                language="en",
+            )
+        )
+    )
+
+    assert response.status == NOT_ANSWERABLE
+    assert response.answer_text == (
+        "I do not have verified public context to answer that reliably."
+    )
+    assert response.sources == ()
+    assert len(provider.chat_requests) == 1
 
 
 def test_not_answerable_decision_returns_fallback_without_provider_call() -> None:

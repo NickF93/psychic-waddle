@@ -29,13 +29,35 @@ Use only the approved context provided by the application.
 Do not use outside knowledge.
 Do not infer facts, dates, employers, degrees, skills, private information, or
 source evidence that are absent from the approved context.
-If the approved context is insufficient, say that the available verified context
-is not enough.
+If you cannot answer directly from the approved context, reply exactly:
+INSUFFICIENT_APPROVED_CONTEXT
 Do not mention retrieval scores, ranking, thresholds, or internal diagnostics.
 Do not add citations or source labels. The application attaches sources
 deterministically.
 Answer in the requested language.
 """
+
+_INSUFFICIENT_CONTEXT_SENTINEL = "INSUFFICIENT_APPROVED_CONTEXT"
+_INSUFFICIENT_CONTEXT_PHRASES = frozenset(
+    (
+        "approved context is insufficient",
+        "available verified context is not enough",
+        "context is not enough",
+        "do not have verified public context",
+        "does not provide information",
+        "does not mention",
+        "insufficient context",
+        "not enough context",
+        "not enough information",
+        "cannot determine",
+        "can't determine",
+        "non ho contesto pubblico verificato",
+        "contesto insufficiente",
+        "contesto non e sufficiente",
+        "contesto non è sufficiente",
+        "non abbastanza informazioni",
+    )
+)
 
 _LANGUAGE_NAMES: dict[AnswerLanguage, str] = {
     "en": "English",
@@ -112,9 +134,16 @@ class GroundedAnswerGenerator:
         except LLMProviderError as error:
             raise AnswerGenerationProviderError("provider chat failed") from error
 
+        answer_text = chat_response.message.content.strip()
+        if _is_insufficient_context_answer(answer_text):
+            return AnswerGenerationResponse(
+                answer_text=_FALLBACK_TEXT[request.language],
+                status=NOT_ANSWERABLE,
+            )
+
         return AnswerGenerationResponse(
             answer_text=_with_source_note(
-                chat_response.message.content.strip(),
+                answer_text,
                 sources,
                 request.language,
             ),
@@ -191,6 +220,13 @@ def _format_source(source: AnswerSourceReference) -> str:
     if source.source_locator is None:
         return source.source_title
     return f"{source.source_title} ({source.source_locator})"
+
+
+def _is_insufficient_context_answer(answer_text: str) -> bool:
+    normalized = " ".join(answer_text.casefold().split())
+    if normalized == _INSUFFICIENT_CONTEXT_SENTINEL.casefold():
+        return True
+    return any(phrase in normalized for phrase in _INSUFFICIENT_CONTEXT_PHRASES)
 
 
 def _require_non_empty_text(value: str, field_name: str) -> None:
