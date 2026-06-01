@@ -11,6 +11,7 @@ from portfolio_rag_assistant.answer import (
 )
 from portfolio_rag_assistant.api import (
     ChatRequestBody,
+    ChatSourceBody,
     ChatServiceError,
     PublicChatService,
 )
@@ -21,6 +22,7 @@ from portfolio_rag_assistant.policy import (
     NOT_ANSWERABLE,
     AnswerPolicyDecision,
     AnswerPolicyRequest,
+    DeterministicAnswerPolicy,
 )
 from portfolio_rag_assistant.questions import (
     QuestionCollectionError,
@@ -225,6 +227,71 @@ def test_chat_service_does_not_collect_answerable_questions() -> None:
     assert collector.requests == ()
 
 
+def test_chat_service_collects_real_policy_not_answerable_question() -> None:
+    collector = FakeQuestionCollector(recorded=True)
+    service = _service(
+        retriever=FakeRetriever(
+            RetrievalResponse(
+                question="What is Niccolo favorite pizza topping?",
+                results=(_context(),),
+            ),
+            [],
+        ),
+        policy=DeterministicAnswerPolicy(),
+        generator=DecisionEchoGenerator(),
+        question_collector=collector,
+    )
+
+    response = _run(
+        service.answer(
+            ChatRequestBody(
+                question="What is Niccolo favorite pizza topping?",
+                language="en",
+            )
+        )
+    )
+
+    assert response.status == NOT_ANSWERABLE
+    assert response.sources == ()
+    assert response.model_dump(mode="json")["notices"] == [
+        {"code": "question_recorded"}
+    ]
+    assert collector.requests == (
+        QuestionCollectionRequest(
+            raw_question_text="What is Niccolo favorite pizza topping?"
+        ),
+    )
+
+
+def test_chat_service_does_not_collect_real_policy_answerable_question() -> None:
+    collector = FakeQuestionCollector(recorded=True)
+    service = _service(
+        retriever=FakeRetriever(
+            RetrievalResponse(question="Where did Niccolo work?", results=(_context(),)),
+            [],
+        ),
+        policy=DeterministicAnswerPolicy(),
+        generator=DecisionEchoGenerator(),
+        question_collector=collector,
+    )
+
+    response = _run(
+        service.answer(
+            ChatRequestBody(question="Where did Niccolo work?", language="en")
+        )
+    )
+
+    assert response.status == ANSWERABLE
+    assert response.sources == (
+        ChatSourceBody(
+            title="Niccolo Ferrari CV",
+            locator="Experience section",
+        ),
+    )
+    assert response.notices == ()
+    assert collector.requests == ()
+
+
 def test_chat_service_ignores_question_collection_failures() -> None:
     service = _service(
         retriever=FakeRetriever(
@@ -389,3 +456,23 @@ class FakeGenerator:
         self._events.append("generate")
         self.requests = (*self.requests, request)
         return self._response
+
+
+class DecisionEchoGenerator:
+    async def generate(
+        self,
+        request: AnswerGenerationRequest,
+    ) -> AnswerGenerationResponse:
+        sources = tuple(
+            AnswerSourceReference(
+                source_title=context.source_title,
+                source_uri=context.source_uri,
+                source_locator=context.source_locator,
+            )
+            for context in request.decision.approved_context
+        )
+        return AnswerGenerationResponse(
+            status=request.decision.status,
+            answer_text=f"{request.decision.status}: {request.decision.reason}",
+            sources=sources,
+        )
