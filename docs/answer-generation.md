@@ -78,8 +78,14 @@ The system prompt requires the model to:
 - avoid outside knowledge;
 - avoid unsupported facts, dates, employers, degrees, skills, private
   information, and source evidence;
-- say that verified context is insufficient when the context is not enough;
+- return the exact internal sentinel `INSUFFICIENT_APPROVED_CONTEXT` if it cannot
+  answer directly from approved context;
 - omit citations and source labels because the application attaches sources.
+
+If an answerable provider response returns the sentinel or clear insufficiency
+wording, the generator deterministically demotes the response to
+`not_answerable`, returns the standard fallback text, and attaches no sources.
+This keeps public status, answer text, and source evidence consistent.
 
 The generator uses explicit request language only:
 

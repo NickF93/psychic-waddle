@@ -163,7 +163,7 @@ class PostgreSQLRetriever:
         cursor = self._connection.execute(
             """
             WITH keyword_query AS (
-                SELECT plainto_tsquery('simple', %s) AS value
+                SELECT websearch_to_tsquery('english', %s) AS value
             )
             SELECT
                 chunks.id,
@@ -175,7 +175,7 @@ class PostgreSQLRetriever:
                 LEAST(
                     1.0,
                     ts_rank_cd(
-                        to_tsvector('simple', chunks.chunk_text),
+                        to_tsvector('english', chunks.chunk_text),
                         keyword_query.value
                     )::double precision
                 ) AS keyword_score
@@ -183,7 +183,7 @@ class PostgreSQLRetriever:
             JOIN sources ON sources.id = chunks.source_id
             CROSS JOIN keyword_query
             WHERE chunks.public_visible = true
-              AND to_tsvector('simple', chunks.chunk_text) @@ keyword_query.value
+              AND to_tsvector('english', chunks.chunk_text) @@ keyword_query.value
             ORDER BY keyword_score DESC, chunks.id ASC
             LIMIT %s
             """,

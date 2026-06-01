@@ -227,6 +227,46 @@ def test_chat_service_does_not_collect_answerable_questions() -> None:
     assert collector.requests == ()
 
 
+def test_chat_service_collects_demoted_answerable_generation() -> None:
+    collector = FakeQuestionCollector(recorded=True)
+    context = _context()
+    service = _service(
+        retriever=FakeRetriever(
+            RetrievalResponse(question="Where did Niccolo work?", results=(context,)),
+            [],
+        ),
+        policy=FakePolicy(
+            AnswerPolicyDecision(
+                status=ANSWERABLE,
+                reason="sufficient_source_backed_context",
+                approved_context=(context,),
+            ),
+            [],
+        ),
+        generator=FakeGenerator(
+            AnswerGenerationResponse(
+                status=NOT_ANSWERABLE,
+                answer_text="I do not have verified public context.",
+            ),
+            [],
+        ),
+        question_collector=collector,
+    )
+
+    response = _run(
+        service.answer(ChatRequestBody(question="Where did Niccolo work?", language="en"))
+    )
+
+    assert response.status == NOT_ANSWERABLE
+    assert response.sources == ()
+    assert response.model_dump(mode="json")["notices"] == [
+        {"code": "question_recorded"}
+    ]
+    assert collector.requests == (
+        QuestionCollectionRequest(raw_question_text="Where did Niccolo work?"),
+    )
+
+
 def test_chat_service_collects_real_policy_not_answerable_question() -> None:
     collector = FakeQuestionCollector(recorded=True)
     service = _service(
