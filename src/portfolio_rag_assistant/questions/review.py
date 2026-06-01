@@ -90,8 +90,13 @@ class QuestionReviewStore:
         _require_optional_state(state)
         if not _is_positive_int(limit):
             raise QuestionReviewError("limit must be positive")
+        where_clause = ""
+        params: tuple[object, ...] = (limit,)
+        if state is not None:
+            where_clause = "WHERE review_state = %s"
+            params = (state, limit)
         cursor = self._connection.execute(
-            """
+            f"""
             SELECT
                 id,
                 raw_question_text,
@@ -101,11 +106,11 @@ class QuestionReviewStore:
                 created_at,
                 updated_at
             FROM question_events
-            WHERE (%s IS NULL OR review_state = %s)
+            {where_clause}
             ORDER BY created_at DESC, id DESC
             LIMIT %s
             """,
-            (state, state, limit),
+            params,
         )
         return tuple(_event_from_row(row) for row in cursor.fetchall())
 
@@ -113,8 +118,13 @@ class QuestionReviewStore:
         """Export collected question events newest first."""
 
         _require_optional_state(state)
+        where_clause = ""
+        params: tuple[object, ...] = ()
+        if state is not None:
+            where_clause = "WHERE review_state = %s"
+            params = (state,)
         cursor = self._connection.execute(
-            """
+            f"""
             SELECT
                 id,
                 raw_question_text,
@@ -124,10 +134,10 @@ class QuestionReviewStore:
                 created_at,
                 updated_at
             FROM question_events
-            WHERE (%s IS NULL OR review_state = %s)
+            {where_clause}
             ORDER BY created_at DESC, id DESC
             """,
-            (state, state),
+            params,
         )
         return tuple(_event_from_row(row) for row in cursor.fetchall())
 

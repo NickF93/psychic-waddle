@@ -40,8 +40,22 @@ def test_question_review_store_lists_events_with_state_and_limit() -> None:
     )
     query, params = connection.calls[0]
     assert "FROM question_events" in query
+    assert "WHERE review_state = %s" in query
+    assert "%s IS NULL" not in query
     assert "ORDER BY created_at DESC, id DESC" in query
-    assert params == ("pending", "pending", 10)
+    assert params == ("pending", 10)
+
+
+def test_question_review_store_lists_events_without_state_filter() -> None:
+    connection = FakeConnection(rows=[_row(event_id=3, question="Missing fact?")])
+
+    events = QuestionReviewStore(connection).list_events(limit=25)
+
+    assert tuple(event.id for event in events) == (3,)
+    query, params = connection.calls[0]
+    assert "WHERE review_state = %s" not in query
+    assert "%s IS NULL" not in query
+    assert params == (25,)
 
 
 def test_question_review_store_exports_events_without_limit() -> None:
@@ -52,7 +66,21 @@ def test_question_review_store_exports_events_without_limit() -> None:
     assert tuple(event.id for event in events) == (3,)
     query, params = connection.calls[0]
     assert "LIMIT" not in query
-    assert params == (None, None)
+    assert "WHERE review_state = %s" not in query
+    assert "%s IS NULL" not in query
+    assert params == ()
+
+
+def test_question_review_store_exports_events_with_state_filter() -> None:
+    connection = FakeConnection(rows=[_row(event_id=8, question="Ignored?")])
+
+    events = QuestionReviewStore(connection).export_events(state="ignored")
+
+    assert tuple(event.id for event in events) == (8,)
+    query, params = connection.calls[0]
+    assert "WHERE review_state = %s" in query
+    assert "%s IS NULL" not in query
+    assert params == ("ignored",)
 
 
 def test_question_review_store_loads_one_event() -> None:
