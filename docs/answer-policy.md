@@ -50,7 +50,13 @@ The default policy uses only local, inspectable signals:
 - `RetrievedContext.score.combined_score` must be at least the configured
   `RETRIEVAL_MIN_SCORE` value passed into the policy request.
 - At least one reviewed source must support the approved context.
-- The question domain is inferred with a bounded keyword map for:
+- Common recruiter intents are detected with shared `QuestionIntentProfile`
+  definitions for workplace, current role, skills, education, publications,
+  projects, and contact/profile questions.
+- Detected profiles map to their accepted knowledge categories and required
+  evidence terms.
+- When no shared profile matches, the question domain is inferred with a
+  bounded category keyword map for:
   - `experience`
   - `education`
   - `projects`
@@ -59,9 +65,8 @@ The default policy uses only local, inspectable signals:
   - `contact`
 - If a domain is inferred, approved context is limited to that domain.
 - For common recruiter intents, matching category alone is not sufficient.
-  Shared intent profiles define the required evidence for workplace, current
-  role, skills, education, publications, projects, or contact/profile
-  questions.
+  Shared intent profiles define the required evidence and the policy rejects
+  category-only support.
 - If the question is broad and the usable context spans multiple domains, the
   policy asks for clarification.
 - If no domain is inferred and the question is not a broad profile question,

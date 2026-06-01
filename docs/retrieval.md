@@ -127,6 +127,10 @@ lexical expansion terms, and required evidence terms. Retrieval may use trigger
 and expansion terms to improve recall. Policy must use the same profile
 definitions to verify evidence completeness.
 
+Sprint 9.2 introduces the shared profile definitions. Sprint 9.3 wires the
+retriever to the profile expansion terms for intent-expanded lexical search and
+rank fusion.
+
 ## Sprint 3.2 Scope
 
 Sprint 3.2 adds PostgreSQL vector retrieval, keyword retrieval, deterministic
