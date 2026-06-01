@@ -93,7 +93,16 @@ def test_runtime_api_composition_uses_separate_chat_and_embedding_authorities() 
         ),
     )
     assert chat_provider.chat_requests == ()
-    assert len(connection.calls) == 2
+    assert len(connection.calls) == 3
+    intent_calls = [
+        (query, params)
+        for query, params in connection.calls
+        if "WITH intent_query" in query
+    ]
+    assert len(intent_calls) == 1
+    assert "work history" in str(intent_calls[0][1][0])
+    assert intent_calls[0][1][1] == ["experience"]
+    assert not any("INSERT INTO question_events" in query for query, _ in connection.calls)
     assert "access-control-allow-origin" not in response.headers
 
 
