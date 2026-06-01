@@ -46,6 +46,9 @@ EXPECTED_PUBLIC_SCRIPTS = {
     "postgres-start.sh",
     "postgres-stop.sh",
     "nginx-validate.sh",
+    "public-certbot-install-timer.sh",
+    "public-certbot-status.sh",
+    "public-certbot-test-renewal.sh",
     "public-build.sh",
     "public-cleanup.sh",
     "public-deploy.sh",
@@ -243,9 +246,58 @@ def test_letsencrypt_scripts_use_explicit_tls_contract() -> None:
     assert "configured_value PUBLIC_SERVER_NAME" in renew
     assert "configured_value LETSENCRYPT_EMAIL" in renew
     assert "compose_profile public-tls run --rm certbot renew" in renew
+    assert "--dry-run" in renew
     assert "--webroot-path /var/www/certbot" in renew
     assert "--cert-name portfolio-rag-assistant" in renew
+    assert "--deploy-hook" in renew
+    assert "MARKER_MOUNT=/var/lib/portfolio-rag-assistant-renewal" in renew
+    assert "no certificates renewed; nginx reload skipped" in renew
+    assert "compose_profile public-tls exec nginx-tls nginx -t" in renew
     assert "compose_profile public-tls exec nginx-tls nginx -s reload" in renew
+
+
+def test_public_certbot_operator_scripts_are_bounded() -> None:
+    status = _script("public-certbot-status.sh")
+    test_renewal = _script("public-certbot-test-renewal.sh")
+    timer = _script("public-certbot-install-timer.sh")
+
+    assert "compose_profile public-tls run --rm certbot certificates" in status
+    assert "--cert-name portfolio-rag-assistant" in status
+    assert '"$SCRIPT_DIR/letsencrypt-renew.sh" --dry-run' in test_renewal
+    assert "usage: public-certbot-install-timer.sh [--dry-run]" in timer
+    assert "portfolio-rag-assistant-letsencrypt-renew.service" in timer
+    assert "portfolio-rag-assistant-letsencrypt-renew.timer" in timer
+    assert "ExecStart=$ROOT_DIR/scripts/runtime/letsencrypt-renew.sh" in timer
+    assert "Environment=ENV_FILE=$ENV_FILE" in timer
+    assert "OnCalendar=*-*-* 03,15:17:00" in timer
+    assert "RandomizedDelaySec=1h" in timer
+    assert "systemctl enable --now" in timer
+
+
+def test_public_certbot_timer_dry_run_does_not_require_systemctl(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "PUBLIC_SERVER_NAME=vps.madnick.ovh\n"
+        "LETSENCRYPT_EMAIL=ops@example.invalid\n",
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env["ENV_FILE"] = str(env_file)
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-certbot-install-timer.sh"), "--dry-run"),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "would install /etc/systemd/system/portfolio-rag-assistant-letsencrypt-renew.service" in result.stdout
+    assert "ExecStart=" in result.stdout
+    assert "letsencrypt-renew.sh" in result.stdout
+    assert "portfolio-rag-assistant-letsencrypt-renew.timer" in result.stdout
 
 
 def test_letsencrypt_setup_rejects_non_public_http_config(tmp_path: Path) -> None:
