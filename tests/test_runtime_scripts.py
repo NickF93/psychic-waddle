@@ -46,15 +46,22 @@ EXPECTED_PUBLIC_SCRIPTS = {
     "postgres-start.sh",
     "postgres-stop.sh",
     "nginx-validate.sh",
+    "public-certbot-install-timer.sh",
+    "public-certbot-status.sh",
+    "public-certbot-test-renewal.sh",
     "public-build.sh",
     "public-cleanup.sh",
     "public-deploy.sh",
     "public-down.sh",
+    "public-load-knowledge.sh",
     "public-migrate.sh",
+    "public-reset-and-setup.sh",
     "public-setup.sh",
     "public-smoke.sh",
     "public-start.sh",
     "public-stop.sh",
+    "public-upgrade.sh",
+    "public-validate-env.sh",
 }
 
 
@@ -91,6 +98,8 @@ def test_scripts_use_explicit_env_file_contract() -> None:
     assert 'docker compose --env-file "$ENV_FILE"' in common
     assert "RUNTIME_WAIT_TIMEOUT_SECONDS" in common
     assert "up --wait --wait-timeout" in common
+    assert "compose_provider_run()" in common
+    assert "compose --profile ollama --profile llama-cpp run --rm" in common
     assert ".env.example" not in _all_script_text()
 
 
@@ -237,9 +246,58 @@ def test_letsencrypt_scripts_use_explicit_tls_contract() -> None:
     assert "configured_value PUBLIC_SERVER_NAME" in renew
     assert "configured_value LETSENCRYPT_EMAIL" in renew
     assert "compose_profile public-tls run --rm certbot renew" in renew
+    assert "--dry-run" in renew
     assert "--webroot-path /var/www/certbot" in renew
     assert "--cert-name portfolio-rag-assistant" in renew
+    assert "--deploy-hook" in renew
+    assert "MARKER_MOUNT=/var/lib/portfolio-rag-assistant-renewal" in renew
+    assert "no certificates renewed; nginx reload skipped" in renew
+    assert "compose_profile public-tls exec nginx-tls nginx -t" in renew
     assert "compose_profile public-tls exec nginx-tls nginx -s reload" in renew
+
+
+def test_public_certbot_operator_scripts_are_bounded() -> None:
+    status = _script("public-certbot-status.sh")
+    test_renewal = _script("public-certbot-test-renewal.sh")
+    timer = _script("public-certbot-install-timer.sh")
+
+    assert "compose_profile public-tls run --rm certbot certificates" in status
+    assert "--cert-name portfolio-rag-assistant" in status
+    assert '"$SCRIPT_DIR/letsencrypt-renew.sh" --dry-run' in test_renewal
+    assert "usage: public-certbot-install-timer.sh [--dry-run]" in timer
+    assert "portfolio-rag-assistant-letsencrypt-renew.service" in timer
+    assert "portfolio-rag-assistant-letsencrypt-renew.timer" in timer
+    assert "ExecStart=$ROOT_DIR/scripts/runtime/letsencrypt-renew.sh" in timer
+    assert "Environment=ENV_FILE=$ENV_FILE" in timer
+    assert "OnCalendar=*-*-* 03,15:17:00" in timer
+    assert "RandomizedDelaySec=1h" in timer
+    assert "systemctl enable --now" in timer
+
+
+def test_public_certbot_timer_dry_run_does_not_require_systemctl(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "PUBLIC_SERVER_NAME=vps.madnick.ovh\n"
+        "LETSENCRYPT_EMAIL=ops@example.invalid\n",
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env["ENV_FILE"] = str(env_file)
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-certbot-install-timer.sh"), "--dry-run"),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "would install /etc/systemd/system/portfolio-rag-assistant-letsencrypt-renew.service" in result.stdout
+    assert "ExecStart=" in result.stdout
+    assert "letsencrypt-renew.sh" in result.stdout
+    assert "portfolio-rag-assistant-letsencrypt-renew.timer" in result.stdout
 
 
 def test_letsencrypt_setup_rejects_non_public_http_config(tmp_path: Path) -> None:
@@ -293,6 +351,62 @@ def test_public_scripts_wrap_existing_runtime_authorities() -> None:
     assert "letsencrypt-renew.sh" not in _script("public-deploy.sh")
 
 
+def test_public_env_validator_checks_explicit_public_runtime_contract() -> None:
+    validate = _script("public-validate-env.sh")
+
+    for key in (
+        "API_BIND_ADDRESS",
+        "API_PORT",
+        "PUBLIC_HTTP_BIND_ADDRESS",
+        "PUBLIC_HTTP_PORT",
+        "PUBLIC_HTTPS_BIND_ADDRESS",
+        "PUBLIC_HTTPS_PORT",
+        "PUBLIC_SERVER_NAME",
+        "LETSENCRYPT_EMAIL",
+        "POSTGRES_DB",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "CHAT_BACKEND",
+        "CHAT_BASE_URL",
+        "CHAT_MODEL",
+        "EMBEDDING_BACKEND",
+        "EMBEDDING_BASE_URL",
+        "EMBEDDING_MODEL",
+        "RETRIEVAL_TOP_K",
+        "RETRIEVAL_MIN_SCORE",
+        "QUESTION_COLLECTION_ENABLED",
+    ):
+        assert key in validate
+
+    assert "API_BIND_ADDRESS must be 127.0.0.1" in validate
+    assert "require_backend_value CHAT_BACKEND" in validate
+    assert "require_backend_value EMBEDDING_BACKEND" in validate
+    assert "configured_value CHAT_API_KEY" in validate
+    assert "configured_value EMBEDDING_API_KEY" in validate
+    assert "require_llama_model_file LLAMA_CPP_CHAT_MODEL_PATH" in validate
+    assert "require_llama_model_file LLAMA_CPP_EMBEDDING_MODEL_PATH" in validate
+    assert "require_boolean QUESTION_COLLECTION_ENABLED" in validate
+    assert "compose config >/dev/null" in validate
+    assert "compose_profile public config >/dev/null" in validate
+    assert "compose_profile public-tls config >/dev/null" in validate
+
+
+def test_public_load_knowledge_delegates_to_existing_cli_commands() -> None:
+    load = _script("public-load-knowledge.sh")
+
+    assert 'PUBLIC_KNOWLEDGE_FILE:-"$ROOT_DIR/knowledge/profile.json"' in load
+    assert 'PUBLIC_KNOWLEDGE_FILE must point inside $ROOT_DIR/knowledge' in load
+    assert "--volume \"$ROOT_DIR/knowledge:/knowledge:ro\"" in load
+    assert "portfolio-rag-assistant knowledge validate" in load
+    assert "portfolio-rag-assistant knowledge ingest" in load
+    assert "portfolio-rag-assistant knowledge index-embeddings" in load
+    assert "compose_profile ollama run --rm api" in load
+    assert "compose_profile llama-cpp run --rm api" in load
+    assert "unsupported EMBEDDING_BACKEND" in load
+    assert "psql" not in load
+    assert "/migrations/" not in load
+
+
 def test_public_setup_requires_explicit_certificate_flag() -> None:
     setup = _script("public-setup.sh")
 
@@ -303,6 +417,61 @@ def test_public_setup_requires_explicit_certificate_flag() -> None:
     assert '"$SCRIPT_DIR/letsencrypt-setup.sh"' in setup
     assert "compose_profile public stop nginx" in setup
     assert "certificate issuance skipped" in setup
+
+
+def test_public_reset_requires_destructive_flags() -> None:
+    reset = _script("public-reset-and-setup.sh")
+
+    assert "usage: public-reset-and-setup.sh (--destroy-db|--destroy-models|--destroy-certs)" in reset
+    assert "reset requires at least one explicit destructive flag" in reset
+    assert "DESTROY_DB=false" in reset
+    assert "DESTROY_MODELS=false" in reset
+    assert "DESTROY_CERTS=false" in reset
+    assert '"$SCRIPT_DIR/public-cleanup.sh"' in reset
+    assert '"$SCRIPT_DIR/postgres-cleanup.sh" --destroy-data' in reset
+    assert '"$SCRIPT_DIR/ollama-chat-cleanup.sh" --destroy-models' in reset
+    assert "remove_compose_volume letsencrypt-certs" in reset
+    assert "remove_compose_volume letsencrypt-work" in reset
+    assert "remove_compose_volume acme-challenges" in reset
+    assert '"$SCRIPT_DIR/public-validate-env.sh"' in reset
+    assert '"$SCRIPT_DIR/public-setup.sh"' in reset
+    assert '"$SCRIPT_DIR/public-load-knowledge.sh"' in reset
+    assert "compose_provider_run api portfolio-rag-assistant runtime smoke" in reset
+    assert '"$SCRIPT_DIR/public-smoke.sh"' in reset
+
+
+def test_public_reset_fails_before_docker_without_destructive_flags() -> None:
+    result = subprocess.run(
+        (str(SCRIPTS / "public-reset-and-setup.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "reset requires at least one explicit destructive flag" in result.stderr
+
+
+def test_public_upgrade_preserves_runtime_state_and_refreshes_knowledge() -> None:
+    upgrade = _script("public-upgrade.sh")
+
+    assert "usage: public-upgrade.sh [--skip-knowledge-refresh] [--tls-runtime]" in upgrade
+    assert "SKIP_KNOWLEDGE_REFRESH=false" in upgrade
+    assert "TLS_RUNTIME=false" in upgrade
+    assert '"$SCRIPT_DIR/public-validate-env.sh"' in upgrade
+    assert '"$SCRIPT_DIR/public-setup.sh"' in upgrade
+    assert '"$SCRIPT_DIR/public-load-knowledge.sh"' in upgrade
+    assert "knowledge refresh skipped" in upgrade
+    assert '"$SCRIPT_DIR/public-start.sh"' in upgrade
+    assert "compose_profile_up_wait public nginx" in upgrade
+    assert "compose_provider_run api portfolio-rag-assistant runtime smoke" in upgrade
+    assert '"$SCRIPT_DIR/public-smoke.sh"' in upgrade
+    assert "cleanup.sh" not in upgrade
+    assert "remove_compose_volume" not in upgrade
+    assert "--destroy-data" not in upgrade
+    assert "--destroy-models" not in upgrade
+    assert "--destroy-certs" not in upgrade
 
 
 def test_public_start_stops_bootstrap_edge_before_tls_runtime() -> None:
@@ -471,7 +640,12 @@ def test_nginx_validate_checks_both_public_edge_configs() -> None:
 
 
 def test_cleanup_scripts_are_bounded() -> None:
-    script_text = _all_script_text()
+    script_text = "\n".join(
+        _read(path)
+        for path in sorted(SCRIPTS.glob("*.sh"))
+        if path.name != "public-reset-and-setup.sh"
+    )
+    reset = _script("public-reset-and-setup.sh")
 
     assert "down --volumes" not in script_text
     assert "down -v" not in script_text
@@ -479,6 +653,8 @@ def test_cleanup_scripts_are_bounded() -> None:
     assert "remove_compose_volume letsencrypt-certs" not in script_text
     assert "remove_compose_volume letsencrypt-work" not in script_text
     assert "remove_compose_volume acme-challenges" not in script_text
+    assert "remove_compose_volume letsencrypt-certs" in reset
+    assert "--destroy-certs" in reset
     assert "require_cleanup_flag --destroy-data" in _script("postgres-cleanup.sh")
     assert "require_cleanup_flag --destroy-models" in _script(
         "ollama-chat-cleanup.sh"
