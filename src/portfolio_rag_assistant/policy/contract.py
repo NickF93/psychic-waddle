@@ -206,7 +206,9 @@ class DeterministicAnswerPolicy:
             )
         else:
             available_categories = {context.category for context in usable_context}
-            if _is_broad_question(request.question) and len(available_categories) > 1:
+            if not _is_broad_question(request.question):
+                return _not_answerable("unsupported_question_category")
+            if len(available_categories) > 1:
                 return AnswerPolicyDecision(
                     status=NEEDS_CLARIFICATION,
                     reason="ambiguous_question",

@@ -92,6 +92,36 @@ def test_policy_rejects_unsupported_question_category() -> None:
     assert decision.reason == "unsupported_question_category"
 
 
+@pytest.mark.parametrize(
+    "question",
+    (
+        "What is Niccolo favorite pizza topping?",
+        "What is Niccolo private phone number?",
+        "Who won the football match yesterday?",
+    ),
+)
+def test_policy_rejects_uncategorized_unsupported_questions(
+    question: str,
+) -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question=question,
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    combined_score=0.96,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "unsupported_question_category"
+    assert decision.approved_context == ()
+
+
 def test_policy_asks_for_clarification_on_broad_multi_category_question() -> None:
     decision = DeterministicAnswerPolicy().decide(
         AnswerPolicyRequest(
