@@ -271,10 +271,11 @@ curl http://127.0.0.1:8000/ready
 ```
 
 `/health` is liveness only. It confirms the API process answers HTTP requests.
-`/ready` confirms database access, the expected knowledge schema, and at least
-one public embedding for the configured embedding backend and model. When
-`QUESTION_COLLECTION_ENABLED=true`, `/ready` also requires the
-`question_events` schema.
+`/ready` confirms database access, the expected knowledge schema, and current
+public embeddings for the configured embedding backend and model. Every public
+chunk must have a matching embedding row whose stored chunk-text hash matches
+the current chunk text. When `QUESTION_COLLECTION_ENABLED=true`, `/ready` also
+requires the `question_events` schema.
 
 Before exposing the service to recruiters, run the explicit smoke check:
 
@@ -311,7 +312,9 @@ docker compose --env-file .env run --rm api portfolio-rag-assistant knowledge in
 ```
 
 Embedding indexing uses only the configured embedding provider. It does not call
-chat models or create facts.
+chat models or create facts. It embeds public chunks that are missing an
+embedding for the configured backend/model pair or whose stored chunk-text hash
+is stale after a knowledge update.
 
 ## Runtime Configuration
 

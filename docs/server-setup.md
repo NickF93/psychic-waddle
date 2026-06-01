@@ -238,12 +238,17 @@ docker compose --env-file .env --profile ollama run --rm \
   api portfolio-rag-assistant knowledge index-embeddings
 ```
 
-Expected result: the command indexes embeddings for the ingested chunks. The
-current reviewed profile file validates as one source with more than one hundred
-public facts and matching chunks.
+Expected result: the command indexes missing or stale embeddings for the
+ingested chunks. A later run may report `indexed 0 chunk embeddings` only when
+the configured backend/model already has current embeddings for every public
+chunk. The current reviewed profile file validates as one source with more than
+one hundred public facts and matching chunks.
 
 Changing `EMBEDDING_BACKEND` or `EMBEDDING_MODEL` requires re-indexing before
-readiness can pass for the new embedding pair.
+readiness can pass for the new embedding pair. Changing `knowledge/profile.json`
+requires `scripts/runtime/public-load-knowledge.sh` or
+`scripts/runtime/public-upgrade.sh`; PostgreSQL data destruction is not part of
+normal knowledge refresh.
 
 ## 8. Start The Backend/API Service
 

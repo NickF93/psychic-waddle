@@ -117,8 +117,8 @@ Owns verified facts, chunks, sources, and embeddings only.
 
 - Stores reviewed sources, facts, chunks, metadata, and embedding vectors.
 - Serves persistence operations requested by ingestion and retrieval.
-- Stores enough embedding metadata for indexing to detect whether a stored
-  embedding belongs to the current chunk text.
+- Stores a deterministic hash of the exact embedded chunk text so indexing and
+  readiness can reject stale vectors after reviewed knowledge changes.
 - Must not rank results, generate answers, call chat models, or collect visitor
   signals.
 

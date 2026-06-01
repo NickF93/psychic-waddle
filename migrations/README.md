@@ -23,6 +23,7 @@ The migration layer owns schema definition only. It must not contain ingestion,
 retrieval, ranking, answer policy, answer generation, provider I/O, API behavior,
 or question collection logic.
 
-The v1 database target is PostgreSQL with the `pgvector` extension available.
-Container orchestration and runtime migration execution are handled in later
-sprints.
+The v1 database target is PostgreSQL with the `pgvector` and `pgcrypto`
+extensions available. `pgcrypto` is used by migrations for deterministic
+content-hash backfills. Container orchestration and runtime migration execution
+are handled in later sprints.
