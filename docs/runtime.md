@@ -83,6 +83,10 @@ For the planned public `vps.madnick.ovh` deployment with Nginx, free Let's
 Encrypt TLS, CORS, rate limits, and public smoke validation, see
 [Public Deployment Boundary](public-deployment.md).
 
+If unanswered-question collection is enabled, operator review commands and the
+manual deletion workflow are documented in
+[Question Review Workflow](question-review.md).
+
 Setup and start scripts wait for the targeted service to become ready before
 returning. The wait timeout defaults to 120 seconds and can be changed with:
 

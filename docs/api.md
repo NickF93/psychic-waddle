@@ -208,6 +208,9 @@ browser/network metadata. Stored question records are operator review signals
 only and must never automatically become facts, chunks, aliases, or evaluation
 cases.
 
+Operator review and deletion are documented in
+[Question Review Workflow](question-review.md).
+
 ## Limits
 
 Milestone 5 uses simple fixed limits:
@@ -284,4 +287,5 @@ Milestone 5 is accepted when:
 - answerable responses expose source title and optional locator only;
 - internal scores, prompts, stack traces, provider details, and database details
   do not reach the frontend;
-- visitor questions are not persisted.
+- Milestone 5 itself does not persist visitor questions. Milestone 8 adds only
+  the bounded `not_answerable` question collection contract documented above.

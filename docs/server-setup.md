@@ -90,6 +90,7 @@ EMBEDDING_MODEL=nomic-embed-text
 
 RETRIEVAL_TOP_K=4
 RETRIEVAL_MIN_SCORE=0.3
+QUESTION_COLLECTION_ENABLED=false
 
 LLAMA_CPP_MODEL_DIR=./models
 LLAMA_CPP_CHAT_MODEL_PATH=/models/replace-with-chat-model.gguf
@@ -144,7 +145,7 @@ scripts/runtime/postgres-migrate.sh
 ```
 
 Expected result: the migration creates the `vector` extension, knowledge tables,
-embedding table, and indexes.
+embedding table, question review table, and indexes.
 
 ## 5. Start Ollama And Pull Models
 
