@@ -253,6 +253,23 @@ def test_questions_export_writes_jsonl(monkeypatch) -> None:
     }
 
 
+def test_questions_review_opens_terminal_review_mode(monkeypatch) -> None:
+    store = FakeQuestionReviewStore(events=())
+    opened: list[FakeQuestionReviewStore] = []
+
+    monkeypatch.setattr(cli, "_question_review_store", lambda env: FakeStoreContext(store))
+    monkeypatch.setattr(
+        cli,
+        "_run_question_review_tui",
+        lambda review_store: opened.append(review_store),
+    )
+
+    exit_code = cli.run(("questions", "review"), env=_db_env())
+
+    assert exit_code == 0
+    assert opened == [store]
+
+
 def _valid_document() -> dict[str, object]:
     return {
         "schema_version": 1,
