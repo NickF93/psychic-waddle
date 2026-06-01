@@ -77,6 +77,7 @@ def test_chat_endpoint_returns_answerable_response() -> None:
                 "locator": "Experience section",
             }
         ],
+        "notices": [],
     }
     assert service.requests == (
         ChatRequestBody(question="Where did Niccolo work?", language="en"),
@@ -102,6 +103,7 @@ def test_chat_endpoint_returns_not_answerable_response() -> None:
         "status": "not_answerable",
         "answer": "I do not have verified public context.",
         "sources": [],
+        "notices": [],
     }
 
 

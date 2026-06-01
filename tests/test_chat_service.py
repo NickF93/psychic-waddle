@@ -22,6 +22,11 @@ from portfolio_rag_assistant.policy import (
     AnswerPolicyDecision,
     AnswerPolicyRequest,
 )
+from portfolio_rag_assistant.questions import (
+    QuestionCollectionError,
+    QuestionCollectionRequest,
+    QuestionCollectionResult,
+)
 from portfolio_rag_assistant.retrieval import (
     RetrievedContext,
     RetrievalRequest,
@@ -96,11 +101,13 @@ def test_chat_service_orchestrates_answerable_flow() -> None:
                 "locator": "Experience section",
             }
         ],
+        "notices": [],
     }
     assert "cv://niccolo/main" not in str(response.model_dump(mode="json"))
 
 
 def test_chat_service_returns_not_answerable_generator_response() -> None:
+    collector = FakeQuestionCollector(recorded=True)
     service = _service(
         retriever=FakeRetriever(
             RetrievalResponse(question="Private phone?", results=()),
@@ -120,6 +127,7 @@ def test_chat_service_returns_not_answerable_generator_response() -> None:
             ),
             [],
         ),
+        question_collector=collector,
     )
 
     response = _run(
@@ -129,9 +137,16 @@ def test_chat_service_returns_not_answerable_generator_response() -> None:
     assert response.status == NOT_ANSWERABLE
     assert response.answer == "I do not have verified public context."
     assert response.sources == ()
+    assert response.model_dump(mode="json")["notices"] == [
+        {"code": "question_recorded"}
+    ]
+    assert collector.requests == (
+        QuestionCollectionRequest(raw_question_text="Private phone?"),
+    )
 
 
 def test_chat_service_returns_clarification_generator_response() -> None:
+    collector = FakeQuestionCollector(recorded=True)
     service = _service(
         retriever=FakeRetriever(
             RetrievalResponse(question="Tell me about Niccolo", results=(_context(),)),
@@ -151,6 +166,7 @@ def test_chat_service_returns_clarification_generator_response() -> None:
             ),
             [],
         ),
+        question_collector=collector,
     )
 
     response = _run(
@@ -162,6 +178,82 @@ def test_chat_service_returns_clarification_generator_response() -> None:
     assert response.status == NEEDS_CLARIFICATION
     assert response.answer == "Please ask a more specific question."
     assert response.sources == ()
+    assert response.notices == ()
+    assert collector.requests == ()
+
+
+def test_chat_service_does_not_collect_answerable_questions() -> None:
+    collector = FakeQuestionCollector(recorded=True)
+    service = _service(
+        retriever=FakeRetriever(
+            RetrievalResponse(question="Where did Niccolo work?", results=(_context(),)),
+            [],
+        ),
+        policy=FakePolicy(
+            AnswerPolicyDecision(
+                status=ANSWERABLE,
+                reason="sufficient_source_backed_context",
+                approved_context=(_context(),),
+            ),
+            [],
+        ),
+        generator=FakeGenerator(
+            AnswerGenerationResponse(
+                status=ANSWERABLE,
+                answer_text="Niccolo worked at NAIS s.r.l.",
+                sources=(
+                    AnswerSourceReference(
+                        source_title="Niccolo Ferrari CV",
+                        source_uri="cv://niccolo/main",
+                        source_locator="Experience section",
+                    ),
+                ),
+            ),
+            [],
+        ),
+        question_collector=collector,
+    )
+
+    response = _run(
+        service.answer(
+            ChatRequestBody(question="Where did Niccolo work?", language="en")
+        )
+    )
+
+    assert response.status == ANSWERABLE
+    assert response.notices == ()
+    assert collector.requests == ()
+
+
+def test_chat_service_ignores_question_collection_failures() -> None:
+    service = _service(
+        retriever=FakeRetriever(
+            RetrievalResponse(question="Private phone?", results=()),
+            [],
+        ),
+        policy=FakePolicy(
+            AnswerPolicyDecision(
+                status=NOT_ANSWERABLE,
+                reason="no_retrieved_context",
+            ),
+            [],
+        ),
+        generator=FakeGenerator(
+            AnswerGenerationResponse(
+                status=NOT_ANSWERABLE,
+                answer_text="I do not have verified public context.",
+            ),
+            [],
+        ),
+        question_collector=FailingQuestionCollector(),
+    )
+
+    response = _run(
+        service.answer(ChatRequestBody(question="Private phone?", language="en"))
+    )
+
+    assert response.status == NOT_ANSWERABLE
+    assert response.notices == ()
 
 
 def test_chat_service_sanitizes_internal_errors() -> None:
@@ -193,11 +285,13 @@ def _service(
     retriever: object,
     policy: object,
     generator: object,
+    question_collector: object | None = None,
 ) -> PublicChatService:
     return PublicChatService(
         retriever=retriever,  # type: ignore[arg-type]
         answer_policy=policy,  # type: ignore[arg-type]
         answer_generator=generator,  # type: ignore[arg-type]
+        question_collector=question_collector or FakeQuestionCollector(recorded=False),
         retrieval_settings=RetrievalSettings(top_k=3, min_score=0.25),
     )
 
@@ -237,6 +331,29 @@ class FakeRetriever:
 class FailingRetriever:
     async def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
         raise RetrievalStoreError("database password leaked")
+
+
+class FakeQuestionCollector:
+    def __init__(self, *, recorded: bool) -> None:
+        self._recorded = recorded
+        self.requests: tuple[QuestionCollectionRequest, ...] = ()
+
+    async def collect(
+        self,
+        request: QuestionCollectionRequest,
+    ) -> QuestionCollectionResult:
+        self.requests = (*self.requests, request)
+        if self._recorded:
+            return QuestionCollectionResult(recorded=True, event_id=1)
+        return QuestionCollectionResult(recorded=False)
+
+
+class FailingQuestionCollector:
+    async def collect(
+        self,
+        request: QuestionCollectionRequest,
+    ) -> QuestionCollectionResult:
+        raise QuestionCollectionError("database password leaked")
 
 
 class FakePolicy:

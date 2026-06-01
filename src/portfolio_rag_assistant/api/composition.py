@@ -22,11 +22,16 @@ from portfolio_rag_assistant.config import (
     load_chat_provider_settings,
     load_database_settings,
     load_embedding_provider_settings,
+    load_question_collection_settings,
     load_retrieval_settings,
 )
 from portfolio_rag_assistant.knowledge import connect_database
 from portfolio_rag_assistant.policy import DeterministicAnswerPolicy
 from portfolio_rag_assistant.provider import ChatProvider, EmbeddingProvider
+from portfolio_rag_assistant.questions import (
+    DisabledQuestionCollector,
+    PostgreSQLQuestionCollector,
+)
 from portfolio_rag_assistant.retrieval import PostgreSQLRetriever
 
 ChatProviderFactory = Callable[[ChatProviderSettings], ChatProvider]
@@ -111,9 +116,15 @@ def build_runtime_services(
     chat_settings = load_chat_provider_settings(environment)
     embedding_settings = load_embedding_provider_settings(environment)
     retrieval_settings = load_retrieval_settings(environment)
+    question_collection_settings = load_question_collection_settings(environment)
     chat_provider = chat_provider_factory(chat_settings)
     embedding_provider = embedding_provider_factory(embedding_settings)
     connection = connection_factory(database_settings)
+    question_collector = (
+        PostgreSQLQuestionCollector(connection)
+        if question_collection_settings.enabled
+        else DisabledQuestionCollector()
+    )
     retriever = PostgreSQLRetriever(
         connection=connection,
         provider=embedding_provider,
@@ -129,6 +140,7 @@ def build_runtime_services(
                 provider=chat_provider,
                 chat_model=chat_settings.model,
             ),
+            question_collector=question_collector,
             retrieval_settings=retrieval_settings,
         ),
         readiness_service=DatabaseReadinessService(

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -57,6 +57,17 @@ class ChatSourceBody(BaseModel):
         return stripped
 
 
+ChatNoticeCode = Literal["question_recorded"]
+
+
+class ChatNoticeBody(BaseModel):
+    """Machine-readable frontend notice."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: ChatNoticeCode
+
+
 class ChatRequestBody(BaseModel):
     """Public chat request body."""
 
@@ -82,6 +93,7 @@ class ChatResponseBody(BaseModel):
     status: AnswerDecisionStatus
     answer: str
     sources: tuple[ChatSourceBody, ...] = ()
+    notices: tuple[ChatNoticeBody, ...] = ()
 
     @field_validator("answer")
     @classmethod
