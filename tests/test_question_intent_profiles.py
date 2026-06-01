@@ -78,12 +78,58 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
     assert "employers" in workplace.lexical_expansion_terms
 
 
-def test_text_satisfies_intent_evidence_uses_required_terms() -> None:
-    assert text_satisfies_intent_evidence(
-        "Niccolo Ferrari's current role is Senior Machine Learning Engineer.",
-        "current_role",
-    )
-    assert not text_satisfies_intent_evidence(
-        "Niccolo Ferrari previously worked as a Machine Learning Engineer.",
-        "current_role",
-    )
+@pytest.mark.parametrize(
+    ("text", "intent"),
+    (
+        (
+            "Niccolo Ferrari worked at NAIS S.r.l. in Bologna.",
+            "workplace",
+        ),
+        (
+            "Niccolo Ferrari's professional workplaces include NAIS S.r.l. "
+            "and Bonfiglioli Engineering.",
+            "workplace",
+        ),
+        (
+            "Niccolo Ferrari's current role is Senior Machine Learning Engineer.",
+            "current_role",
+        ),
+        (
+            "Niccolo Ferrari currently works at NAIS S.r.l.",
+            "current_role",
+        ),
+    ),
+)
+def test_text_satisfies_intent_evidence_uses_required_terms(
+    text: str,
+    intent: str,
+) -> None:
+    assert text_satisfies_intent_evidence(text, intent)
+
+
+@pytest.mark.parametrize(
+    ("text", "intent"),
+    (
+        (
+            "Niccolo Ferrari worked on Ph.D. research in deep learning.",
+            "workplace",
+        ),
+        (
+            "Niccolo Ferrari has professional experience in computer vision.",
+            "workplace",
+        ),
+        (
+            "Niccolo Ferrari previously worked as a Machine Learning Engineer.",
+            "current_role",
+        ),
+        (
+            "Niccolo Ferrari has experience with role-based access control.",
+            "current_role",
+        ),
+    ),
+)
+def test_text_satisfies_intent_evidence_rejects_incomplete_evidence(
+    text: str,
+    intent: str,
+) -> None:
+    assert not text_satisfies_intent_evidence(text, intent)

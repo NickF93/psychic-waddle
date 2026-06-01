@@ -70,12 +70,49 @@ def _word_groups_match(
     return all(words & group for group in groups)
 
 
-def _normalized_words(text: str) -> frozenset[str]:
+def _term_groups_match(
+    text: str,
+    groups: tuple[frozenset[str], ...],
+) -> bool:
+    words = _normalized_words(text)
+    normalized_text = _normalized_text(text)
+    return all(
+        any(
+            _term_matches_text(
+                term=term,
+                words=words,
+                normalized_text=normalized_text,
+            )
+            for term in group
+        )
+        for group in groups
+    )
+
+
+def _term_matches_text(
+    *,
+    term: str,
+    words: frozenset[str],
+    normalized_text: str,
+) -> bool:
+    normalized_term = _normalized_text(term)
+    if not normalized_term:
+        return False
+    if " " not in normalized_term:
+        return normalized_term in words
+    return f" {normalized_term} " in f" {normalized_text} "
+
+
+def _normalized_text(text: str) -> str:
     normalized = unicodedata.normalize("NFKD", text.casefold())
     ascii_text = "".join(
         character for character in normalized if not unicodedata.combining(character)
     )
-    return frozenset(re.findall(r"[a-z0-9]+", ascii_text))
+    return " ".join(re.findall(r"[a-z0-9]+", ascii_text))
+
+
+def _normalized_words(text: str) -> frozenset[str]:
+    return frozenset(_normalized_text(text).split())
 
 
 def _require_non_empty_text(value: str, field_name: str) -> None:
@@ -147,21 +184,23 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
         required_evidence_groups=(
             frozenset(
                 (
-                    "workplace",
-                    "workplaces",
-                    "worked",
-                    "works",
-                    "currently",
-                    "previously",
+                    "current employer",
+                    "currently works",
+                    "employed by",
                     "employer",
                     "employers",
+                    "employment",
+                    "professional workplaces",
+                    "previously worked at",
+                    "worked at",
+                    "works at",
+                    "work history",
+                    "workplace",
+                    "workplaces",
                     "company",
                     "companies",
-                    "history",
                     "internship",
                     "internships",
-                    "role",
-                    "roles",
                 )
             ),
         ),
@@ -198,8 +237,31 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
             )
         ),
         required_evidence_groups=(
-            frozenset(("current", "currently", "since", "serves", "lead", "technical")),
-            frozenset(("role", "title", "position", "engineer", "researcher", "lead")),
+            frozenset(
+                (
+                    "current employer",
+                    "current role",
+                    "currently employed",
+                    "currently works",
+                    "now",
+                    "present position",
+                    "present role",
+                    "serves as",
+                )
+            ),
+            frozenset(
+                (
+                    "company",
+                    "employer",
+                    "engineer",
+                    "lead",
+                    "position",
+                    "researcher",
+                    "role",
+                    "title",
+                    "works at",
+                )
+            ),
         ),
     ),
     QuestionIntentProfile(
@@ -512,8 +574,4 @@ def text_satisfies_intent_evidence(text: str, intent: QuestionIntent) -> bool:
 
     _require_non_empty_text(text, "text")
     profile = profile_for_intent(intent)
-    return _word_groups_match(
-        _normalized_words(text),
-        profile.required_evidence_groups,
-    )
-
+    return _term_groups_match(text, profile.required_evidence_groups)
