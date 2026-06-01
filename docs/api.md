@@ -81,7 +81,8 @@ Response:
 
 Returns readiness for recruiter-facing exposure. Readiness checks database
 access, the expected knowledge schema, and embedding availability for the
-configured embedding backend and model.
+configured embedding backend and model. When `QUESTION_COLLECTION_ENABLED=true`,
+readiness also checks that the question collection schema exists.
 
 Response:
 
@@ -281,7 +282,7 @@ logic, provider payload logic, or database query logic.
 Milestone 5 is accepted when:
 
 - `GET /health` returns a stable health response;
-- `GET /ready` returns readiness only when schema and embeddings are ready;
+- `GET /ready` returns readiness only when required schema and embeddings are ready;
 - `POST /chat` returns public-safe answers through the existing authorities;
 - API schemas reject invalid language, blank questions, and oversized input;
 - answerable responses expose source title and optional locator only;

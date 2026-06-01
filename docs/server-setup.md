@@ -144,8 +144,8 @@ Run the schema migration:
 scripts/runtime/postgres-migrate.sh
 ```
 
-Expected result: the migration creates the `vector` extension, knowledge tables,
-embedding table, question review table, and indexes.
+Expected result: the migration creates the migration ledger, `vector` extension,
+knowledge tables, embedding table, question review table, and indexes.
 
 ## 5. Start Ollama And Pull Models
 
@@ -462,6 +462,17 @@ direct API probe skipped: set PUBLIC_DIRECT_API_PROBE_URL to check public port 8
 public smoke passed: https://vps.madnick.ovh
 ```
 
+To validate M8 question collection through the public edge, run the opt-in
+notice check:
+
+```sh
+PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh \
+PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=true \
+scripts/runtime/public-smoke.sh
+```
+
+This records one unsupported question for manual review.
+
 On the public server, also probe the public IP for accidental FastAPI exposure:
 
 ```sh
@@ -480,8 +491,9 @@ PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-deploy.sh
 ```
 
 The public smoke script checks both portfolio CORS origins, rejection of an
-unexpected origin, health, readiness, and the chat route. A direct manual chat
-request is still useful when checking answer text:
+unexpected origin, health, readiness, the chat route, and optional question
+collection notices. A direct manual chat request is still useful when checking
+answer text:
 
 ```sh
 curl -s -X POST https://vps.madnick.ovh/api/assistant/chat \
