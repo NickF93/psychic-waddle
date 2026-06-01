@@ -126,6 +126,26 @@ def test_text_satisfies_intent_evidence_uses_required_terms(
             "Niccolo Ferrari has experience with role-based access control.",
             "current_role",
         ),
+        (
+            "skills: Niccolo Ferrari has public profile information.",
+            "skills",
+        ),
+        (
+            "education: Niccolo Ferrari has public profile information.",
+            "education",
+        ),
+        (
+            "research: Niccolo Ferrari has public profile information.",
+            "publications",
+        ),
+        (
+            "projects: Niccolo Ferrari has public profile information.",
+            "projects",
+        ),
+        (
+            "contact: Niccolo Ferrari has public profile information.",
+            "contact",
+        ),
     ),
 )
 def test_text_satisfies_intent_evidence_rejects_incomplete_evidence(

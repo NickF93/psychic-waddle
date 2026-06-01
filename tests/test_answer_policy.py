@@ -116,6 +116,30 @@ def test_policy_rejects_category_match_without_intent_support() -> None:
     assert decision.approved_context == ()
 
 
+def test_policy_rejects_workplace_question_with_non_workplace_work_context() -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="Where did Niccolo work?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    chunk_text=(
+                        "experience: Niccolo worked on Ph.D. research in "
+                        "deep learning and computer vision."
+                    ),
+                    combined_score=0.98,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "insufficient_intent_support"
+    assert decision.approved_context == ()
+
+
 def test_policy_allows_workplace_question_with_work_history_context() -> None:
     decision = DeterministicAnswerPolicy().decide(
         AnswerPolicyRequest(
@@ -258,6 +282,61 @@ def test_policy_allows_common_recruiter_intents_with_matching_evidence(
 
     assert decision.status == ANSWERABLE
     assert decision.approved_context[0].chunk_text == chunk_text
+
+
+@pytest.mark.parametrize(
+    ("question", "category", "chunk_text"),
+    (
+        (
+            "What are Niccolo's main machine learning skills?",
+            "skills",
+            "skills: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "What is Niccolo's education?",
+            "education",
+            "education: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "What publications does Niccolo have?",
+            "research",
+            "research: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "What research software does Niccolo publish?",
+            "projects",
+            "projects: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "Where can I find Niccolo's public profile links?",
+            "contact",
+            "contact: Niccolo Ferrari has public profile information.",
+        ),
+    ),
+)
+def test_policy_rejects_common_recruiter_intents_with_category_only_context(
+    question: str,
+    category: str,
+    chunk_text: str,
+) -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question=question,
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category=category,
+                    chunk_text=chunk_text,
+                    combined_score=0.99,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "insufficient_intent_support"
+    assert decision.approved_context == ()
 
 
 def test_policy_treats_github_repository_question_as_project_intent() -> None:

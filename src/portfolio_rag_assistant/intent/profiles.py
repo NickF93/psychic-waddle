@@ -298,19 +298,30 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
         required_evidence_groups=(
             frozenset(
                 (
-                    "skill",
-                    "skills",
+                    "anomaly detection",
+                    "computer vision",
+                    "domain",
+                    "domains",
+                    "framework",
+                    "frameworks",
+                    "halcon",
+                    "language",
+                    "languages",
+                    "machine learning",
+                    "opencv",
+                    "pytorch",
+                    "specialization",
+                    "specializations",
+                    "technical skills",
                     "technology",
                     "technologies",
                     "tool",
                     "tools",
-                    "framework",
-                    "frameworks",
-                    "language",
-                    "languages",
+                    "tensorflow",
                     "uses",
                     "include",
                     "includes",
+                    "python",
                 )
             ),
         ),
@@ -349,7 +360,6 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
         required_evidence_groups=(
             frozenset(
                 (
-                    "education",
                     "degree",
                     "degrees",
                     "phd",
@@ -402,7 +412,6 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
                     "doi",
                     "arxiv",
                     "thesis",
-                    "research",
                     "submitted",
                     "released",
                 )
@@ -443,12 +452,13 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
         required_evidence_groups=(
             frozenset(
                 (
-                    "project",
-                    "projects",
+                    "built",
+                    "developed",
                     "repository",
                     "repositories",
                     "repo",
                     "repos",
+                    "portfolio",
                     "software",
                     "code",
                     "github",
@@ -493,17 +503,13 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
         required_evidence_groups=(
             frozenset(
                 (
-                    "contact",
                     "linkedin",
                     "website",
-                    "profile",
-                    "profiles",
                     "orcid",
                     "portfolio",
                     "link",
                     "links",
                     "github",
-                    "public",
                 )
             ),
         ),
