@@ -138,7 +138,8 @@ Response:
       "title": "Niccolo Ferrari CV",
       "locator": "Experience section"
     }
-  ]
+  ],
+  "notices": []
 }
 ```
 
@@ -172,9 +173,40 @@ Clarification response:
 {
   "status": "needs_clarification",
   "answer": "I can answer that, but I need a more specific question about experience, education, projects, research, skills, or contact details.",
-  "sources": []
+  "sources": [],
+  "notices": []
 }
 ```
+
+## Question Collection Notice
+
+When `QUESTION_COLLECTION_ENABLED=true`, the backend may record the raw question
+text only if the final chat status is `not_answerable`. This recording happens
+after answer generation and must never change the answer text, answer status, or
+source fields.
+
+When recording succeeds, the response includes a machine-readable notice:
+
+```json
+{
+  "notices": [
+    {
+      "code": "question_recorded"
+    }
+  ]
+}
+```
+
+The separate `pigreco.xyz` frontend owns popup wording, timing, and graphics. It
+may consume this notice code to show a non-blocking message. This backend must
+not return visitor-facing prose about collection inside the answer text.
+
+Question collection must not store IP addresses, user agents, cookies, session
+IDs, frontend identifiers, per-question language, answer status, answer text,
+source identifiers, source kinds, retrieval scores, request metadata, or any
+browser/network metadata. Stored question records are operator review signals
+only and must never automatically become facts, chunks, aliases, or evaluation
+cases.
 
 ## Limits
 
@@ -221,6 +253,7 @@ Runtime composition uses only explicit environment names:
 - `EMBEDDING_MODEL`
 - `RETRIEVAL_TOP_K`
 - `RETRIEVAL_MIN_SCORE`
+- `QUESTION_COLLECTION_ENABLED`
 
 No aliases, deprecated names, hidden fallbacks, wildcard CORS defaults, or
 legacy compatibility paths are allowed.

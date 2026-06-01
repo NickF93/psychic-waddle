@@ -824,38 +824,96 @@ Items:
 
 ## Milestone 8: Anonymous Question Collection
 
-**Feature:** collect useful question signals without visitor tracking after the
-public deployment boundary is stable.
+**Feature:** collect useful raw unanswered-question signals without visitor
+tracking after the public deployment boundary is stable.
 
-### Sprint 8.1: Question Events
-
-Items:
-
-- Implementation: redact emails, phone numbers, names, and organizations before
-  storage.
-- Implementation: store only redacted question text as visitor-derived data.
-- Implementation: do not store per-question language, answer status, source
-  kinds, top scores, retrieval scores, or request metadata.
-- Implementation: explicitly avoid IP address, user agent, cookies, session
-  identity, email, phone, names, company names, photos, and raw transcripts.
-- Test: add redaction and persistence tests.
-- Validation: raw request metadata is not stored.
-- Checkpoint: question review queue is useful without tracking visitors.
-- Final track/doc: privacy note.
-
-### Sprint 8.2: Review Loop
+### Sprint 8.1: Contract And Schema
 
 Items:
 
-- Implementation: add admin/export command for unanswered and low-confidence
-  questions.
-- Implementation: allow reviewed questions to be marked as reviewed or ignored.
+- Documentation: update `AGENTS.md`, `docs/architecture.md`, `docs/api.md`, and
+  this plan for raw unanswered-question collection.
+- Documentation: document that frontend graphics and popup text live in
+  `pigreco.xyz`, while this backend returns machine-readable notice codes.
+- Dependency: add `rich` and `textual` as main runtime dependencies for local
+  operator CLI/TUI review tools.
+- Implementation: add `question_events` schema.
+- Implementation: store `id`, `raw_question_text`, `review_state`,
+  `review_category`, `review_note`, `created_at`, and `updated_at`.
+- Implementation: allow review states `pending`, `reviewed`, and `ignored`.
+- Implementation: allow review categories `missing_fact`, `alias`, `eval_case`,
+  `unclear`, `off_topic`, `private_data`, `spam`, and `other`.
+- Test: prove the schema does not include visitor identity, answer text, answer
+  status, per-question language, source IDs, source kinds, retrieval scores, or
+  request metadata.
+- Validation: raw question text is the only runtime visitor-derived field.
+- Final track/doc: privacy and schema contract.
+
+### Sprint 8.2: Collector Authority
+
+Items:
+
+- Config: add explicit `QUESTION_COLLECTION_ENABLED`.
+- Implementation: define `QuestionCollector` authority.
+- Implementation: persist only the raw question text received from the chat
+  service.
+- Implementation: disabled collection is explicit and writes nothing.
+- Implementation: sanitize collector failures so the chat response still
+  returns normally.
+- Test: enabled collection stores a pending question event.
+- Test: disabled collection stores nothing.
+- Test: collector failures do not leak database details.
+- Validation: collector never stores answer, retrieval, provider, request,
+  browser, session, or network metadata.
+- Final track/doc: collector contract.
+
+### Sprint 8.3: API Integration
+
+Items:
+
+- Implementation: inject `QuestionCollector` into runtime API composition.
+- Implementation: trigger collection only when the final chat status is
+  `not_answerable`.
+- Implementation: add public response notices.
+- Implementation: return `question_recorded` notice only after successful
+  collection.
+- Test: answerable and clarification responses are not collected.
+- Test: not-answerable responses are collected when enabled.
+- Test: answer text, status, and sources remain unchanged by collection.
+- Test: collection failure returns the normal chat response without a notice.
+- Final track/doc: API notice contract.
+
+### Sprint 8.4: Review Tools
+
+Items:
+
+- Implementation: add CLI commands to list, show, mark, delete, and export
+  question records.
+- Implementation: add a local Textual terminal review mode.
+- Implementation: use Rich for readable terminal table output.
+- Implementation: allow reviewed questions to be categorized and annotated with
+  admin notes.
 - Documentation: define how reviewed questions become new facts, aliases, or eval
   cases.
-- Test: add review command tests.
+- Test: add CLI review command tests.
+- Test: add terminal review behavior tests where practical without requiring an
+  interactive terminal.
 - Validation: visitor questions never auto-promote into the knowledge base.
 - Checkpoint: improvement loop exists without contaminating reviewed truth.
 - Final track/doc: review workflow.
+
+### Sprint 8.5: Documentation And Validation
+
+Items:
+
+- Documentation: document backend/frontend notice integration.
+- Documentation: document manual deletion as the retention policy.
+- Documentation: document operator commands for review, export, and cleanup.
+- Validation: run the full test suite.
+- Validation: run migration validation.
+- Checkpoint: raw unanswered-question collection is operational without
+  changing the public answer flow.
+- Final track/doc: `docs/question-review.md`.
 
 ---
 
