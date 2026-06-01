@@ -40,6 +40,9 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
             _row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.9),
             _row(3, "experience: Niccolo worked at Bonfiglioli.", 0.5),
         ),
+        intent_rows=(
+            _row(3, "experience: Niccolo worked at Bonfiglioli.", 0.8),
+        ),
     )
     provider = FakeEmbeddingProvider(((1.0, 0.0),))
     retriever = PostgreSQLRetriever(
@@ -59,10 +62,12 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
     )
     assert provider.chat_requests == ()
     assert tuple(result.chunk_id for result in response.results) == (1, 3)
-    assert response.results[0].score.combined_score == 0.9
+    assert response.results[0].score.combined_score == pytest.approx(2 / 3)
     assert response.results[0].score.vector_score == 0.72
     assert response.results[0].score.keyword_score == 0.9
-    assert response.results[1].score.combined_score == 0.5
+    assert response.results[1].score.combined_score == pytest.approx(
+        ((1 / 62) + (1 / 61)) / (3 / 61)
+    )
     assert response.results[1].score.vector_score is None
     assert response.results[1].score.keyword_score == 0.5
 
@@ -97,11 +102,117 @@ def test_postgres_retriever_queries_only_public_backend_model_chunks() -> None:
     assert "plainto_tsquery" not in keyword_query
     assert "to_tsvector('simple'" not in keyword_query
     assert keyword_params == ("NAIS", 4)
+    assert len(connection.calls) == 2
     assert not any(
         forbidden in query.lower()
         for query, _params in connection.calls
         for forbidden in ("insert ", "update ", "delete ")
     )
+
+
+def test_postgres_retriever_uses_bounded_intent_expansion() -> None:
+    connection = FakeRetrievalConnection(
+        vector_rows=(),
+        keyword_rows=(),
+        intent_rows=(
+            _row(
+                7,
+                (
+                    "experience: Niccolo Ferrari's professional workplaces "
+                    "include NAIS S.r.l. and Bonfiglioli Engineering."
+                ),
+                0.42,
+            ),
+        ),
+    )
+    retriever = PostgreSQLRetriever(
+        connection=connection,
+        provider=FakeEmbeddingProvider(((0.1, 0.2),)),
+        embedding_backend="ollama",
+        embedding_model="nomic-embed-text",
+        min_score=0.3,
+    )
+
+    response = asyncio.run(
+        retriever.retrieve(RetrievalRequest(question="Where did Niccolo work?", top_k=4))
+    )
+
+    assert tuple(result.chunk_id for result in response.results) == (7,)
+    intent_query, intent_params = connection.calls[2]
+    assert "WITH intent_query" in intent_query
+    assert "chunks.public_visible = true" in intent_query
+    assert "chunks.category = ANY(%s::text[])" in intent_query
+    assert "websearch_to_tsquery('english', %s)" in intent_query
+    assert "to_tsvector('english', chunks.chunk_text)" in intent_query
+    assert "Where did Niccolo work?" in str(intent_params[0])
+    assert "work history" in str(intent_params[0])
+    assert intent_params[1] == ["experience"]
+    assert intent_params[2] == 4
+    assert not any(
+        forbidden in query.lower()
+        for query, _params in connection.calls
+        for forbidden in ("insert ", "update ", "delete ")
+    )
+
+
+def test_postgres_retriever_fuses_candidate_ranks() -> None:
+    connection = FakeRetrievalConnection(
+        vector_rows=(
+            _row(2, "experience: high vector score but single channel", 0.99),
+            _row(1, "experience: appears in both vector and keyword", 0.4),
+        ),
+        keyword_rows=(
+            _row(1, "experience: appears in both vector and keyword", 0.1),
+        ),
+    )
+    retriever = PostgreSQLRetriever(
+        connection=connection,
+        provider=FakeEmbeddingProvider(((0.1, 0.2),)),
+        embedding_backend="ollama",
+        embedding_model="nomic-embed-text",
+        min_score=0.0,
+    )
+
+    response = asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=2)))
+
+    assert tuple(result.chunk_id for result in response.results) == (1, 2)
+    assert response.results[0].score.combined_score > (
+        response.results[1].score.combined_score
+    )
+    assert response.results[0].score.vector_score == 0.4
+    assert response.results[0].score.keyword_score == 0.1
+
+
+def test_postgres_retriever_does_not_expand_unsupported_questions() -> None:
+    connection = FakeRetrievalConnection(
+        vector_rows=(
+            _row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.88),
+        ),
+        keyword_rows=(),
+        intent_rows=(
+            _row(2, "experience: should not be queried for pizza questions", 0.99),
+        ),
+    )
+    retriever = PostgreSQLRetriever(
+        connection=connection,
+        provider=FakeEmbeddingProvider(((0.1, 0.2),)),
+        embedding_backend="ollama",
+        embedding_model="nomic-embed-text",
+        min_score=0.0,
+    )
+
+    response = asyncio.run(
+        retriever.retrieve(
+            RetrievalRequest(
+                question="What is Niccolo favorite pizza topping?",
+                top_k=4,
+            )
+        )
+    )
+
+    assert tuple(result.chunk_id for result in response.results) == (1,)
+    assert len(connection.calls) == 2
+    assert not any("WITH intent_query" in query for query, _params in connection.calls)
 
 
 def test_postgres_retriever_rejects_invalid_configuration() -> None:
@@ -238,9 +349,11 @@ class FakeRetrievalConnection:
         *,
         vector_rows: tuple[tuple[object, ...], ...],
         keyword_rows: tuple[tuple[object, ...], ...],
+        intent_rows: tuple[tuple[object, ...], ...] = (),
     ) -> None:
         self._vector_rows = vector_rows
         self._keyword_rows = keyword_rows
+        self._intent_rows = intent_rows
         self.calls: list[tuple[str, tuple[object, ...]]] = []
 
     def execute(
@@ -253,6 +366,8 @@ class FakeRetrievalConnection:
             return FakeCursor(self._vector_rows)
         if "WITH keyword_query" in query:
             return FakeCursor(self._keyword_rows)
+        if "WITH intent_query" in query:
+            return FakeCursor(self._intent_rows)
         raise AssertionError(f"unexpected query: {query}")
 
 
