@@ -23,10 +23,15 @@ from portfolio_rag_assistant.retrieval import (
     RetrievalStoreError,
 )
 
-MIGRATION_SQL = (
+KNOWLEDGE_MIGRATION_SQL = (
     Path(__file__).resolve().parents[1]
     / "migrations"
     / "0001_knowledge_schema.sql"
+).read_text(encoding="utf-8")
+EMBEDDING_HASH_MIGRATION_SQL = (
+    Path(__file__).resolve().parents[1]
+    / "migrations"
+    / "0003_embedding_content_hash.sql"
 ).read_text(encoding="utf-8")
 
 
@@ -255,7 +260,8 @@ def db_connection() -> Iterator[object]:
         try:
             with psycopg.connect(database_url) as connection:
                 connection.execute(f'SET search_path TO "{schema_name}", public')
-                connection.execute(MIGRATION_SQL)
+                connection.execute(KNOWLEDGE_MIGRATION_SQL)
+                connection.execute(EMBEDDING_HASH_MIGRATION_SQL)
                 connection.commit()
                 yield connection
         finally:
@@ -300,10 +306,24 @@ def test_postgres_retriever_can_read_real_schema(db_connection: object) -> None:
             chunk_id,
             embedding_backend,
             embedding_model,
+            chunk_text_hash,
             embedding_dimension,
             embedding
         )
-        VALUES (%s, 'ollama', 'nomic-embed-text', 2, '[1,0]'::vector)
+        VALUES (
+            %s,
+            'ollama',
+            'nomic-embed-text',
+            encode(
+                digest(
+                    convert_to('experience: Niccolo worked at NAIS s.r.l.', 'UTF8'),
+                    'sha256'
+                ),
+                'hex'
+            ),
+            2,
+            '[1,0]'::vector
+        )
         """,
         (chunk_id,),
     )

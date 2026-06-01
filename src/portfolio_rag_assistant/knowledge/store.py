@@ -32,11 +32,14 @@ class ChunkEmbeddingInput:
     """Embedding vector ready for persistence."""
 
     chunk_id: int
+    chunk_text_hash: str
     embedding: tuple[float, ...]
 
     def __post_init__(self) -> None:
         if self.chunk_id <= 0:
             raise KnowledgeStoreError("chunk_id must be positive")
+        if not _is_sha256_hex(self.chunk_text_hash):
+            raise KnowledgeStoreError("chunk_text_hash must be a SHA-256 hex digest")
         if not self.embedding:
             raise KnowledgeStoreError("embedding must not be empty")
 
@@ -93,24 +96,28 @@ class KnowledgeStore:
                 for chunk in source_chunks:
                     self._upsert_chunk(source_id, chunk)
 
-    def list_public_chunks_missing_embedding(
+    def list_public_chunks_requiring_embedding(
         self,
         backend: str,
         model: str,
     ) -> tuple[StoredChunk, ...]:
-        """Return public chunks without an embedding for backend/model."""
+        """Return public chunks with missing or stale embeddings for backend/model."""
 
         cursor = self._connection.execute(
             """
             SELECT chunks.id, chunks.chunk_text
             FROM chunks
+            LEFT JOIN chunk_embeddings
+              ON chunk_embeddings.chunk_id = chunks.id
+             AND chunk_embeddings.embedding_backend = %s
+             AND chunk_embeddings.embedding_model = %s
             WHERE chunks.public_visible = true
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM chunk_embeddings
-                  WHERE chunk_embeddings.chunk_id = chunks.id
-                    AND chunk_embeddings.embedding_backend = %s
-                    AND chunk_embeddings.embedding_model = %s
+              AND (
+                  chunk_embeddings.id IS NULL
+                  OR chunk_embeddings.chunk_text_hash <> encode(
+                      digest(convert_to(chunks.chunk_text, 'UTF8'), 'sha256'),
+                      'hex'
+                  )
               )
             ORDER BY chunks.id
             """,
@@ -141,19 +148,22 @@ class KnowledgeStore:
                         chunk_id,
                         embedding_backend,
                         embedding_model,
+                        chunk_text_hash,
                         embedding_dimension,
                         embedding
                     )
-                    VALUES (%s, %s, %s, %s, %s::vector)
+                    VALUES (%s, %s, %s, %s, %s, %s::vector)
                     ON CONFLICT (chunk_id, embedding_backend, embedding_model)
                     DO UPDATE
-                    SET embedding_dimension = EXCLUDED.embedding_dimension,
+                    SET chunk_text_hash = EXCLUDED.chunk_text_hash,
+                        embedding_dimension = EXCLUDED.embedding_dimension,
                         embedding = EXCLUDED.embedding
                     """,
                     (
                         embedding.chunk_id,
                         backend,
                         model,
+                        embedding.chunk_text_hash,
                         len(embedding.embedding),
                         _format_vector(embedding.embedding),
                     ),
@@ -298,6 +308,14 @@ def connect_database(
 
 def _format_vector(embedding: tuple[float, ...]) -> str:
     return "[" + ",".join(str(value) for value in embedding) + "]"
+
+
+def _is_sha256_hex(value: str) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 def _group_facts_by_source(
