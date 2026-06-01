@@ -88,6 +88,9 @@ def test_compose_api_uses_capability_specific_config_without_database_url() -> N
     assert environment["CHAT_BASE_URL"] == "${CHAT_BASE_URL}"
     assert environment["EMBEDDING_BACKEND"] == "${EMBEDDING_BACKEND}"
     assert environment["EMBEDDING_BASE_URL"] == "${EMBEDDING_BASE_URL}"
+    assert environment["QUESTION_COLLECTION_ENABLED"] == (
+        "${QUESTION_COLLECTION_ENABLED}"
+    )
 
 
 def test_compose_keeps_api_port_localhost_by_default() -> None:
@@ -306,6 +309,7 @@ def test_env_example_contains_placeholders_not_real_secrets() -> None:
     assert values["EMBEDDING_API_KEY"] == "replace-with-embedding-provider-token"
     assert values["CHAT_BASE_URL"] == "https://example.invalid/v1"
     assert values["EMBEDDING_BASE_URL"] == "https://example.invalid/v1"
+    assert values["QUESTION_COLLECTION_ENABLED"] == "false"
     assert not values["CHAT_API_KEY"].startswith("sk-")
     assert not values["EMBEDDING_API_KEY"].startswith("sk-")
 

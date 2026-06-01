@@ -6,6 +6,7 @@ from portfolio_rag_assistant.config import (
     ChatProviderSettings,
     DatabaseSettings,
     EmbeddingProviderSettings,
+    QuestionCollectionSettings,
     RetrievalSettings,
     RuntimeConfigurationError,
     build_chat_provider,
@@ -13,6 +14,7 @@ from portfolio_rag_assistant.config import (
     load_chat_provider_settings,
     load_database_settings,
     load_embedding_provider_settings,
+    load_question_collection_settings,
     load_retrieval_settings,
 )
 from portfolio_rag_assistant.provider import (
@@ -297,6 +299,45 @@ def test_load_retrieval_settings_requires_named_values(missing_name: str) -> Non
 
     with pytest.raises(RetrievalConfigurationError):
         load_retrieval_settings(env)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    (
+        ("true", True),
+        ("false", False),
+        (" TRUE ", True),
+        (" FALSE ", False),
+    ),
+)
+def test_load_question_collection_settings_reads_exact_env_name(
+    text: str,
+    expected: bool,
+) -> None:
+    settings = load_question_collection_settings(
+        {"QUESTION_COLLECTION_ENABLED": text}
+    )
+
+    assert settings == QuestionCollectionSettings(enabled=expected)
+
+
+def test_load_question_collection_settings_requires_named_value() -> None:
+    with pytest.raises(
+        RuntimeConfigurationError,
+        match="QUESTION_COLLECTION_ENABLED must be set",
+    ):
+        load_question_collection_settings({})
+
+
+@pytest.mark.parametrize("text", ("yes", "1", "enabled", ""))
+def test_load_question_collection_settings_rejects_invalid_text(text: str) -> None:
+    with pytest.raises(RuntimeConfigurationError):
+        load_question_collection_settings({"QUESTION_COLLECTION_ENABLED": text})
+
+
+def test_question_collection_settings_requires_boolean() -> None:
+    with pytest.raises(RuntimeConfigurationError):
+        QuestionCollectionSettings(enabled="true")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
