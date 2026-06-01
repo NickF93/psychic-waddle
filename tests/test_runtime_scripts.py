@@ -50,11 +50,13 @@ EXPECTED_PUBLIC_SCRIPTS = {
     "public-cleanup.sh",
     "public-deploy.sh",
     "public-down.sh",
+    "public-load-knowledge.sh",
     "public-migrate.sh",
     "public-setup.sh",
     "public-smoke.sh",
     "public-start.sh",
     "public-stop.sh",
+    "public-validate-env.sh",
 }
 
 
@@ -291,6 +293,62 @@ def test_public_scripts_wrap_existing_runtime_authorities() -> None:
     assert '"$SCRIPT_DIR/public-smoke.sh"' in _script("public-deploy.sh")
     assert "letsencrypt-setup.sh" not in _script("public-deploy.sh")
     assert "letsencrypt-renew.sh" not in _script("public-deploy.sh")
+
+
+def test_public_env_validator_checks_explicit_public_runtime_contract() -> None:
+    validate = _script("public-validate-env.sh")
+
+    for key in (
+        "API_BIND_ADDRESS",
+        "API_PORT",
+        "PUBLIC_HTTP_BIND_ADDRESS",
+        "PUBLIC_HTTP_PORT",
+        "PUBLIC_HTTPS_BIND_ADDRESS",
+        "PUBLIC_HTTPS_PORT",
+        "PUBLIC_SERVER_NAME",
+        "LETSENCRYPT_EMAIL",
+        "POSTGRES_DB",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "CHAT_BACKEND",
+        "CHAT_BASE_URL",
+        "CHAT_MODEL",
+        "EMBEDDING_BACKEND",
+        "EMBEDDING_BASE_URL",
+        "EMBEDDING_MODEL",
+        "RETRIEVAL_TOP_K",
+        "RETRIEVAL_MIN_SCORE",
+        "QUESTION_COLLECTION_ENABLED",
+    ):
+        assert key in validate
+
+    assert "API_BIND_ADDRESS must be 127.0.0.1" in validate
+    assert "require_backend_value CHAT_BACKEND" in validate
+    assert "require_backend_value EMBEDDING_BACKEND" in validate
+    assert "configured_value CHAT_API_KEY" in validate
+    assert "configured_value EMBEDDING_API_KEY" in validate
+    assert "require_llama_model_file LLAMA_CPP_CHAT_MODEL_PATH" in validate
+    assert "require_llama_model_file LLAMA_CPP_EMBEDDING_MODEL_PATH" in validate
+    assert "require_boolean QUESTION_COLLECTION_ENABLED" in validate
+    assert "compose config >/dev/null" in validate
+    assert "compose_profile public config >/dev/null" in validate
+    assert "compose_profile public-tls config >/dev/null" in validate
+
+
+def test_public_load_knowledge_delegates_to_existing_cli_commands() -> None:
+    load = _script("public-load-knowledge.sh")
+
+    assert 'PUBLIC_KNOWLEDGE_FILE:-"$ROOT_DIR/knowledge/profile.json"' in load
+    assert 'PUBLIC_KNOWLEDGE_FILE must point inside $ROOT_DIR/knowledge' in load
+    assert "--volume \"$ROOT_DIR/knowledge:/knowledge:ro\"" in load
+    assert "portfolio-rag-assistant knowledge validate" in load
+    assert "portfolio-rag-assistant knowledge ingest" in load
+    assert "portfolio-rag-assistant knowledge index-embeddings" in load
+    assert "compose_profile ollama run --rm api" in load
+    assert "compose_profile llama-cpp run --rm api" in load
+    assert "unsupported EMBEDDING_BACKEND" in load
+    assert "psql" not in load
+    assert "/migrations/" not in load
 
 
 def test_public_setup_requires_explicit_certificate_flag() -> None:
