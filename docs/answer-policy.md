@@ -57,6 +57,10 @@ The default policy uses only local, inspectable signals:
   - `skills`
   - `contact`
 - If a domain is inferred, approved context is limited to that domain.
+- For common recruiter intents, matching category alone is not sufficient. The
+  approved context must also contain deterministic intent evidence for workplace,
+  current role, skills, education, publications, projects, or contact/profile
+  questions.
 - If the question is broad and the usable context spans multiple domains, the
   policy asks for clarification.
 - If no domain is inferred and the question is not a broad profile question,
@@ -74,6 +78,7 @@ The policy returns `not_answerable` when:
 - all context is below the required score threshold;
 - no bounded domain can be inferred for a non-broad question;
 - the inferred question domain is not covered by usable context;
+- category-matching context does not contain required intent evidence;
 - approved context has no reviewed source support.
 
 The policy returns `needs_clarification` when:

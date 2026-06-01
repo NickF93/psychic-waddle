@@ -89,8 +89,9 @@ The retriever:
 - Searches only `chunks.public_visible = true`.
 - Runs exact vector search over `chunk_embeddings`.
 - Filters vector candidates by embedding backend and embedding model.
-- Runs keyword search with PostgreSQL full-text search using the `simple`
-  configuration.
+- Runs keyword search with PostgreSQL full-text search using
+  `websearch_to_tsquery('english', question)` and the matching English text
+  vector.
 - Merges vector and keyword candidates by chunk id.
 - Ranks deterministically by combined score, vector score, keyword score, and
   chunk id.

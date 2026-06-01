@@ -92,7 +92,10 @@ def test_postgres_retriever_queries_only_public_backend_model_chunks() -> None:
         4,
     )
     assert "chunks.public_visible = true" in keyword_query
-    assert "plainto_tsquery('simple', %s)" in keyword_query
+    assert "websearch_to_tsquery('english', %s)" in keyword_query
+    assert "to_tsvector('english', chunks.chunk_text)" in keyword_query
+    assert "plainto_tsquery" not in keyword_query
+    assert "to_tsvector('simple'" not in keyword_query
     assert keyword_params == ("NAIS", 4)
     assert not any(
         forbidden in query.lower()
