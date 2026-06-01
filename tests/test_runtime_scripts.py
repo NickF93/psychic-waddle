@@ -125,7 +125,8 @@ def test_postgres_scripts_own_database_lifecycle_and_migration() -> None:
     assert "remove_compose_volume postgres-data" in _script("postgres-cleanup.sh")
     assert "psql" in _script("postgres-migrate.sh")
     assert "--set ON_ERROR_STOP=1" in _script("postgres-migrate.sh")
-    assert "/migrations/0001_knowledge_schema.sql" in _script("postgres-migrate.sh")
+    assert "for migration in /migrations/*.sql" in _script("postgres-migrate.sh")
+    assert '-f "$migration"' in _script("postgres-migrate.sh")
 
 
 def test_migration_command_is_not_duplicated() -> None:
