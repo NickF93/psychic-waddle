@@ -57,6 +57,36 @@ compose_profile_up_wait() {
     compose_profile "$PROFILE_NAME" up --wait --wait-timeout "$(wait_timeout)" "$@"
 }
 
+compose_provider_run() {
+    USE_OLLAMA=false
+    USE_LLAMA_CPP=false
+    CHAT_BACKEND_VALUE=$(env_value CHAT_BACKEND)
+    EMBEDDING_BACKEND_VALUE=$(env_value EMBEDDING_BACKEND)
+
+    case "$CHAT_BACKEND_VALUE" in
+        ollama) USE_OLLAMA=true ;;
+        llama-cpp) USE_LLAMA_CPP=true ;;
+        openai-compatible) ;;
+        *) fail "unsupported CHAT_BACKEND: $CHAT_BACKEND_VALUE" ;;
+    esac
+    case "$EMBEDDING_BACKEND_VALUE" in
+        ollama) USE_OLLAMA=true ;;
+        llama-cpp) USE_LLAMA_CPP=true ;;
+        openai-compatible) ;;
+        *) fail "unsupported EMBEDDING_BACKEND: $EMBEDDING_BACKEND_VALUE" ;;
+    esac
+
+    if [ "$USE_OLLAMA" = true ] && [ "$USE_LLAMA_CPP" = true ]; then
+        compose --profile ollama --profile llama-cpp run --rm "$@"
+    elif [ "$USE_OLLAMA" = true ]; then
+        compose_profile ollama run --rm "$@"
+    elif [ "$USE_LLAMA_CPP" = true ]; then
+        compose_profile llama-cpp run --rm "$@"
+    else
+        compose run --rm "$@"
+    fi
+}
+
 env_value() {
     ENV_KEY=$1
     require_env_file

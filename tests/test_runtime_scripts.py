@@ -52,6 +52,7 @@ EXPECTED_PUBLIC_SCRIPTS = {
     "public-down.sh",
     "public-load-knowledge.sh",
     "public-migrate.sh",
+    "public-reset-and-setup.sh",
     "public-setup.sh",
     "public-smoke.sh",
     "public-start.sh",
@@ -93,6 +94,8 @@ def test_scripts_use_explicit_env_file_contract() -> None:
     assert 'docker compose --env-file "$ENV_FILE"' in common
     assert "RUNTIME_WAIT_TIMEOUT_SECONDS" in common
     assert "up --wait --wait-timeout" in common
+    assert "compose_provider_run()" in common
+    assert "compose --profile ollama --profile llama-cpp run --rm" in common
     assert ".env.example" not in _all_script_text()
 
 
@@ -363,6 +366,40 @@ def test_public_setup_requires_explicit_certificate_flag() -> None:
     assert "certificate issuance skipped" in setup
 
 
+def test_public_reset_requires_destructive_flags() -> None:
+    reset = _script("public-reset-and-setup.sh")
+
+    assert "usage: public-reset-and-setup.sh --destroy-db" in reset
+    assert "reset requires at least one explicit destructive flag" in reset
+    assert "DESTROY_DB=false" in reset
+    assert "DESTROY_MODELS=false" in reset
+    assert "DESTROY_CERTS=false" in reset
+    assert '"$SCRIPT_DIR/public-cleanup.sh"' in reset
+    assert '"$SCRIPT_DIR/postgres-cleanup.sh" --destroy-data' in reset
+    assert '"$SCRIPT_DIR/ollama-chat-cleanup.sh" --destroy-models' in reset
+    assert "remove_compose_volume letsencrypt-certs" in reset
+    assert "remove_compose_volume letsencrypt-work" in reset
+    assert "remove_compose_volume acme-challenges" in reset
+    assert '"$SCRIPT_DIR/public-validate-env.sh"' in reset
+    assert '"$SCRIPT_DIR/public-setup.sh"' in reset
+    assert '"$SCRIPT_DIR/public-load-knowledge.sh"' in reset
+    assert "compose_provider_run api portfolio-rag-assistant runtime smoke" in reset
+    assert '"$SCRIPT_DIR/public-smoke.sh"' in reset
+
+
+def test_public_reset_fails_before_docker_without_destructive_flags() -> None:
+    result = subprocess.run(
+        (str(SCRIPTS / "public-reset-and-setup.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "reset requires at least one explicit destructive flag" in result.stderr
+
+
 def test_public_start_stops_bootstrap_edge_before_tls_runtime() -> None:
     start = _script("public-start.sh")
 
@@ -529,7 +566,12 @@ def test_nginx_validate_checks_both_public_edge_configs() -> None:
 
 
 def test_cleanup_scripts_are_bounded() -> None:
-    script_text = _all_script_text()
+    script_text = "\n".join(
+        _read(path)
+        for path in sorted(SCRIPTS.glob("*.sh"))
+        if path.name != "public-reset-and-setup.sh"
+    )
+    reset = _script("public-reset-and-setup.sh")
 
     assert "down --volumes" not in script_text
     assert "down -v" not in script_text
@@ -537,6 +579,8 @@ def test_cleanup_scripts_are_bounded() -> None:
     assert "remove_compose_volume letsencrypt-certs" not in script_text
     assert "remove_compose_volume letsencrypt-work" not in script_text
     assert "remove_compose_volume acme-challenges" not in script_text
+    assert "remove_compose_volume letsencrypt-certs" in reset
+    assert "--destroy-certs" in reset
     assert "require_cleanup_flag --destroy-data" in _script("postgres-cleanup.sh")
     assert "require_cleanup_flag --destroy-models" in _script(
         "ollama-chat-cleanup.sh"
