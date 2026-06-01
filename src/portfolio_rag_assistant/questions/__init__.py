@@ -12,9 +12,18 @@ from portfolio_rag_assistant.questions.contract import (
     QuestionCollectionStoreError,
     QuestionCollector,
 )
+from portfolio_rag_assistant.questions.review import (
+    QUESTION_REVIEW_CATEGORIES,
+    QUESTION_REVIEW_STATES,
+    QuestionEvent,
+    QuestionReviewError,
+    QuestionReviewStore,
+)
 
 __all__ = [
     "DisabledQuestionCollector",
+    "QUESTION_REVIEW_CATEGORIES",
+    "QUESTION_REVIEW_STATES",
     "PostgreSQLQuestionCollector",
     "QuestionCollectionError",
     "QuestionCollectionRequest",
@@ -22,4 +31,7 @@ __all__ = [
     "QuestionCollectionResult",
     "QuestionCollectionStoreError",
     "QuestionCollector",
+    "QuestionEvent",
+    "QuestionReviewError",
+    "QuestionReviewStore",
 ]

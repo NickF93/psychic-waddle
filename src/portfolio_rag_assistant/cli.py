@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
 import sys
 from collections.abc import Mapping, Sequence
+from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import TextIO
 
@@ -41,6 +43,13 @@ from portfolio_rag_assistant.provider import (
     EmbeddingProvider,
     EmbeddingRequest,
     LLMProviderError,
+)
+from portfolio_rag_assistant.questions import (
+    QUESTION_REVIEW_CATEGORIES,
+    QUESTION_REVIEW_STATES,
+    QuestionEvent,
+    QuestionReviewError,
+    QuestionReviewStore,
 )
 
 
@@ -80,6 +89,17 @@ def run(
         if args.command == "runtime":
             if args.runtime_command == "smoke":
                 return _run_runtime_smoke(environment, output)
+        if args.command == "questions":
+            if args.questions_command == "list":
+                return _run_questions_list(args, environment, output)
+            if args.questions_command == "show":
+                return _run_questions_show(args.event_id, environment, output)
+            if args.questions_command == "mark":
+                return _run_questions_mark(args, environment, output)
+            if args.questions_command == "delete":
+                return _run_questions_delete(args.event_id, environment, output)
+            if args.questions_command == "export":
+                return _run_questions_export(args, environment, output)
         parser.print_help(file=errors)
         return 2
     except (
@@ -88,6 +108,7 @@ def run(
         KnowledgeIngestionError,
         KnowledgeStoreError,
         KnowledgeValidationError,
+        QuestionReviewError,
         ReadinessCheckError,
         RuntimeConfigurationError,
         LLMProviderError,
@@ -121,6 +142,71 @@ def _run_knowledge_validate(files: Sequence[Path], stdout: TextIO) -> int:
         f"{report.chunk_count} chunks",
         file=stdout,
     )
+    return 0
+
+
+def _run_questions_list(
+    args: argparse.Namespace,
+    env: Mapping[str, str],
+    stdout: TextIO,
+) -> int:
+    with _question_review_store(env) as store:
+        events = store.list_events(state=args.state, limit=args.limit)
+    _print_question_table(events, stdout)
+    return 0
+
+
+def _run_questions_show(
+    event_id: int,
+    env: Mapping[str, str],
+    stdout: TextIO,
+) -> int:
+    with _question_review_store(env) as store:
+        event = store.get_event(event_id)
+    _print_question_detail(event, stdout)
+    return 0
+
+
+def _run_questions_mark(
+    args: argparse.Namespace,
+    env: Mapping[str, str],
+    stdout: TextIO,
+) -> int:
+    with _question_review_store(env) as store:
+        event = store.mark_event(
+            args.event_id,
+            state=args.state,
+            category=args.category,
+            note=args.note,
+        )
+    print(f"marked question event {event.id} as {event.review_state}", file=stdout)
+    return 0
+
+
+def _run_questions_delete(
+    event_id: int,
+    env: Mapping[str, str],
+    stdout: TextIO,
+) -> int:
+    with _question_review_store(env) as store:
+        deleted = store.delete_event(event_id)
+    if not deleted:
+        raise CommandError("question event not found")
+    print(f"deleted question event {event_id}", file=stdout)
+    return 0
+
+
+def _run_questions_export(
+    args: argparse.Namespace,
+    env: Mapping[str, str],
+    stdout: TextIO,
+) -> int:
+    if args.format != "jsonl":
+        raise CommandError("questions export supports only jsonl")
+    with _question_review_store(env) as store:
+        events = store.export_events(state=args.state)
+    for event in events:
+        print(json.dumps(_question_event_json(event), ensure_ascii=False), file=stdout)
     return 0
 
 
@@ -224,6 +310,29 @@ def _build_parser() -> argparse.ArgumentParser:
     runtime = subcommands.add_parser("runtime")
     runtime_subcommands = runtime.add_subparsers(dest="runtime_command")
     runtime_subcommands.add_parser("smoke")
+
+    questions = subcommands.add_parser("questions")
+    question_subcommands = questions.add_subparsers(dest="questions_command")
+
+    list_questions = question_subcommands.add_parser("list")
+    list_questions.add_argument("--state", choices=sorted(QUESTION_REVIEW_STATES))
+    list_questions.add_argument("--limit", type=int, default=50)
+
+    show_question = question_subcommands.add_parser("show")
+    show_question.add_argument("event_id", type=int)
+
+    mark_question = question_subcommands.add_parser("mark")
+    mark_question.add_argument("event_id", type=int)
+    mark_question.add_argument("--state", required=True, choices=sorted(QUESTION_REVIEW_STATES))
+    mark_question.add_argument("--category", choices=sorted(QUESTION_REVIEW_CATEGORIES))
+    mark_question.add_argument("--note")
+
+    delete_question = question_subcommands.add_parser("delete")
+    delete_question.add_argument("event_id", type=int)
+
+    export_questions = question_subcommands.add_parser("export")
+    export_questions.add_argument("--state", choices=sorted(QUESTION_REVIEW_STATES))
+    export_questions.add_argument("--format", choices=("jsonl",), default="jsonl")
     return parser
 
 
@@ -235,3 +344,68 @@ def _connect_database(settings: DatabaseSettings) -> object:
         user=settings.user,
         password=settings.password,
     )
+
+
+class _QuestionReviewStoreContext:
+    def __init__(self, env: Mapping[str, str]) -> None:
+        self._env = env
+        self._connection_context: AbstractContextManager[object] | None = None
+
+    def __enter__(self) -> QuestionReviewStore:
+        database_settings = load_database_settings(self._env)
+        self._connection_context = _connect_database(database_settings)
+        connection = self._connection_context.__enter__()
+        return QuestionReviewStore(connection)
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        if self._connection_context is not None:
+            self._connection_context.__exit__(exc_type, exc, traceback)
+
+
+def _question_review_store(env: Mapping[str, str]) -> _QuestionReviewStoreContext:
+    return _QuestionReviewStoreContext(env)
+
+
+def _print_question_table(events: tuple[QuestionEvent, ...], stdout: TextIO) -> None:
+    from rich.console import Console
+    from rich.table import Table
+
+    table = Table(title="Collected Questions")
+    table.add_column("ID", justify="right")
+    table.add_column("State")
+    table.add_column("Category")
+    table.add_column("Created")
+    table.add_column("Question")
+    for event in events:
+        table.add_row(
+            str(event.id),
+            event.review_state,
+            event.review_category or "",
+            event.created_at,
+            event.raw_question_text,
+        )
+    Console(file=stdout, force_terminal=False, color_system=None).print(table)
+
+
+def _print_question_detail(event: QuestionEvent, stdout: TextIO) -> None:
+    from rich.console import Console
+    from rich.table import Table
+
+    table = Table.grid(padding=(0, 2))
+    table.add_column("Field", style="bold")
+    table.add_column("Value")
+    for field_name, value in _question_event_json(event).items():
+        table.add_row(field_name, "" if value is None else str(value))
+    Console(file=stdout, force_terminal=False, color_system=None).print(table)
+
+
+def _question_event_json(event: QuestionEvent) -> dict[str, object]:
+    return {
+        "id": event.id,
+        "raw_question_text": event.raw_question_text,
+        "review_state": event.review_state,
+        "review_category": event.review_category,
+        "review_note": event.review_note,
+        "created_at": event.created_at,
+        "updated_at": event.updated_at,
+    }

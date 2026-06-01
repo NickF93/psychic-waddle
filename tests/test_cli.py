@@ -13,6 +13,7 @@ from portfolio_rag_assistant.provider import (
     EmbeddingRequest,
     EmbeddingResponse,
 )
+from portfolio_rag_assistant.questions import QuestionEvent
 
 
 def test_ingest_command_validates_input_before_database_connection(
@@ -125,6 +126,133 @@ def test_runtime_smoke_checks_database_and_providers(monkeypatch) -> None:
     )
 
 
+def test_questions_list_uses_review_store(monkeypatch) -> None:
+    store = FakeQuestionReviewStore(events=(_question_event(11),))
+    rendered: list[tuple[QuestionEvent, ...]] = []
+
+    monkeypatch.setattr(cli, "_question_review_store", lambda env: FakeStoreContext(store))
+    monkeypatch.setattr(
+        cli,
+        "_print_question_table",
+        lambda events, stdout: rendered.append(events),
+    )
+
+    exit_code = cli.run(
+        ("questions", "list", "--state", "pending", "--limit", "5"),
+        env=_db_env(),
+    )
+
+    assert exit_code == 0
+    assert store.list_calls == (("pending", 5),)
+    assert rendered == [(_question_event(11),)]
+
+
+def test_questions_show_uses_review_store(monkeypatch) -> None:
+    event = _question_event(12)
+    store = FakeQuestionReviewStore(events=(event,))
+    rendered: list[QuestionEvent] = []
+
+    monkeypatch.setattr(cli, "_question_review_store", lambda env: FakeStoreContext(store))
+    monkeypatch.setattr(
+        cli,
+        "_print_question_detail",
+        lambda question_event, stdout: rendered.append(question_event),
+    )
+
+    exit_code = cli.run(("questions", "show", "12"), env=_db_env())
+
+    assert exit_code == 0
+    assert store.get_calls == (12,)
+    assert rendered == [event]
+
+
+def test_questions_mark_updates_operator_fields(monkeypatch) -> None:
+    store = FakeQuestionReviewStore(events=(_question_event(13, state="reviewed"),))
+    stdout = StringIO()
+
+    monkeypatch.setattr(cli, "_question_review_store", lambda env: FakeStoreContext(store))
+
+    exit_code = cli.run(
+        (
+            "questions",
+            "mark",
+            "13",
+            "--state",
+            "reviewed",
+            "--category",
+            "missing_fact",
+            "--note",
+            "Add reviewed public source.",
+        ),
+        env=_db_env(),
+        stdout=stdout,
+    )
+
+    assert exit_code == 0
+    assert store.mark_calls == (
+        (13, "reviewed", "missing_fact", "Add reviewed public source."),
+    )
+    assert "marked question event 13 as reviewed" in stdout.getvalue()
+
+
+def test_questions_delete_deletes_raw_record(monkeypatch) -> None:
+    store = FakeQuestionReviewStore(events=())
+    stdout = StringIO()
+
+    monkeypatch.setattr(cli, "_question_review_store", lambda env: FakeStoreContext(store))
+
+    exit_code = cli.run(
+        ("questions", "delete", "14"),
+        env=_db_env(),
+        stdout=stdout,
+    )
+
+    assert exit_code == 0
+    assert store.delete_calls == (14,)
+    assert "deleted question event 14" in stdout.getvalue()
+
+
+def test_questions_delete_reports_missing_record(monkeypatch) -> None:
+    store = FakeQuestionReviewStore(events=(), delete_result=False)
+    stderr = StringIO()
+
+    monkeypatch.setattr(cli, "_question_review_store", lambda env: FakeStoreContext(store))
+
+    exit_code = cli.run(
+        ("questions", "delete", "14"),
+        env=_db_env(),
+        stderr=stderr,
+    )
+
+    assert exit_code == 2
+    assert "question event not found" in stderr.getvalue()
+
+
+def test_questions_export_writes_jsonl(monkeypatch) -> None:
+    store = FakeQuestionReviewStore(events=(_question_event(15),))
+    stdout = StringIO()
+
+    monkeypatch.setattr(cli, "_question_review_store", lambda env: FakeStoreContext(store))
+
+    exit_code = cli.run(
+        ("questions", "export", "--state", "pending"),
+        env=_db_env(),
+        stdout=stdout,
+    )
+
+    assert exit_code == 0
+    assert store.export_calls == ("pending",)
+    assert json.loads(stdout.getvalue()) == {
+        "id": 15,
+        "raw_question_text": "Could Niccolo answer this?",
+        "review_state": "pending",
+        "review_category": None,
+        "review_note": None,
+        "created_at": "2026-06-01T12:00:00+00:00",
+        "updated_at": "2026-06-01T12:00:00+00:00",
+    }
+
+
 def _valid_document() -> dict[str, object]:
     return {
         "schema_version": 1,
@@ -207,3 +335,74 @@ class FakeEmbeddingProvider:
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse:
         self.requests = (*self.requests, request)
         return EmbeddingResponse(model=request.model, embeddings=((1.0,),))
+
+
+def _question_event(event_id: int, *, state: str = "pending") -> QuestionEvent:
+    return QuestionEvent(
+        id=event_id,
+        raw_question_text="Could Niccolo answer this?",
+        review_state=state,
+        review_category=None,
+        review_note=None,
+        created_at="2026-06-01T12:00:00+00:00",
+        updated_at="2026-06-01T12:00:00+00:00",
+    )
+
+
+class FakeStoreContext:
+    def __init__(self, store: "FakeQuestionReviewStore") -> None:
+        self._store = store
+
+    def __enter__(self) -> "FakeQuestionReviewStore":
+        return self._store
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        return None
+
+
+class FakeQuestionReviewStore:
+    def __init__(
+        self,
+        *,
+        events: tuple[QuestionEvent, ...],
+        delete_result: bool = True,
+    ) -> None:
+        self._events = events
+        self._delete_result = delete_result
+        self.list_calls: tuple[tuple[str | None, int], ...] = ()
+        self.get_calls: tuple[int, ...] = ()
+        self.mark_calls: tuple[tuple[int, str, str | None, str | None], ...] = ()
+        self.delete_calls: tuple[int, ...] = ()
+        self.export_calls: tuple[str | None, ...] = ()
+
+    def list_events(
+        self,
+        *,
+        state: str | None = None,
+        limit: int = 50,
+    ) -> tuple[QuestionEvent, ...]:
+        self.list_calls = (*self.list_calls, (state, limit))
+        return self._events
+
+    def get_event(self, event_id: int) -> QuestionEvent:
+        self.get_calls = (*self.get_calls, event_id)
+        return self._events[0]
+
+    def mark_event(
+        self,
+        event_id: int,
+        *,
+        state: str,
+        category: str | None,
+        note: str | None,
+    ) -> QuestionEvent:
+        self.mark_calls = (*self.mark_calls, (event_id, state, category, note))
+        return _question_event(event_id, state=state)
+
+    def delete_event(self, event_id: int) -> bool:
+        self.delete_calls = (*self.delete_calls, event_id)
+        return self._delete_result
+
+    def export_events(self, *, state: str | None = None) -> tuple[QuestionEvent, ...]:
+        self.export_calls = (*self.export_calls, state)
+        return self._events
