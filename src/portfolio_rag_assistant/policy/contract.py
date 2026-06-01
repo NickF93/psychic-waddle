@@ -105,7 +105,6 @@ _CATEGORY_KEYWORDS: dict[KnowledgeCategory, frozenset[str]] = {
     "contact": frozenset(
         (
             "contact",
-            "email",
             "linkedin",
             "reach",
             "website",
@@ -261,18 +260,6 @@ def _infer_question_categories(question: str) -> tuple[KnowledgeCategory, ...]:
         if words & _CATEGORY_KEYWORDS[category]
     )
     return categories
-
-
-def _infer_question_intents(question: str) -> tuple[QuestionIntent, ...]:
-    words = _normalized_words(question)
-    intents: list[QuestionIntent] = []
-    for intent, rule in _INTENT_RULES.items():
-        if not _word_groups_match(words, rule.trigger_groups):
-            continue
-        if intent == "contact" and "github" in words and words & _PROJECT_CONTEXT_WORDS:
-            continue
-        intents.append(intent)
-    return tuple(intents)
 
 
 def _question_categories(
