@@ -56,7 +56,6 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
         provider=provider,
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
-        min_score=0.5,
     )
 
     response = asyncio.run(
@@ -86,7 +85,6 @@ def test_postgres_retriever_queries_only_public_backend_model_chunks() -> None:
         provider=provider,
         embedding_backend="openai-compatible",
         embedding_model="text-embedding-3-small",
-        min_score=0.0,
     )
 
     asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=4)))
@@ -136,7 +134,6 @@ def test_postgres_retriever_uses_bounded_intent_expansion() -> None:
         provider=FakeEmbeddingProvider(((0.1, 0.2),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
-        min_score=0.3,
     )
 
     response = asyncio.run(
@@ -182,7 +179,6 @@ def test_postgres_retriever_fuses_candidate_ranks() -> None:
         provider=FakeEmbeddingProvider(((0.1, 0.2),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
-        min_score=0.0,
     )
 
     response = asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=2)))
@@ -193,6 +189,28 @@ def test_postgres_retriever_fuses_candidate_ranks() -> None:
     )
     assert response.results[0].score.vector_score == 0.4
     assert response.results[0].score.keyword_score == 0.1
+
+
+def test_postgres_retriever_does_not_apply_policy_score_threshold() -> None:
+    connection = FakeRetrievalConnection(
+        vector_rows=(
+            _row(1, "experience: vector-only candidate for policy review", 0.05),
+        ),
+        keyword_rows=(),
+    )
+    retriever = PostgreSQLRetriever(
+        connection=connection,
+        provider=FakeEmbeddingProvider(((0.1, 0.2),)),
+        embedding_backend="ollama",
+        embedding_model="nomic-embed-text",
+    )
+
+    response = asyncio.run(
+        retriever.retrieve(RetrievalRequest(question="NAIS", top_k=1))
+    )
+
+    assert tuple(result.chunk_id for result in response.results) == (1,)
+    assert response.results[0].score.combined_score == pytest.approx(0.5)
 
 
 def test_postgres_retriever_does_not_expand_unsupported_questions() -> None:
@@ -210,7 +228,6 @@ def test_postgres_retriever_does_not_expand_unsupported_questions() -> None:
         provider=FakeEmbeddingProvider(((0.1, 0.2),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
-        min_score=0.0,
     )
 
     response = asyncio.run(
@@ -234,7 +251,6 @@ def test_postgres_retriever_rejects_invalid_configuration() -> None:
             provider=FakeEmbeddingProvider(((1.0,),)),
             embedding_backend=" ",
             embedding_model="model",
-            min_score=0.0,
         )
 
 
@@ -244,7 +260,6 @@ def test_postgres_retriever_rejects_wrong_embedding_count() -> None:
         provider=FakeEmbeddingProvider(((1.0,), (2.0,))),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
-        min_score=0.0,
     )
 
     with pytest.raises(RetrievalStoreError):
@@ -340,7 +355,6 @@ def test_postgres_retriever_can_read_real_schema(db_connection: object) -> None:
         provider=FakeEmbeddingProvider(((1.0, 0.0),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
-        min_score=0.0,
     )
 
     response = asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=1)))

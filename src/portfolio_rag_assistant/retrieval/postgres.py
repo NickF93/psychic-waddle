@@ -92,13 +92,11 @@ class PostgreSQLRetriever:
         provider: EmbeddingProvider,
         embedding_backend: str,
         embedding_model: str,
-        min_score: float,
     ) -> None:
         self._connection = connection
         self._provider = provider
         self._embedding_backend = _require_text(embedding_backend, "embedding_backend")
         self._embedding_model = _require_text(embedding_model, "embedding_model")
-        self._min_score = _require_score(min_score, "min_score")
 
     async def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
         """Return ranked public source-backed context for a question."""
@@ -130,7 +128,6 @@ class PostgreSQLRetriever:
                 intent_candidates=intent_candidates,
                 attempted_channel_count=2 + int(bool(intents)),
                 top_k=request.top_k,
-                min_score=self._min_score,
             )
         )
         return RetrievalResponse(question=request.question, results=results)
@@ -260,7 +257,6 @@ def _rank_candidates(
     intent_candidates: tuple[RetrievalCandidate, ...],
     attempted_channel_count: int,
     top_k: int,
-    min_score: float,
 ) -> tuple[RetrievalCandidate, ...]:
     candidates = tuple(
         _with_rrf_score(candidate, attempted_channel_count)
@@ -282,7 +278,6 @@ def _rank_candidates(
                 item.chunk_id,
             ),
         )
-        if candidate.combined_score >= min_score
     )[:top_k]
 
 
@@ -470,9 +465,3 @@ def _require_text(value: str, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise RetrievalConfigurationError(f"{field_name} must be set")
     return value.strip()
-
-
-def _require_score(value: float, field_name: str) -> float:
-    if not isinstance(value, float) or not 0 <= value <= 1:
-        raise RetrievalConfigurationError(f"{field_name} must be between 0 and 1")
-    return value
