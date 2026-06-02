@@ -364,6 +364,116 @@ def test_postgres_retriever_can_read_real_schema(db_connection: object) -> None:
     assert response.results[0].source_uri == "cv://niccolo/main"
 
 
+def test_postgres_retriever_retrieves_workplace_aggregate_for_natural_question(
+    db_connection: object,
+) -> None:
+    db_connection.execute(
+        """
+        INSERT INTO sources (source_uri, title, reviewed_at)
+        VALUES ('cv://niccolo/main', 'Niccolo Ferrari CV', now())
+        """
+    )
+    source_id = db_connection.execute(
+        "SELECT id FROM sources WHERE source_uri = 'cv://niccolo/main'"
+    ).fetchone()[0]
+    chunk_rows = (
+        (
+            "experience",
+            0,
+            "Niccolo Ferrari's Ph.D. work resulted in two publications.",
+            "Professional Experience",
+        ),
+        (
+            "experience",
+            1,
+            "During Ph.D. work, Niccolo Ferrari designed two Python architectures.",
+            "Professional Experience",
+        ),
+        (
+            "skills",
+            2,
+            "Niccolo Ferrari uses MLflow and TensorBoard for experiment tracking.",
+            "Frameworks, Ecosystems and Tools",
+        ),
+        (
+            "experience",
+            3,
+            "Niccolo Ferrari works between applied research and production software.",
+            "About me",
+        ),
+        (
+            "experience",
+            4,
+            (
+                "Niccolo Ferrari's professional workplaces include NAIS S.r.l. "
+                "in Bologna, Bonfiglioli Engineering in Ferrara, the University "
+                "of Ferrara, and CIAS in Ferrara."
+            ),
+            "Professional Experience",
+        ),
+        (
+            "experience",
+            5,
+            (
+                "Niccolo Ferrari's work history includes Senior Machine Learning "
+                "Engineer and Researcher at NAIS S.r.l. and Machine Learning "
+                "Engineer at Bonfiglioli Engineering."
+            ),
+            "Professional Experience",
+        ),
+    )
+    for category, chunk_index, chunk_text, source_locator in chunk_rows:
+        db_connection.execute(
+            """
+            INSERT INTO chunks (
+                source_id,
+                category,
+                chunk_index,
+                chunk_text,
+                source_locator,
+                public_visible
+            )
+            VALUES (%s, %s, %s, %s, %s, true)
+            """,
+            (source_id, category, chunk_index, chunk_text, source_locator),
+        )
+    db_connection.execute(
+        """
+        INSERT INTO chunk_embeddings (
+            chunk_id,
+            embedding_backend,
+            embedding_model,
+            chunk_text_hash,
+            embedding_dimension,
+            embedding
+        )
+        SELECT
+            id,
+            'ollama',
+            'nomic-embed-text',
+            encode(digest(convert_to(chunk_text, 'UTF8'), 'sha256'), 'hex'),
+            2,
+            '[1,0]'::vector
+        FROM chunks
+        """
+    )
+    db_connection.commit()
+    retriever = PostgreSQLRetriever(
+        connection=db_connection,
+        provider=FakeEmbeddingProvider(((1.0, 0.0),)),
+        embedding_backend="ollama",
+        embedding_model="nomic-embed-text",
+    )
+
+    response = asyncio.run(
+        retriever.retrieve(RetrievalRequest(question="Where did Niccolo work?", top_k=4))
+    )
+
+    retrieved_text = "\n".join(result.chunk_text for result in response.results)
+    assert "professional workplaces include NAIS S.r.l." in retrieved_text
+    assert "Bonfiglioli Engineering" in retrieved_text
+
+
 def _row(chunk_id: int, chunk_text: str, score: float) -> tuple[object, ...]:
     return (
         chunk_id,
