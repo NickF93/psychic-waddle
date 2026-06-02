@@ -539,6 +539,7 @@ def test_public_smoke_supports_local_default_and_public_override() -> None:
     assert "json_workplace_answer_is_valid" in smoke
     assert "workplace smoke expected answerable status" in smoke
     assert "workplace smoke missing expected employer evidence" in smoke
+    assert "workplace answerability smoke passed" in smoke
 
 
 def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> None:
@@ -560,6 +561,7 @@ def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> N
     assert "cors preflight passed: https://pigreco.xyz" in result.stdout
     assert "cors preflight passed: https://www.pigreco.xyz" in result.stdout
     assert "unexpected origin rejected: https://example.invalid" in result.stdout
+    assert "workplace answerability smoke passed" in result.stdout
     assert "direct API probe passed: http://public-api-closed:8000/health returned 000" in result.stdout
     assert "public smoke passed: http://127.0.0.1:18080" in result.stdout
     assert "question collection smoke skipped" in result.stdout

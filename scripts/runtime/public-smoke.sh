@@ -122,6 +122,7 @@ CHAT_RESPONSE=$(curl -fsS -X POST "$PUBLIC_SMOKE_BASE_URL/api/assistant/chat" \
     -H "origin: $PUBLIC_SMOKE_ALLOWED_ORIGIN" \
     -d "$CHAT_BODY")
 printf '%s\n' "$CHAT_RESPONSE" | json_workplace_answer_is_valid
+info "workplace answerability smoke passed"
 
 if [ "$PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION" = true ]; then
     QUESTION_COLLECTION_RESPONSE=$(curl -fsS -X POST "$PUBLIC_SMOKE_BASE_URL/api/assistant/chat" \
