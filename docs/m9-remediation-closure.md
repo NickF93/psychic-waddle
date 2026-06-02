@@ -98,6 +98,9 @@ workplace answerability smoke passed
 public smoke passed: http://127.0.0.1:19080
 ```
 
+The remediation was validated with the remote-style retrieval setting
+`RETRIEVAL_TOP_K=4`; correctness does not rely on raising `top_k`.
+
 Manual isolated runtime probes:
 
 ```text
