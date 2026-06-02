@@ -24,7 +24,8 @@ The `AnswerGenerator` protocol exposes one async operation:
 `AnswerGenerationResponse` contains:
 
 - `answer_text`: final text for the recruiter-facing response.
-- `status`: the original answerability status.
+- `status`: final response status after deterministic generation consistency
+  checks.
 - `sources`: deterministic source references.
 
 `AnswerSourceReference` contains:
@@ -86,6 +87,8 @@ If an answerable provider response returns the sentinel or clear insufficiency
 wording, the generator deterministically demotes the response to
 `not_answerable`, returns the standard fallback text, and attaches no sources.
 This keeps public status, answer text, and source evidence consistent.
+This demotion is a consistency guard for provider wording only; it is not a
+second policy engine and it must not retrieve, rank, persist, or collect data.
 
 The generator uses explicit request language only:
 
@@ -171,3 +174,11 @@ for HTTP.
 
 Sprint 4.3 adds acceptance coverage and these handoff notes. Public HTTP
 schemas and endpoints remain Milestone 5 work.
+
+## Milestone 9 Consistency Guard
+
+Sprint 9.6 hardens the post-policy boundary. Policy remains the only authority
+for answerability, while generation only phrases approved context. If provider
+wording still reports insufficient context, final response status is
+`not_answerable`, source references are empty, and the API handles that final
+status through the normal not-answerable response and question-collection path.
