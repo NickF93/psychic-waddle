@@ -6,16 +6,16 @@ Branch: `feature/m9-remediation-plan`
 
 ## Status
 
-This closure report is superseded by the Sprint 9.11 runtime finding.
+Milestone 9 is validated after Sprint 9.11 through Sprint 9.15 remediation.
 
-The isolated project Docker stack reproduced a public smoke failure for
-`Where did Niccolo work?` after this report was written. The failure was in
-retrieval candidate generation, not in `llama3.2`, policy, generation, tracked
-knowledge, or embedding freshness.
+The earlier Sprint 9.10 conclusion that no runtime code remediation was needed
+was wrong. The isolated project Docker stack reproduced a public smoke failure
+for `Where did Niccolo work?`. The failure was in retrieval candidate
+generation, not in `llama3.2`, policy, generation, tracked knowledge, or
+embedding freshness.
 
-The original "no runtime code remediation was required" finding below is no
-longer valid. Milestone 9 remains open until Sprint 9.11 and later remediation
-is implemented and validated against the isolated project runtime.
+Sprint 9.11 through Sprint 9.15 fixed the retrieval root causes and validated
+the current branch against the project-only isolated Docker runtime.
 
 ## Audit Scope
 
@@ -37,12 +37,33 @@ Reviewed areas:
 
 ## Findings
 
-No runtime code remediation was required by the closure audit.
+Sprint 9.11 found two concrete retrieval defects:
 
-The audited implementation keeps the M9 boundaries intact:
+- intent-expanded PostgreSQL search built one space-joined expansion string,
+  which `websearch_to_tsquery('english', ...)` interpreted as an over-strict
+  AND query;
+- `PostgreSQLRetriever` applied `RETRIEVAL_MIN_SCORE` before answer policy saw
+  candidates, contradicting the architecture contract that the threshold
+  belongs to `AnswerPolicy`.
+
+Sprint 9.12 through Sprint 9.14 remediated those defects:
+
+- intent-expanded retrieval now uses controlled OR evidence queries from
+  profile-owned lexical expansion terms;
+- the raw visitor question is no longer appended to the intent-expanded query
+  because vector and keyword retrieval already search the question;
+- broad workplace retrieval expansion terms such as standalone `work` and
+  `worked` were removed from retrieval expansion;
+- `PostgreSQLRetriever` no longer accepts, stores, or applies `min_score`;
+- retrieval returns ranked candidates and policy alone applies
+  `RETRIEVAL_MIN_SCORE`;
+- real PostgreSQL regression coverage now exercises the workplace failure
+  shape when `TEST_DATABASE_URL` is available.
+
+The final audited implementation keeps the M9 boundaries intact:
 
 - retrieval gathers and ranks plausible public evidence but does not decide
-  answerability;
+  answerability or filter by policy threshold;
 - policy requires intent-complete evidence and rejects category-only support;
 - generation phrases approved context and demotes provider insufficiency output
   to `not_answerable` with no sources;
@@ -58,34 +79,39 @@ The audited implementation keeps the M9 boundaries intact:
   request bodies, raw questions, query strings, user agents, cookies, source
   IDs, retrieval scores, answer status, or answer text.
 
-The only closure change was documentation: `PLAN.md` now points Sprint 9.10 to
-this closure report and describes the M9 remediation architecture as
-implemented rather than planned.
-
 ## Validation
 
-Local validation performed during closure:
+Local validation after remediation:
+
+```text
+360 passed, 9 skipped
+```
+
+Isolated project Docker validation used `/tmp/psychic-waddle-debug.env` with
+`COMPOSE_PROJECT_NAME=psychic-waddle-debug`.
 
 ```text
 validated 1 sources, 113 facts, 113 chunks
+indexed 113 chunk embeddings
+runtime smoke passed: database ready, embeddings ready, providers reachable
+workplace answerability smoke passed
+public smoke passed: http://127.0.0.1:19080
 ```
+
+Manual isolated runtime probes:
 
 ```text
-124 passed, 1 skipped
+Where did Niccolo work? -> answerable, with NAIS, Bonfiglioli, University of Ferrara, and CIAS.
+What is Niccolo current role? -> answerable, Senior Machine Learning Engineer and Researcher at NAIS S.r.l. and Technical Lead of the AI team.
+What are Niccolo main machine learning skills? -> answerable.
+What publications does Niccolo have? -> answerable.
+What is Niccolo favorite pizza topping? -> not_answerable with question_recorded.
 ```
 
-Focused tests covered intent profiles, retrieval, embedding freshness, policy,
-answer generation, tracked knowledge, and runtime smoke behavior.
-
-```text
-359 passed, 8 skipped
-```
-
-The full local test suite passed.
-
-Live public smoke is an environment validation and must be run on the target
-server after deployment because it depends on configured providers, PostgreSQL,
-the public edge, and loaded embeddings.
+Long-form manual probes were run sequentially because the configured local
+`llama3.2` model is small; parallel long-form probes can return
+`service_unavailable` under local debug load. The public workplace regression
+path passes through public smoke.
 
 ## Server Validation Commands
 
@@ -100,6 +126,19 @@ git pull --ff-only
 RUNTIME_WAIT_TIMEOUT_SECONDS=600 \
 PUBLIC_SMOKE_BASE_URL=http://127.0.0.1:18080 \
 scripts/runtime/public-reset-and-setup.sh --destroy-db --destroy-models
+```
+
+Preserve PostgreSQL data, model volumes, certificate volumes, and ACME state:
+
+```sh
+cd ~/rag/psychic-waddle
+git fetch --all --tags
+git switch feature/m9-remediation-plan
+git pull --ff-only
+
+RUNTIME_WAIT_TIMEOUT_SECONDS=600 \
+PUBLIC_SMOKE_BASE_URL=http://127.0.0.1:18080 \
+scripts/runtime/public-upgrade.sh
 ```
 
 HTTPS production-style clean reset, preserving existing certificates:
