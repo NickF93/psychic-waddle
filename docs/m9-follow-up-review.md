@@ -40,11 +40,23 @@ matching broad category.
 
 Recommended remediation:
 
-- make the category-only branch require explicit evidence for the inferred
-  category;
-- add regression tests for broad category questions that do not trigger a
-  `QuestionIntentProfile`;
+- remove the category-only answerability branch;
+- make matched `QuestionIntentProfile` definitions the only path to
+  `answerable`;
+- add a bounded professional overview profile for recruiter experience,
+  background, and career questions;
+- add regression tests for category-keyword questions that do not trigger a
+  supported profile;
 - keep answerability deterministic inside policy, not retrieval or generation.
+
+Remediation status:
+
+- completed in follow-up commits on `feature/m9-remediation-plan`;
+- `AnswerPolicy` now returns `answerable` only after a supported profile
+  matches and context satisfies that profile's evidence terms;
+- generic broad questions without a supported profile return
+  `needs_clarification`;
+- unsupported non-broad questions remain `not_answerable`.
 
 ### 2. Over-Broad Insufficiency Heuristic
 

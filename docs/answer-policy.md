@@ -50,9 +50,9 @@ The default policy uses only local, inspectable signals:
 - `RetrievedContext.score.combined_score` must be at least the configured
   `RETRIEVAL_MIN_SCORE` value passed into the policy request.
 - At least one reviewed source must support the approved context.
-- Common recruiter intents are detected with shared `QuestionIntentProfile`
-  definitions for workplace, current role, skills, education, publications,
-  projects, and contact/profile questions.
+- Supported recruiter questions are detected with shared `QuestionIntentProfile`
+  definitions for professional overview, workplace, current role, skills,
+  education, publications, projects, and contact/profile questions.
 - Detected profiles map to their accepted knowledge categories and required
   evidence terms.
 - Required evidence may be a normalized word or an exact normalized phrase,
@@ -61,18 +61,16 @@ The default policy uses only local, inspectable signals:
   `education: Niccolo has public profile information` does not satisfy an
   education question unless it also contains degree, university, Ph.D.,
   master's, bachelor's, study, completion, or equivalent profile evidence.
-- When no shared profile matches, the question domain is inferred with a
-  bounded category keyword map for:
-  - `experience`
-  - `education`
-  - `projects`
-  - `research`
-  - `skills`
-  - `contact`
-- If a domain is inferred, approved context is limited to that domain.
-- For common recruiter intents, matching category alone is not sufficient.
-  Shared intent profiles define the required evidence and the policy rejects
-  category-only support.
+- When no shared profile matches, the policy cannot return `answerable`.
+- If no shared profile matches and the question is a generic broad profile
+  request, the policy returns `needs_clarification`.
+- If no shared profile matches and the question is not generic broad, the
+  policy returns `not_answerable`.
+- Matching category alone is never sufficient. Shared profiles define accepted
+  categories and required evidence; policy rejects category-only support.
+- Professional overview questions require explicit professional evidence such
+  as real experience, career, role, responsibility, research, deployment, or
+  work-history terms.
 - Workplace/work-history questions require explicit employment evidence such
   as employer, company, workplace, internship, `worked at`, or `work history`.
 - Current-role questions require current/present role or employer evidence,
@@ -92,15 +90,15 @@ The policy returns `not_answerable` when:
 
 - retrieval returned no context;
 - all context is below the required score threshold;
-- no bounded domain can be inferred for a non-broad question;
-- the inferred question domain is not covered by usable context;
-- category-matching context does not contain required intent evidence;
+- no bounded shared profile matches a non-broad question;
+- the matched profile's accepted categories are not covered by usable context;
+- category-matching context does not contain required profile evidence;
 - approved context has no reviewed source support.
 
 The policy returns `needs_clarification` when:
 
-- the question is broad, such as a general profile or background request;
-- retrieval found strong context across multiple categories.
+- the question is broad and generic, such as a general profile, summary, or
+  tell-me-about request, and no supported profile matched.
 
 Final wording for refusals or clarification prompts belongs to a later
 generation/API layer, not to `AnswerPolicy`.

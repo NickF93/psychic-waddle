@@ -128,8 +128,9 @@ Owns bounded recruiter-intent definitions only.
 
 - Defines deterministic trigger terms, accepted knowledge categories, lexical
   expansion terms, and required evidence terms for supported recruiter intents.
-- Covered v1 intents are workplaces and work history, current role, skills,
-  education, publications, projects and repositories, and public contact links.
+- Covered v1 intents are professional overview, workplaces and work history,
+  current role, skills, education, publications, projects and repositories, and
+  public contact links.
 - May be read by retrieval for deterministic query expansion.
 - May be read by policy for deterministic evidence-completeness checks.
 - Must not call providers, search PostgreSQL, rank chunks, generate answers,
@@ -153,10 +154,12 @@ Owns search, ranking, and retrieval diagnostics only.
 
 Owns answerability decisions only.
 
-- Decides answer, refuse, or clarify from question domain, retrieval scores,
-  source support, and ambiguity.
+- Decides answer, refuse, or clarify from matched question profiles, retrieval
+  scores, source support, and ambiguity.
 - Uses `QuestionIntentProfile` definitions to require intent-complete evidence
   for common recruiter intents.
+- Must return `answerable` only when a supported `QuestionIntentProfile` matches
+  and approved context satisfies that profile's evidence requirements.
 - Must not approve an answer solely because retrieved context has a matching
   broad category.
 - Produces deterministic decision metadata for tests and diagnostics.

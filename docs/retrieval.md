@@ -116,6 +116,7 @@ answerable.
 
 Question-intent expansion is bounded to supported recruiter intents:
 
+- professional overview;
 - workplaces and work history;
 - current role;
 - skills and technologies;
