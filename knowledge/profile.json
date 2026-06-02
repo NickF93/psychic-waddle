@@ -46,14 +46,14 @@
     {
       "source_uri": "cv://niccolo/main",
       "category": "experience",
-      "fact_text": "Niccolo Ferrari's professional workplaces include NAIS S.r.l. in Bologna, Bonfiglioli Engineering in Ferrara, the University of Ferrara in Ferrara, and CIAS in Ferrara.",
+      "fact_text": "Niccolo Ferrari's professional workplaces and experience organizations include NAIS S.r.l. in Bologna, Bonfiglioli Engineering in Ferrara, the University of Ferrara in Ferrara for Ph.D. research, and CIAS in Ferrara for a curricular internship.",
       "source_locator": "Professional Experience",
       "public_visible": true
     },
     {
       "source_uri": "cv://niccolo/main",
       "category": "experience",
-      "fact_text": "Niccolo Ferrari currently works at NAIS S.r.l. and previously worked at Bonfiglioli Engineering, the University of Ferrara, and CIAS.",
+      "fact_text": "Niccolo Ferrari currently works at NAIS S.r.l.; his previous professional experience includes Bonfiglioli Engineering, Ph.D. research at the University of Ferrara, and a curricular internship at CIAS.",
       "source_locator": "Professional Experience",
       "public_visible": true
     },
