@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import os
+import re
 import uuid
 from collections.abc import Iterator, Sequence
 from pathlib import Path
@@ -149,8 +150,14 @@ def test_postgres_retriever_uses_bounded_intent_expansion() -> None:
     assert "chunks.category = ANY(%s::text[])" in intent_query
     assert "websearch_to_tsquery('english', %s)" in intent_query
     assert "to_tsvector('english', chunks.chunk_text)" in intent_query
-    assert "Where did Niccolo work?" in str(intent_params[0])
-    assert "work history" in str(intent_params[0])
+    intent_query_text = str(intent_params[0])
+    assert "Where did Niccolo work?" not in intent_query_text
+    assert " OR " in intent_query_text
+    assert '"professional workplaces"' in intent_query_text
+    assert '"work history"' in intent_query_text
+    assert "employers" in intent_query_text
+    assert not re.search(r'(^| OR )work($| OR )', intent_query_text)
+    assert not re.search(r'(^| OR )worked($| OR )', intent_query_text)
     assert intent_params[1] == ["experience"]
     assert intent_params[2] == 4
     assert not any(

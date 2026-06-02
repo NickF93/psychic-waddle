@@ -74,8 +74,11 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
     workplace = profile_for_intent("workplace")
 
     assert workplace.accepted_categories == ("experience",)
+    assert "professional workplaces" in workplace.lexical_expansion_terms
     assert "work history" in workplace.lexical_expansion_terms
     assert "employers" in workplace.lexical_expansion_terms
+    assert "work" not in workplace.lexical_expansion_terms
+    assert "worked" not in workplace.lexical_expansion_terms
 
 
 @pytest.mark.parametrize(

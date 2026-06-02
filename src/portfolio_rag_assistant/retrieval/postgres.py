@@ -119,7 +119,6 @@ class PostgreSQLRetriever:
         )
         intents = detect_question_intents(request.question)
         intent_candidates = self._search_intent_keywords(
-            question=request.question,
             intents=intents,
             limit=request.top_k,
         )
@@ -211,7 +210,6 @@ class PostgreSQLRetriever:
     def _search_intent_keywords(
         self,
         *,
-        question: str,
         intents: tuple[QuestionIntent, ...],
         limit: int,
     ) -> tuple[RetrievalCandidate, ...]:
@@ -247,7 +245,7 @@ class PostgreSQLRetriever:
             LIMIT %s
             """,
             (
-                _intent_expanded_query_text(question, intents),
+                _intent_evidence_query_text(intents),
                 list(categories_for_intents(intents)),
                 limit,
             ),
@@ -425,14 +423,35 @@ def _intent_candidate_from_row(row: tuple[Any, ...]) -> RetrievalCandidate:
     )
 
 
-def _intent_expanded_query_text(
-    question: str,
+def _intent_evidence_query_text(
     intents: tuple[QuestionIntent, ...],
 ) -> str:
-    terms = {question.strip()}
+    terms: list[str] = []
+    seen_terms: set[str] = set()
     for intent in intents:
-        terms.update(profile_for_intent(intent).lexical_expansion_terms)
-    return " ".join(sorted(term for term in terms if term.strip()))
+        for term in sorted(profile_for_intent(intent).lexical_expansion_terms):
+            formatted_term = _format_websearch_intent_term(term)
+            term_key = formatted_term.casefold()
+            if term_key in seen_terms:
+                continue
+            terms.append(formatted_term)
+            seen_terms.add(term_key)
+    return " OR ".join(terms)
+
+
+def _format_websearch_intent_term(term: str) -> str:
+    cleaned_term = " ".join(term.split())
+    if not cleaned_term:
+        raise RetrievalConfigurationError(
+            "intent lexical expansion terms must not be blank"
+        )
+    if '"' in cleaned_term:
+        raise RetrievalConfigurationError(
+            "intent lexical expansion terms must not contain double quotes"
+        )
+    if " " in cleaned_term:
+        return f'"{cleaned_term}"'
+    return cleaned_term
 
 
 def _format_vector(embedding: tuple[float, ...]) -> str:
