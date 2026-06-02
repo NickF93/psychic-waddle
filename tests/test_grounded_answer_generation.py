@@ -124,6 +124,54 @@ def test_grounded_generator_demotes_insufficient_answerable_output(
     assert provider.embed_requests == ()
 
 
+@pytest.mark.parametrize(
+    "provider_answer",
+    (
+        (
+            "The CV does not mention a PhD in Physics, but it states that "
+            "Niccolo completed a Ph.D. in Computer Science Engineering."
+        ),
+        (
+            "I cannot determine the favorite pizza topping from the approved "
+            "context, but the CV lists interests including artificial "
+            "intelligence and game development."
+        ),
+        (
+            "Il CV non menziona un dottorato in fisica, ma riporta un Ph.D. "
+            "in Computer Science Engineering."
+        ),
+    ),
+)
+def test_grounded_generator_keeps_grounded_contrastive_answerable_output(
+    provider_answer: str,
+) -> None:
+    provider = FakeProvider(provider_answer)
+    generator = GroundedAnswerGenerator(provider, "chat-model")
+
+    response = _run(
+        generator.generate(
+            AnswerGenerationRequest(
+                question="What can you say from the CV?",
+                decision=_answerable_decision(),
+                language="en",
+            )
+        )
+    )
+
+    assert response.status == ANSWERABLE
+    assert response.answer_text == (
+        f"{provider_answer}\n\n"
+        "Sources: Niccolo Ferrari CV (Experience section)."
+    )
+    assert response.sources == (
+        AnswerSourceReference(
+            source_title="Niccolo Ferrari CV",
+            source_uri="cv://niccolo/main",
+            source_locator="Experience section",
+        ),
+    )
+
+
 def test_not_answerable_decision_returns_fallback_without_provider_call() -> None:
     provider = FakeProvider("should not be used")
     generator = GroundedAnswerGenerator(provider, "chat-model")

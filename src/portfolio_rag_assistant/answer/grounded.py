@@ -10,6 +10,9 @@ from portfolio_rag_assistant.answer.contract import (
     AnswerLanguage,
     AnswerSourceReference,
 )
+from portfolio_rag_assistant.answer.insufficiency import (
+    is_insufficient_context_answer,
+)
 from portfolio_rag_assistant.policy import (
     ANSWERABLE,
     NEEDS_CLARIFICATION,
@@ -36,34 +39,6 @@ Do not add citations or source labels. The application attaches sources
 deterministically.
 Answer in the requested language.
 """
-
-_INSUFFICIENT_CONTEXT_SENTINEL = "INSUFFICIENT_APPROVED_CONTEXT"
-_INSUFFICIENT_CONTEXT_PHRASES = frozenset(
-    (
-        "approved context is insufficient",
-        "available verified context is not enough",
-        "context is not enough",
-        "do not have verified public context",
-        "do not have enough context",
-        "don't have enough context",
-        "do not have enough information",
-        "don't have enough information",
-        "does not provide information",
-        "does not mention",
-        "insufficient context",
-        "not enough context",
-        "not enough information",
-        "cannot answer from the approved context",
-        "can't answer from the approved context",
-        "cannot determine",
-        "can't determine",
-        "non ho contesto pubblico verificato",
-        "contesto insufficiente",
-        "contesto non e sufficiente",
-        "contesto non è sufficiente",
-        "non abbastanza informazioni",
-    )
-)
 
 _LANGUAGE_NAMES: dict[AnswerLanguage, str] = {
     "en": "English",
@@ -141,7 +116,7 @@ class GroundedAnswerGenerator:
             raise AnswerGenerationProviderError("provider chat failed") from error
 
         answer_text = chat_response.message.content.strip()
-        if _is_insufficient_context_answer(answer_text):
+        if is_insufficient_context_answer(answer_text):
             return AnswerGenerationResponse(
                 answer_text=_FALLBACK_TEXT[request.language],
                 status=NOT_ANSWERABLE,
@@ -226,20 +201,6 @@ def _format_source(source: AnswerSourceReference) -> str:
     if source.source_locator is None:
         return source.source_title
     return f"{source.source_title} ({source.source_locator})"
-
-
-def _is_insufficient_context_answer(answer_text: str) -> bool:
-    normalized = " ".join(answer_text.casefold().split())
-    if (
-        _strip_boundary_punctuation(normalized)
-        == _INSUFFICIENT_CONTEXT_SENTINEL.casefold()
-    ):
-        return True
-    return any(phrase in normalized for phrase in _INSUFFICIENT_CONTEXT_PHRASES)
-
-
-def _strip_boundary_punctuation(value: str) -> str:
-    return value.strip(" \t\r\n.!?;:'\"`")
 
 
 def _require_non_empty_text(value: str, field_name: str) -> None:
