@@ -82,6 +82,26 @@ Visitor question records are improvement signals only. A reviewed operator may
 use them to decide that a public source should be curated, but visitor text must
 never be copied directly into `knowledge/profile.json` as a fact.
 
+Aggregate facts are allowed only when they summarize reviewed public source
+material for a real recruiter intent. They must remain source-backed, broad, and
+truth-oriented. Do not add a fact just to satisfy one question wording.
+
+For the tracked CV profile, broad aggregates should cover only the supported M9
+intent groups when the source supports them:
+
+- workplaces and work history from `Professional Experience`;
+- current role and current employer from `Professional Experience`;
+- skills, tools, and specializations from the CV skills sections;
+- education from `Degrees`;
+- publications and research outputs from `Publications and Research Outputs`;
+- public research software and repositories from `Research Software`;
+- public professional links from `Public profile links`.
+
+Before committing aggregate changes, perform a second pass that maps each broad
+aggregate to its source locator and checks that it does not overstate employers,
+roles, dates, degrees, papers, repositories, or contact channels. Private CV
+fields remain excluded even when they appear in the reviewed source file.
+
 When changing the tracked knowledge:
 
 1. Update `knowledge/profile.json` from reviewed public source material.
