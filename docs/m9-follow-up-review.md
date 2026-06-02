@@ -118,6 +118,13 @@ Recommended remediation:
 - update runtime configuration tests so the desired redirect behavior is the
   tested behavior.
 
+Remediation status: implemented by redirecting HTTP requests with the Nginx
+request host and full request URI:
+
+```nginx
+return 308 https://$host$request_uri;
+```
+
 ### 4. Automated `docker compose exec` Without `-T`
 
 Severity: medium.

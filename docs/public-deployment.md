@@ -219,7 +219,9 @@ The certificate flow is:
 
 Certbot stores the service certificate under the fixed certificate name
 `portfolio-rag-assistant`, so Nginx can use stable certificate paths while the
-requested public DNS name remains explicit in `PUBLIC_SERVER_NAME`.
+requested public DNS name remains explicit in `PUBLIC_SERVER_NAME`. The TLS
+HTTP-to-HTTPS redirect preserves the requested host and full request URI; it
+does not hardcode the certificate domain into the Nginx configuration.
 
 Certificate cleanup must require an explicit destructive flag. Normal public
 `down` or `stop` operations must not delete certificates.
