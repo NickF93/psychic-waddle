@@ -1,0 +1,803 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "source_uri": "cv://niccolo/main",
+      "title": "Niccolo Ferrari CV",
+      "reviewed_at": "2026-06-01T00:00:00+00:00"
+    }
+  ],
+  "facts": [
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari is a Senior Machine Learning Engineer and Researcher with a Ph.D. research background.",
+      "source_locator": "Header and About me",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari focuses on industrial computer vision for visual inspection, anomaly detection, segmentation, and production deployment.",
+      "source_locator": "About me",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari designs deep learning models and C++ and Python inference software for real-time inspection systems.",
+      "source_locator": "About me",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari works between applied research and production software, from model design and experiments to machine integration and edge or on-prem deployment.",
+      "source_locator": "About me",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari has published work and open-source research code for GRD-Net, PatchCore-style methods, and graph memory transformers.",
+      "source_locator": "About me",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari's professional workplaces and experience organizations include NAIS S.r.l. in Bologna, Bonfiglioli Engineering in Ferrara, the University of Ferrara in Ferrara for Ph.D. research, and CIAS in Ferrara for a curricular internship.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari currently works at NAIS S.r.l.; his previous professional experience includes Bonfiglioli Engineering, Ph.D. research at the University of Ferrara, and a curricular internship at CIAS.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari's work history includes Senior Machine Learning Engineer and Researcher at NAIS S.r.l., Machine Learning Engineer at Bonfiglioli Engineering, Ph.D. research at the University of Ferrara, and curricular internships at Bonfiglioli Engineering and CIAS.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Since December 2024, Niccolo Ferrari has worked at NAIS S.r.l. in Bologna, Italy as Senior Machine Learning Engineer and Researcher.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "At NAIS S.r.l., Niccolo Ferrari designs and deploys production machine learning and real-time computer vision systems for edge devices.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "At NAIS S.r.l., Niccolo Ferrari built and deployed a C++20 embedded vision system on low-resource edge hardware for food-line counting, classification, measurement, and statistical data collection.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "The NAIS S.r.l. embedded vision system built by Niccolo Ferrari achieved 99.99% reliability.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "At NAIS S.r.l., Niccolo Ferrari leads an industrial machine learning project on vibration-based mechanical data.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "At NAIS S.r.l., Niccolo Ferrari serves as Technical Lead of the AI team.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari's current role is Senior Machine Learning Engineer and Researcher at NAIS S.r.l. in Bologna, Italy, where he also serves as Technical Lead of the AI team.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "As Technical Lead of the AI team at NAIS S.r.l., Niccolo Ferrari coordinates model deployment, applied research, and technical choices for project feasibility.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "From April 2018 to December 2024, Niccolo Ferrari worked at Bonfiglioli Engineering in Ferrara, Italy as a Machine Learning Engineer.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "At Bonfiglioli Engineering, Niccolo Ferrari designed and deployed machine learning and computer vision for pharmaceutical visual inspection.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "At Bonfiglioli Engineering, Niccolo Ferrari used Halcon for algorithmic machine vision.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "At Bonfiglioli Engineering, Niccolo Ferrari used TensorFlow and PyTorch for deep learning on rare-defect cases and larger industrial datasets.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "At Bonfiglioli Engineering, Niccolo Ferrari built a C++ inference runtime for on-board clusters.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "At Bonfiglioli Engineering, Niccolo Ferrari achieved more than 95% out-of-distribution anomaly-detection accuracy in an industrial case.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "At Bonfiglioli Engineering, Niccolo Ferrari managed Linux training and inference servers with high-end NVIDIA GPUs, including two A100-class machines.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "From November 2021 to November 2024, Niccolo Ferrari worked on Ph.D. research in deep learning and computer vision at the University of Ferrara.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari's Ph.D. research focused on out-of-distribution anomaly detection and segmentation.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "During his Ph.D. work, Niccolo Ferrari designed two Python-based architectures.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "One architecture from Niccolo Ferrari's Ph.D. work was deployed through a C++17 inference pipeline for pharmaceutical inspection.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "Niccolo Ferrari's Ph.D. work resulted in two publications.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "From September 2017 to March 2018, Niccolo Ferrari completed a curricular internship at Bonfiglioli Engineering in Ferrara, Italy.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "During his Bonfiglioli Engineering curricular internship, Niccolo Ferrari worked as an HMI Java developer.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "During his Bonfiglioli Engineering curricular internship, Niccolo Ferrari worked on backend and frontend software with an Industry 4.0 SPC toolchain for line workflow control.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "From May 2015 to October 2015, Niccolo Ferrari completed a curricular internship at CIAS in Ferrara, Italy.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "During his CIAS curricular internship, Niccolo Ferrari worked as a JSP web service developer.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "experience",
+      "fact_text": "During his CIAS curricular internship, Niccolo Ferrari deployed a hospital questionnaire system to track healthcare-associated infections.",
+      "source_locator": "Professional Experience",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "education",
+      "fact_text": "Niccolo Ferrari's education includes a Ph.D. in Computer Science Engineering - Deep Learning, a Master's degree in Computer Science and Automation Engineering, and a Bachelor's degree in Computer Science and Electronic Engineering at the University of Ferrara.",
+      "source_locator": "Degrees",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "education",
+      "fact_text": "Since October 2025, Niccolo Ferrari has followed a Game Programming and AI Programming learning path at Digital Bros Game Academy.",
+      "source_locator": "Degrees",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "education",
+      "fact_text": "Niccolo Ferrari's Digital Bros Game Academy learning path is the Learning Path Master Online Game Programming + AI Programming.",
+      "source_locator": "Degrees",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "education",
+      "fact_text": "From November 2021 to April 2025, Niccolo Ferrari completed a Ph.D. in Computer Science Engineering - Deep Learning at the University of Ferrara.",
+      "source_locator": "Degrees",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "education",
+      "fact_text": "Niccolo Ferrari's Ph.D. is an EQF 8 degree focused on deep learning architectures for computer vision applications.",
+      "source_locator": "Degrees",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "education",
+      "fact_text": "From October 2015 to March 2018, Niccolo Ferrari completed a Master's degree in Computer Science and Automation Engineering at the University of Ferrara.",
+      "source_locator": "Degrees",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "education",
+      "fact_text": "Niccolo Ferrari's Master's degree in Computer Science and Automation Engineering is an EQF 7 degree awarded 110/110 cum laude et encomium.",
+      "source_locator": "Degrees",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "education",
+      "fact_text": "From October 2012 to November 2015, Niccolo Ferrari completed a Bachelor's degree in Computer Science and Electronic Engineering at the University of Ferrara.",
+      "source_locator": "Degrees",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "education",
+      "fact_text": "Niccolo Ferrari's Bachelor's degree in Computer Science and Electronic Engineering is an EQF 6 degree awarded 110/110 cum laude.",
+      "source_locator": "Degrees",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's main technical skills combine industrial computer vision, anomaly detection, segmentation, production machine learning, C++ inference, Python training pipelines, PyTorch, TensorFlow, Halcon, OpenCV, ONNX, OpenVINO, TensorRT, Docker, SQL, and Linux deployment.",
+      "source_locator": "Professional Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's areas of specialization include industrial computer vision, visual inspection, anomaly detection, segmentation, production machine learning, and C++ inference.",
+      "source_locator": "Areas of specialization",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's main programming languages are C++, Python, Java, and C.",
+      "source_locator": "Main languages",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses C++ for deep learning inference runtimes, C++ backends, HMI systems, and edge or on-prem deployment.",
+      "source_locator": "Programming",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses Python for deep learning research, training pipelines, tooling, and production machine learning workflows.",
+      "source_locator": "Programming",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses Halcon script for computer vision algorithms deployed on pharmaceutical inspection machines.",
+      "source_locator": "Programming",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses Java for HMI frontends and Industry 4.0 or SCADA plugins.",
+      "source_locator": "Programming",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses C for systems and embedded programming.",
+      "source_locator": "Programming",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses Bash for Linux automation, scripting, and development tooling.",
+      "source_locator": "Programming",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses R for Industry 4.0 tooling and data-oriented libraries.",
+      "source_locator": "Programming",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's main frameworks include PyTorch, TensorFlow, Halcon, OpenCV, and scikit-learn.",
+      "source_locator": "Main frameworks",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses PyTorch and TensorFlow for model training, research prototyping, and deployment workflows in academic and industrial work.",
+      "source_locator": "Frameworks, Ecosystems and Tools",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses Halcon and OpenCV for computer vision work, including Halcon-based algorithmic inspection and OpenCV prototyping and deployment.",
+      "source_locator": "Frameworks, Ecosystems and Tools",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses SQL, including MySQL and PostgreSQL, for production data stores and training-data pipelines.",
+      "source_locator": "Frameworks, Ecosystems and Tools",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses Git, GitHub, and GitLab for branching, code review, collaborative repository management, and release-oriented workflows.",
+      "source_locator": "Frameworks, Ecosystems and Tools",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses Jenkins for CI jobs, build automation, and testing or deployment support.",
+      "source_locator": "Frameworks, Ecosystems and Tools",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses ONNX, OpenVINO, and TensorRT for model export, inference optimization, and deployment on edge and GPU-accelerated targets.",
+      "source_locator": "Frameworks, Ecosystems and Tools",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses Docker for reproducible machine learning environments and deployment support.",
+      "source_locator": "Frameworks, Ecosystems and Tools",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses scikit-learn, NumPy, and Pandas for data processing, machine learning utilities, experiments, analysis, and feature preparation.",
+      "source_locator": "Frameworks, Ecosystems and Tools",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses MLflow and TensorBoard for experiment tracking and training diagnostics.",
+      "source_locator": "Frameworks, Ecosystems and Tools",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses Codex and Claude Code for implementation, refactoring, tests, and review while keeping architecture and validation as his responsibility.",
+      "source_locator": "Frameworks, Ecosystems and Tools",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's operating systems experience includes Linux, FreeBSD, and Windows.",
+      "source_locator": "Operating Systems",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Linux is Niccolo Ferrari's daily development environment and is used by him for on-prem GPU training and inference infrastructure.",
+      "source_locator": "Operating Systems",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari has applied development experience on FreeBSD systems.",
+      "source_locator": "Operating Systems",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's machine learning skills include visual anomaly detection, out-of-distribution anomaly detection, visual inspection, segmentation, GANomaly, PatchCore, GRD-Net, autoencoders, VAE, and knowledge distillation.",
+      "source_locator": "ML Technologies and Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's deep generative model experience includes GANs, variational autoencoders, normalizing flows, nflows, and diffusion models.",
+      "source_locator": "ML Technologies and Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's computer vision architecture experience includes CNNs, ResNet, ViT, and YOLO models.",
+      "source_locator": "ML Technologies and Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari has experience with transformer architectures and local LLM workflows for research experiments.",
+      "source_locator": "ML Technologies and Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's production machine learning deployment skills include edge AI, embedded inference, real-time computer vision, and C++ and Python inference pipelines.",
+      "source_locator": "ML Technologies and Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari builds deep learning systems for visual inspection, anomaly detection, and segmentation, then moves them toward real-time edge or on-prem inference with C++, Python, ONNX, OpenVINO, and TensorRT.",
+      "source_locator": "Professional Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari works with Halcon for pharmaceutical machine-vision algorithms and PyTorch and TensorFlow for deep learning, including PatchCore-style methods and GRD-Net research software.",
+      "source_locator": "Professional Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari translates machine and project requirements into maintainable C++, Python, and Java software, backend services, SQL data flows, tests, and Linux deployment scripts.",
+      "source_locator": "Professional Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari coordinates feasibility and implementation choices for the AI team.",
+      "source_locator": "Professional Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari uses Git, GitHub, GitLab, Docker, Conda, Jenkins, MLflow, TensorBoard, PyTest, Codex, and Claude Code for review, testing, tracking, and reproducible delivery.",
+      "source_locator": "Professional Skills",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's main spoken languages are Italian at native level and English at B2 level.",
+      "source_locator": "Languages",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari has an E.U. Driving License B.",
+      "source_locator": "License",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari's interests include artificial intelligence, deep learning research, game development, electronic circuit design, PCB design, SMD soldering, 3D printing, climbing, bouldering, trekking, Latin, books, films, and cacti cultivation.",
+      "source_locator": "Interests",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari completed courses in TensorFlow Advanced Techniques, TensorFlow 2.0 Practical Advanced, Diffusion Models, Quantization Fundamentals, Quantization in Depth, Physics-Informed Neural Networks, and Graph Neural Networks.",
+      "source_locator": "Certificates and Courses",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari completed C++, systems, and DevOps courses in Modern C++11/14/17, Pure C++20, Data-Oriented C++, ARM CMSIS-RTOS, Git/GitHub, and Jenkins CI/CD.",
+      "source_locator": "Certificates and Courses",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari completed game development courses in Epic Games Game Design, Unreal Engine Fundamentals, and Blueprint Scripting.",
+      "source_locator": "Certificates and Courses",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "skills",
+      "fact_text": "Niccolo Ferrari completed the course Harnessing Ollama local LLMs with Python.",
+      "source_locator": "Certificates and Courses",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "Niccolo Ferrari's publications and research outputs include GRD-Net, Integration of deep generative Anomaly Detection algorithm in high-speed industrial line, the Ph.D. thesis Machine Learning Techniques for Anomaly Detection in Pharmaceutical Quality Control, Mahalanobis PatchCore, and Graph Memory Transformer.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "In 2023, Niccolo Ferrari, Michele Fraccaroli, Evelina Lamma published GRD-Net: Generative-Reconstructive-Discriminative Anomaly Detection with Region of Interest Attention Module in the International Journal of Intelligent Systems.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "The DOI for the 2023 GRD-Net publication is https://doi.org/10.1155/2023/7773481.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "In 2024, Niccolo Ferrari, Nicola Zanarini, Michele Fraccaroli, Alice Bizzarri, Evelina Lamma submitted Integration of deep generative Anomaly Detection algorithm in high-speed industrial line to Springer Nature.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "The SSRN DOI for Integration of deep generative Anomaly Detection algorithm in high-speed industrial line is https://dx.doi.org/10.2139/ssrn.4858664.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "In 2025, Niccolo Ferrari completed the Ph.D. thesis Machine Learning Techniques for Anomaly Detection in Pharmaceutical Quality Control at the University of Ferrara.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "The handle for Niccolo Ferrari's Ph.D. thesis is https://hdl.handle.net/11392/2587174.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "In 2026, Niccolo Ferrari, Oligert Osmani, Evelina Lamma submitted Mahalanobis PatchCore: Covariance-Aware and Streaming-Compatible Industrial Anomaly Detection to EAAI.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "Mahalanobis PatchCore: Covariance-Aware and Streaming-Compatible Industrial Anomaly Detection is available as arXiv:2605.27748 in cs.CV.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "The arXiv DOI for Mahalanobis PatchCore is https://doi.org/10.48550/arXiv.2605.27748.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "In 2026, Nicola Zanarini, Niccolo Ferrari, Evelina Lamma released Graph Memory Transformer as arXiv:2604.23862 in cs.LG.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "The arXiv DOI for Graph Memory Transformer is https://doi.org/10.48550/arXiv.2604.23862.",
+      "source_locator": "Publications and Research Outputs",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "Niccolo Ferrari co-supervised the M.Sc. thesis Improving PatchCore for Visual Anomaly Detection in Pharmaceutical Product Inspection by Oligert Osmani.",
+      "source_locator": "Research Supervision",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "The supervisor of Oligert Osmani's M.Sc. thesis was Evelina Lamma, and the co-supervisors were Niccolo Ferrari and Davide Luisari.",
+      "source_locator": "Research Supervision",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "Niccolo Ferrari's public research software and repositories include GRD-Net, MH-PatchCore, mh-patchcore-tinyedge, Graph Memory Transformer, and AgentOrchestrator.",
+      "source_locator": "Research Software",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "GRD-Net is Niccolo Ferrari's official implementation and industrial high-speed line integration for deep generative anomaly detection.",
+      "source_locator": "Research Software",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "The GRD-Net repository is https://github.com/NickF93/GRD-Net.",
+      "source_locator": "Research Software",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "MH-PatchCore contains PatchCore and Mahalanobis PatchCore code for Niccolo Ferrari's submitted EAAI paper.",
+      "source_locator": "Research Software",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "The MH-PatchCore repository is https://github.com/NickF93/MH-PatchCore.",
+      "source_locator": "Research Software",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "The tiny-edge experiments repository for MH-PatchCore is https://github.com/NickF93/mh-patchcore-tinyedge.",
+      "source_locator": "Research Software",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "Niccolo Ferrari co-authored Graph Memory Transformer source code.",
+      "source_locator": "Research Software",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "The Graph Memory Transformer repository is https://github.com/Nemesis533/GMT-GraphMemoryTransformer.",
+      "source_locator": "Research Software",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "AgentOrchestrator is Niccolo Ferrari's control-plane software for coordinating coding agents in agent-assisted development workflows.",
+      "source_locator": "Research Software",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "The AgentOrchestrator repository is https://github.com/NickF93/AgentOrchestrator.",
+      "source_locator": "Research Software",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "contact",
+      "fact_text": "Niccolo Ferrari's public professional profile links include GitHub, LinkedIn, portfolio website, and ORCID.",
+      "source_locator": "Public profile links",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "contact",
+      "fact_text": "Niccolo Ferrari's public GitHub profile is https://github.com/NickF93.",
+      "source_locator": "Public profile links",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "contact",
+      "fact_text": "Niccolo Ferrari's public LinkedIn profile is https://www.linkedin.com/in/niccolo-ferrari-93bo/.",
+      "source_locator": "Public profile links",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "contact",
+      "fact_text": "Niccolo Ferrari's public portfolio website is https://pigreco.xyz/.",
+      "source_locator": "Public profile links",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "contact",
+      "fact_text": "Niccolo Ferrari's ORCID is https://orcid.org/0000-0002-2578-3211.",
+      "source_locator": "Public profile links",
+      "public_visible": true
+    }
+  ]
+}

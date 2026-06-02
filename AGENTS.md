@@ -1,0 +1,118 @@
+# Repository Agent Instructions
+
+These instructions are mandatory for every automated or assisted change in this
+repository.
+
+## Project Scope
+
+This repository implements a small recruiter-facing Portfolio RAG Assistant.
+It is not a generic autonomous agent platform.
+
+The assistant must retrieve verified context, apply deterministic answer policy,
+and use the LLM only to phrase approved answers.
+
+`docs/architecture.md` is the authoritative architecture contract. Planned or
+implemented changes must not contradict it unless the contract is updated in the
+same change.
+
+## Engineering Constraints
+
+- Keep the system simple, clean, solid, reliable, bounded, and task-specific.
+- Apply SOLID practice as a non-negotiable requirement.
+- Prefer SOLID boundaries over DRY.
+- Do not merge unrelated authorities just to remove repeated code.
+- Keep components decoupled and explicitly defined.
+- Do not mix provider I/O, retrieval, answer policy, answer generation, storage,
+  ingestion, analytics, and API concerns.
+- Do not add legacy code, compatibility shims, deprecated paths, shortcuts, or
+  workarounds.
+- Do not add hidden fallback behavior.
+- Do not add generic agent loops, tool-call loops, or unbounded model-driven
+  execution unless a future explicit plan changes the project scope.
+- Provider-specific payloads must stay inside provider implementations.
+- Configuration must be explicit. Do not add legacy aliases for configuration
+  names.
+- Tests are required for implemented behavior.
+- Documentation must be updated when contracts, architecture, configuration, or
+  public behavior changes.
+
+## Data and Privacy Constraints
+
+- The reviewed knowledge base is the only source of truth.
+- Visitor questions are improvement signals only.
+- Visitor questions must never be automatically promoted into facts.
+- Store no visitor identity outside the submitted question text.
+- Do not store IP addresses, user agents, cookies, session identifiers,
+  frontend identifiers, answer text, answer status, source identifiers,
+  retrieval scores, source kinds, per-question language, or request metadata
+  from visitor traffic.
+- If question collection is implemented, store raw text only for questions that
+  are not answerable from verified context. The raw text may contain personal
+  data typed by the visitor; it must be reviewed and manually deleted by the
+  operator when it is not useful or should not be retained.
+- Question review metadata is limited to admin-owned state, category, note, and
+  timestamps. Review metadata must not be derived from runtime answer,
+  retrieval, provider, browser, session, or network metadata.
+- The public Nginx edge may keep redacted operational access logs containing
+  only timestamp, HTTP method, normalized route path without query string,
+  status code, response byte count, request duration, and allowed browser
+  origin. These logs must never include visitor identity, request bodies, raw
+  questions, query strings, user agents, cookies, API keys, source IDs,
+  retrieval scores, answer status, or answer text.
+- The public Nginx edge may use a volatile IP-derived key in memory only for
+  rate-limit enforcement. It must not log, export, persist, or forward that
+  value.
+
+## Git-Flow Rules
+
+- `main` is for releases only.
+- `develop` is for development integration only.
+- Never commit directly on `main` or `develop`.
+- Never push directly to `main` or `develop`.
+- If the current branch is `main` or `develop`, create or switch to a working
+  branch before making changes.
+- Use only canonical Git-flow branch families:
+  - `feature/<short-name>`
+  - `bugfix/<short-name>`
+  - `release/<version>`
+  - `hotfix/<short-name>`
+- Do not use any non-canonical branch family.
+- Normal work targets `develop`.
+- Every completed item or sprint must be committed immediately after its
+  validation step.
+- Huge milestone-end or implementation-end commits are forbidden.
+- Split work into small, semantically defined commits for each coherent
+  documentation, code, config, test, validation, or tracking change.
+- Do not batch unrelated item groups into one commit just because they belong to
+  the same milestone.
+- Do not leave a completed item or sprint uncommitted unless the user explicitly
+  stops the work before completion.
+- Commit messages must always use the `type(scope): summary` format.
+- Keep commit scope names short and concrete, for example
+  `docs(architecture): define milestone 0 contract`.
+- Commit type is not a branch family. Documentation, tests, refactors, chores,
+  and fixes still use the appropriate commit type while staying on a canonical
+  Git-flow branch.
+- After the first commit for a normal work branch, open a draft pull request to
+  `develop`.
+- Release work uses `release/<version>` branches and may target `main` only with
+  explicit release approval.
+- Tags must use the `v` prefix, for example `v0.1.0`.
+- Merge only through pull requests.
+- Use `gh` outside the sandbox for PR operations when required.
+- Never merge automatically.
+- Never merge without explicit user consent.
+- Never squash merge.
+- Never rebase merge.
+- Use merge commits for PR merges.
+- Never delete the source branch after merge.
+- Do not perform local direct merges into `main` or `develop`.
+
+## Worktree Safety
+
+- Inspect the current branch and worktree before editing.
+- Preserve user changes.
+- Do not revert or overwrite changes made by the user unless explicitly asked.
+- Keep edits scoped to the requested task.
+- If a required action conflicts with these rules, stop and ask for explicit
+  instruction.

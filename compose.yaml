@@ -1,0 +1,215 @@
+name: portfolio-rag-assistant
+
+services:
+  api:
+    build:
+      context: .
+    image: portfolio-rag-assistant:local
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      CHAT_BACKEND: ${CHAT_BACKEND}
+      CHAT_BASE_URL: ${CHAT_BASE_URL}
+      CHAT_API_KEY: ${CHAT_API_KEY}
+      CHAT_MODEL: ${CHAT_MODEL}
+      EMBEDDING_BACKEND: ${EMBEDDING_BACKEND}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K}
+      RETRIEVAL_MIN_SCORE: ${RETRIEVAL_MIN_SCORE}
+      QUESTION_COLLECTION_ENABLED: ${QUESTION_COLLECTION_ENABLED}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000"
+    networks:
+      - runtime
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  nginx:
+    image: nginx:1.27.5-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+    profiles:
+      - public
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${PUBLIC_HTTP_BIND_ADDRESS:?missing PUBLIC_HTTP_BIND_ADDRESS}:${PUBLIC_HTTP_PORT:?missing PUBLIC_HTTP_PORT}:80"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - acme-challenges:/var/www/certbot:ro
+    tmpfs:
+      - /tmp
+    networks:
+      - runtime
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "wget -q -O /dev/null http://127.0.0.1/api/assistant/health"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  nginx-tls:
+    image: nginx:1.27.5-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+    profiles:
+      - public-tls
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${PUBLIC_HTTP_BIND_ADDRESS:?missing PUBLIC_HTTP_BIND_ADDRESS}:${PUBLIC_HTTP_PORT:?missing PUBLIC_HTTP_PORT}:80"
+      - "${PUBLIC_HTTPS_BIND_ADDRESS:?missing PUBLIC_HTTPS_BIND_ADDRESS}:${PUBLIC_HTTPS_PORT:?missing PUBLIC_HTTPS_PORT}:443"
+    volumes:
+      - ./deploy/nginx/nginx-tls.conf:/etc/nginx/nginx.conf:ro
+      - acme-challenges:/var/www/certbot:ro
+      - letsencrypt-certs:/etc/letsencrypt:ro
+    tmpfs:
+      - /tmp
+    networks:
+      - runtime
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "nginx -t"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  certbot:
+    image: certbot/certbot:latest@sha256:0107d084c225631fc64a8313e19adb07275f7296fde338f7dfa93986c80b2e3e
+    profiles:
+      - public
+      - public-tls
+    volumes:
+      - letsencrypt-certs:/etc/letsencrypt
+      - letsencrypt-work:/var/lib/letsencrypt
+      - acme-challenges:/var/www/certbot
+    networks:
+      - runtime
+
+  db:
+    image: pgvector/pgvector:0.8.2-pg17@sha256:feb68f4f15446397d8cac7f4fe48fe4586de83160d1fc48b46283312d1a33966
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./migrations:/migrations:ro
+    networks:
+      - runtime
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  ollama:
+    image: ollama/ollama:latest@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
+    profiles:
+      - ollama
+    volumes:
+      - ollama-models:/root/.ollama
+    networks:
+      - runtime
+    healthcheck:
+      test:
+        - CMD
+        - ollama
+        - list
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  llama-cpp-chat:
+    image: ghcr.io/ggml-org/llama.cpp:server@sha256:1c2e5802addaaf61684532d828664027b5daaf2e2b29943cf338b7005e4ea9ca
+    profiles:
+      - llama-cpp
+    command:
+      - -m
+      - ${LLAMA_CPP_CHAT_MODEL_PATH}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+    volumes:
+      - type: bind
+        source: ${LLAMA_CPP_MODEL_DIR}
+        target: /models
+        read_only: true
+    networks:
+      - runtime
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -fsS
+        - http://127.0.0.1:8080/health
+      interval: 10s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+
+  llama-cpp-embeddings:
+    image: ghcr.io/ggml-org/llama.cpp:server@sha256:1c2e5802addaaf61684532d828664027b5daaf2e2b29943cf338b7005e4ea9ca
+    profiles:
+      - llama-cpp
+    command:
+      - -m
+      - ${LLAMA_CPP_EMBEDDING_MODEL_PATH}
+      - --embedding
+      - --pooling
+      - ${LLAMA_CPP_EMBEDDING_POOLING:-mean}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+    volumes:
+      - type: bind
+        source: ${LLAMA_CPP_MODEL_DIR}
+        target: /models
+        read_only: true
+    networks:
+      - runtime
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -fsS
+        - http://127.0.0.1:8080/health
+      interval: 10s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+
+networks:
+  runtime:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  ollama-models:
+  letsencrypt-certs:
+  letsencrypt-work:
+  acme-challenges:
