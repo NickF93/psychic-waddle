@@ -153,6 +153,13 @@ Recommended remediation:
 - change the automated `exec` calls to `exec -T`;
 - update runtime script tests to assert the headless-safe command shape.
 
+Remediation status:
+
+- completed in follow-up commits on `feature/m9-remediation-plan`;
+- automated lifecycle scripts now disable pseudo-TTY allocation for
+  `docker compose exec` calls;
+- runtime script tests assert the headless-safe command shape.
+
 ### 5. Provider Code Duplication And HTTPX Connection Pooling
 
 Severity: medium.

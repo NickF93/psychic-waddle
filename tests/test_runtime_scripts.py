@@ -171,11 +171,37 @@ def test_migration_command_is_not_duplicated() -> None:
     assert migration_scripts == ["postgres-migrate.sh"]
 
 
+def test_runtime_compose_exec_calls_disable_tty_allocation() -> None:
+    unsafe_exec_lines: list[str] = []
+
+    for path in sorted(SCRIPTS.glob("*.sh")):
+        for line_number, line in enumerate(_read(path).splitlines(), start=1):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if " exec " not in stripped:
+                continue
+            if not (
+                stripped.startswith("compose exec ")
+                or " compose exec " in stripped
+                or stripped.startswith("compose_profile ")
+                or " compose_profile " in stripped
+            ):
+                continue
+            if " exec -T " not in stripped:
+                unsafe_exec_lines.append(f"{path.name}:{line_number}: {stripped}")
+
+    assert unsafe_exec_lines == []
+
+
 def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
     assert "require_backend CHAT_BACKEND ollama" in _script("ollama-chat-setup.sh")
     assert "configured_value CHAT_MODEL" in _script("ollama-chat-setup.sh")
     assert "compose_profile_up_wait ollama ollama" in _script("ollama-chat-setup.sh")
-    assert "ollama pull" in _script("ollama-chat-setup.sh")
+    assert (
+        'compose_profile ollama exec -T ollama ollama pull "$CHAT_MODEL_NAME"'
+        in _script("ollama-chat-setup.sh")
+    )
     assert "require_backend EMBEDDING_BACKEND ollama" in _script(
         "ollama-embeddings-setup.sh"
     )
@@ -185,7 +211,10 @@ def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
     assert "compose_profile_up_wait ollama ollama" in _script(
         "ollama-embeddings-setup.sh"
     )
-    assert "ollama pull" in _script("ollama-embeddings-setup.sh")
+    assert (
+        'compose_profile ollama exec -T ollama ollama pull "$EMBEDDING_MODEL_NAME"'
+        in _script("ollama-embeddings-setup.sh")
+    )
 
     for name in (
         "ollama-chat-start.sh",
@@ -252,8 +281,8 @@ def test_letsencrypt_scripts_use_explicit_tls_contract() -> None:
     assert "--deploy-hook" in renew
     assert "MARKER_MOUNT=/var/lib/portfolio-rag-assistant-renewal" in renew
     assert "no certificates renewed; nginx reload skipped" in renew
-    assert "compose_profile public-tls exec nginx-tls nginx -t" in renew
-    assert "compose_profile public-tls exec nginx-tls nginx -s reload" in renew
+    assert "compose_profile public-tls exec -T nginx-tls nginx -t" in renew
+    assert "compose_profile public-tls exec -T nginx-tls nginx -s reload" in renew
 
 
 def test_public_certbot_operator_scripts_are_bounded() -> None:
