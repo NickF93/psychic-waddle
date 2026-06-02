@@ -1166,6 +1166,91 @@ Items:
 - Checkpoint: M9 is ready for explicit review and merge approval.
 - Final track/doc: `docs/m9-remediation-closure.md`.
 
+### Sprint 9.11: Runtime Retrieval Failure Reopen
+
+Items:
+
+- Documentation: mark the previous M9 closure report as superseded by the live
+  isolated Docker failure.
+- Documentation: record that the failure is retrieval candidate generation, not
+  `llama3.2`, policy, answer generation, tracked knowledge, or embedding
+  freshness.
+- Documentation: record the direct root cause: intent-expanded PostgreSQL
+  search currently builds a space-joined string that
+  `websearch_to_tsquery('english', ...)` interprets as an over-strict AND
+  query.
+- Documentation: record the architectural root cause: retrieval currently
+  applies `RETRIEVAL_MIN_SCORE` before policy sees candidates, contradicting
+  the architecture contract that the threshold belongs to answer policy.
+- Checkpoint: M9 is open until runtime proof passes in the isolated project
+  stack.
+- Final track/doc: update this plan and the M9 closure report.
+
+### Sprint 9.12: Structured Intent Evidence Retrieval
+
+Items:
+
+- Implementation: replace concatenated intent-expanded query text with a
+  controlled OR query built only from profile-owned evidence terms.
+- Implementation: do not include raw visitor question text in intent-expanded
+  retrieval; vector and keyword retrieval already search the question.
+- Implementation: remove broad workplace retrieval expansion terms such as
+  standalone `work` and `worked`; keep precise evidence terms such as
+  `professional workplaces`, `work history`, employer, workplace, company, and
+  employment.
+- Test: assert intent search parameters use OR semantics and no longer contain
+  the raw question.
+- Test: assert unsupported questions do not run intent-expanded retrieval.
+- Checkpoint: natural workplace questions can retrieve source-backed workplace
+  aggregate chunks without increasing `RETRIEVAL_TOP_K`.
+- Final track/doc: update `docs/retrieval.md`.
+
+### Sprint 9.13: Policy-Owned Score Threshold
+
+Items:
+
+- Implementation: remove `RETRIEVAL_MIN_SCORE` from the retriever constructor,
+  state, ranking function, and retrieval result filtering.
+- Implementation: keep `RETRIEVAL_MIN_SCORE` in runtime configuration because
+  `PublicChatService` passes it to `AnswerPolicyRequest`.
+- Implementation: retrieval returns the top ranked candidate contexts; policy
+  alone decides which candidates meet the score threshold.
+- Test: prove retrieval does not discard candidates below policy threshold.
+- Checkpoint: retrieval is candidate generation only, and answerability remains
+  policy-owned.
+- Final track/doc: update retrieval and API composition tests.
+
+### Sprint 9.14: Real PostgreSQL Retrieval Regression Coverage
+
+Items:
+
+- Test: add real PostgreSQL coverage for the workplace failure shape when
+  `TEST_DATABASE_URL` is available.
+- Test: insert tracked-profile-style workplace aggregate chunks plus noisy
+  experience chunks, then prove `Where did Niccolo work?` retrieves workplace
+  evidence with `top_k=4`.
+- Test: keep fake-cursor tests for query shape and RRF behavior, but do not use
+  them as the only authority for PostgreSQL full-text semantics.
+- Checkpoint: real SQL semantics cover the AND/OR regression.
+- Final track/doc: update retrieval tests.
+
+### Sprint 9.15: Isolated Runtime Proof And Server Commands
+
+Items:
+
+- Validation: clean only the project debug stack using
+  `COMPOSE_PROJECT_NAME=psychic-waddle-debug`.
+- Validation: rebuild, reset, migrate, load tracked knowledge, index
+  embeddings, and run public smoke from `/tmp/psychic-waddle-debug.env`.
+- Validation: manually prove workplace, current role, machine-learning skills,
+  and publications questions are `answerable`.
+- Validation: manually prove pizza topping remains `not_answerable`.
+- Validation: clean the isolated project debug stack after proof.
+- Documentation: update final server commands after the runtime proof.
+- Checkpoint: M9 is ready for explicit PR review only after live project smoke
+  passes.
+- Final track/doc: update M9 closure documentation.
+
 Acceptance:
 
 - Answerability depends on intent-complete reviewed evidence, not category-only

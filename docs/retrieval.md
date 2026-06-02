@@ -78,7 +78,7 @@ legacy names, or fallback defaults.
 | Name | Required | Description |
 | --- | --- | --- |
 | `RETRIEVAL_TOP_K` | Yes | Positive maximum number of chunks requested by the application layer. |
-| `RETRIEVAL_MIN_SCORE` | Yes | Minimum accepted combined score from `0` to `1`. |
+| `RETRIEVAL_MIN_SCORE` | Yes | Minimum accepted combined score from `0` to `1`, applied by answer policy after retrieval. |
 
 The configured `EMBEDDING_MODEL` and `EMBEDDING_BACKEND` identify the
 embeddings used by PostgreSQL retrieval. The retriever filters stored
@@ -106,11 +106,11 @@ The retriever:
 
 RRF uses a fixed internal rank constant of `60`. The raw RRF sum is normalized
 to the existing `0..1` `combined_score` contract by dividing by the maximum
-possible RRF score for the channels attempted by that request. This preserves
-rank-fusion ordering while keeping `RETRIEVAL_MIN_SCORE` in the documented
-range. Retrieval must not treat raw vector similarity and `ts_rank_cd` as
-directly comparable confidence scores. Retrieval gathers candidate evidence;
-`AnswerPolicy` decides whether that evidence is intent-complete and answerable.
+possible RRF score for the channels attempted by that request. Retrieval must
+not treat raw vector similarity and `ts_rank_cd` as directly comparable
+confidence scores. Retrieval gathers candidate evidence; `AnswerPolicy` applies
+`RETRIEVAL_MIN_SCORE` and decides whether that evidence is intent-complete and
+answerable.
 
 ## Question Intent Expansion
 
@@ -127,9 +127,11 @@ Question-intent expansion is bounded to supported recruiter intents:
 Each intent profile supplies trigger terms, accepted knowledge categories,
 lexical expansion terms, and required evidence terms. Retrieval may use trigger
 and expansion terms to improve recall. Detected intent expansion is bounded to
-the original question plus the matching profiles' lexical expansion terms and
-searches only those profiles' accepted knowledge categories. Policy uses the
-same profile definitions to verify evidence completeness.
+matching profiles' controlled lexical expansion terms, joined as a PostgreSQL
+full-text OR query, and searches only those profiles' accepted knowledge
+categories. The raw visitor question is not appended to the intent-expanded
+query because vector and keyword retrieval already search the question. Policy
+uses the same profile definitions to verify evidence completeness.
 
 ## Sprint 3.2 Scope
 

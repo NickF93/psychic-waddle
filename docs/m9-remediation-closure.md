@@ -4,6 +4,19 @@ Date: 2026-06-02
 
 Branch: `feature/m9-remediation-plan`
 
+## Status
+
+This closure report is superseded by the Sprint 9.11 runtime finding.
+
+The isolated project Docker stack reproduced a public smoke failure for
+`Where did Niccolo work?` after this report was written. The failure was in
+retrieval candidate generation, not in `llama3.2`, policy, generation, tracked
+knowledge, or embedding freshness.
+
+The original "no runtime code remediation was required" finding below is no
+longer valid. Milestone 9 remains open until Sprint 9.11 and later remediation
+is implemented and validated against the isolated project runtime.
+
 ## Audit Scope
 
 Sprint 9.10 audited the implemented Milestone 9 answerability remediation
