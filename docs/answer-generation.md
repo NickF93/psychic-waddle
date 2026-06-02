@@ -83,12 +83,20 @@ The system prompt requires the model to:
   answer directly from approved context;
 - omit citations and source labels because the application attaches sources.
 
-If an answerable provider response returns the sentinel or clear insufficiency
-wording, the generator deterministically demotes the response to
+If an answerable provider response returns the sentinel or a whole-answer
+insufficiency refusal, the generator deterministically demotes the response to
 `not_answerable`, returns the standard fallback text, and attaches no sources.
-This keeps public status, answer text, and source evidence consistent.
-This demotion is a consistency guard for provider wording only; it is not a
-second policy engine and it must not retrieve, rank, persist, or collect data.
+Whole-answer refusals include bounded English and Italian prose forms such as
+not having enough approved context or being unable to answer from the approved
+context. Embedded negative clauses inside otherwise factual grounded answers do
+not demote the response. For example, an answer may state that the approved
+context does not mention one requested detail and still provide verified facts
+from that context.
+
+This keeps public status, answer text, and source evidence consistent. The
+demotion is a consistency guard for provider wording only; it is not a second
+policy engine and it must not retrieve, rank, persist, collect data, or decide
+whether answering is allowed.
 
 The generator uses explicit request language only:
 

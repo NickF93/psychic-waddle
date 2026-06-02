@@ -62,10 +62,10 @@ Remediation status:
 
 Severity: medium.
 
-Verdict: agree, but the fix needs care.
+Verdict: remediated.
 
-Confirmed in `src/portfolio_rag_assistant/answer/grounded.py:41`. The phrase
-list catches valid text such as:
+Originally confirmed in `src/portfolio_rag_assistant/answer/grounded.py:41`.
+The previous phrase list caught valid text such as:
 
 ```text
 The CV does not mention a PhD, but lists a Master at University of Ferrara.
@@ -73,20 +73,22 @@ The CV does not mention a PhD, but lists a Master at University of Ferrara.
 
 and demotes it to `not_answerable`.
 
-This is lossy hidden behavior. At the same time, this project uses `llama3.2`,
-so replacing the heuristic with sentinel-only matching must be validated against
-the actual small-model behavior. The remediation must preserve the contract that
-an `answerable` response can never contain insufficiency wording, without
-discarding valid contrastive answers.
+Follow-up remediation:
 
-Recommended remediation:
-
-- keep the LLM as final wording only;
-- keep deterministic demotion for the explicit
+- `GroundedAnswerGenerator` now delegates provider wording checks to the
+  answer-package insufficiency classifier;
+- deterministic demotion remains for the explicit
   `INSUFFICIENT_APPROVED_CONTEXT` sentinel;
-- replace the broad substring phrase list with a narrower, tested consistency
-  rule that avoids false positives;
-- add tests for valid negative statements and true insufficiency output.
+- whole-answer English and Italian insufficiency refusals still demote to
+  `not_answerable`;
+- valid contrastive answers with embedded negative clauses remain `answerable`
+  when they include substantive verified facts;
+- tests cover sentinel output, prose refusals, English contrastive answers, and
+  Italian contrastive answers.
+
+Unit tests prove the deterministic guard behavior. They do not claim that the
+deployed `llama3.2` model always emits the sentinel; real-model validation
+remains a separate runtime check.
 
 ### 3. Hardcoded TLS Redirect
 
