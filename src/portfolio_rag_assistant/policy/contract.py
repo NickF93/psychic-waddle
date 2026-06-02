@@ -14,10 +14,6 @@ from portfolio_rag_assistant.intent import (
     profile_for_intent,
     text_satisfies_intent_evidence,
 )
-from portfolio_rag_assistant.knowledge import (
-    ALLOWED_KNOWLEDGE_CATEGORIES,
-    KnowledgeCategory,
-)
 from portfolio_rag_assistant.retrieval import RetrievedContext
 
 AnswerDecisionStatus = Literal["answerable", "not_answerable", "needs_clarification"]
@@ -31,86 +27,6 @@ ANSWER_POLICY_STATUSES: frozenset[str] = frozenset(
 )
 
 MINIMUM_SOURCE_COUNT = 1
-
-_CATEGORY_KEYWORDS: dict[KnowledgeCategory, frozenset[str]] = {
-    "experience": frozenset(
-        (
-            "career",
-            "company",
-            "companies",
-            "employer",
-            "employers",
-            "experience",
-            "job",
-            "jobs",
-            "role",
-            "roles",
-            "work",
-            "worked",
-            "working",
-        )
-    ),
-    "education": frozenset(
-        (
-            "academic",
-            "bachelor",
-            "degree",
-            "education",
-            "master",
-            "phd",
-            "studied",
-            "study",
-            "thesis",
-            "university",
-        )
-    ),
-    "projects": frozenset(
-        (
-            "app",
-            "built",
-            "developed",
-            "github",
-            "portfolio",
-            "project",
-            "projects",
-            "repository",
-            "software",
-        )
-    ),
-    "research": frozenset(
-        (
-            "experiment",
-            "experiments",
-            "paper",
-            "publication",
-            "publications",
-            "research",
-        )
-    ),
-    "skills": frozenset(
-        (
-            "framework",
-            "frameworks",
-            "language",
-            "languages",
-            "skill",
-            "skills",
-            "stack",
-            "technology",
-            "technologies",
-            "tool",
-            "tools",
-        )
-    ),
-    "contact": frozenset(
-        (
-            "contact",
-            "linkedin",
-            "reach",
-            "website",
-        )
-    ),
-}
 
 _BROAD_QUESTION_KEYWORDS = frozenset(
     (
@@ -201,37 +117,29 @@ class DeterministicAnswerPolicy:
             return _not_answerable("low_confidence_context")
 
         question_intents = detect_question_intents(request.question)
-        question_categories = _question_categories(
-            question=request.question,
-            intents=question_intents,
-        )
-        if question_categories:
-            context_categories = {context.category for context in usable_context}
-            if not set(question_categories).issubset(context_categories):
-                return _not_answerable("unsupported_question_category")
-            approved_context = tuple(
-                context
-                for context in usable_context
-                if context.category in question_categories
-            )
-        else:
-            available_categories = {context.category for context in usable_context}
-            if not _is_broad_question(request.question):
-                return _not_answerable("unsupported_question_category")
-            if len(available_categories) > 1:
+        if not question_intents:
+            if _is_broad_question(request.question):
                 return AnswerPolicyDecision(
                     status=NEEDS_CLARIFICATION,
                     reason="ambiguous_question",
                 )
-            approved_context = usable_context
+            return _not_answerable("unsupported_question_category")
 
-        if question_intents:
-            approved_context = _contexts_with_intent_support(
-                approved_context,
-                question_intents,
-            )
-            if not approved_context:
-                return _not_answerable("insufficient_intent_support")
+        question_categories = categories_for_intents(question_intents)
+        context_categories = {context.category for context in usable_context}
+        if not set(question_categories).issubset(context_categories):
+            return _not_answerable("unsupported_question_category")
+        approved_context = tuple(
+            context
+            for context in usable_context
+            if context.category in question_categories
+        )
+        approved_context = _contexts_with_intent_support(
+            approved_context,
+            question_intents,
+        )
+        if not approved_context:
+            return _not_answerable("insufficient_intent_support")
 
         if _source_count(approved_context) < MINIMUM_SOURCE_COUNT:
             return _not_answerable("insufficient_source_support")
@@ -250,26 +158,6 @@ def _contexts_at_or_above_score(
     return tuple(
         context for context in contexts if context.score.combined_score >= min_score
     )
-
-
-def _infer_question_categories(question: str) -> tuple[KnowledgeCategory, ...]:
-    words = _normalized_words(question)
-    categories = tuple(
-        category
-        for category in sorted(ALLOWED_KNOWLEDGE_CATEGORIES)
-        if words & _CATEGORY_KEYWORDS[category]
-    )
-    return categories
-
-
-def _question_categories(
-    *,
-    question: str,
-    intents: tuple[QuestionIntent, ...],
-) -> tuple[KnowledgeCategory, ...]:
-    if intents:
-        return categories_for_intents(intents)
-    return _infer_question_categories(question)
 
 
 def _contexts_with_intent_support(

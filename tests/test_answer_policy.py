@@ -211,6 +211,55 @@ def test_policy_allows_current_role_question_with_current_context() -> None:
     assert decision.approved_context[0].chunk_id == 1
 
 
+def test_policy_allows_professional_overview_with_matching_evidence() -> None:
+    chunk_text = (
+        "experience: Niccolo Ferrari is a Senior Machine Learning Engineer "
+        "and Researcher with a Ph.D. research background."
+    )
+
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="What is Niccolo's experience?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    chunk_text=chunk_text,
+                    combined_score=0.96,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == ANSWERABLE
+    assert decision.approved_context[0].chunk_text == chunk_text
+
+
+def test_policy_rejects_professional_overview_with_category_only_context() -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="What is Niccolo's experience?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    chunk_text=(
+                        "experience: Niccolo Ferrari has public profile "
+                        "information."
+                    ),
+                    combined_score=0.99,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "insufficient_intent_support"
+    assert decision.approved_context == ()
+
+
 @pytest.mark.parametrize(
     ("question", "category", "chunk_text"),
     (
@@ -443,6 +492,51 @@ def test_policy_asks_for_clarification_on_broad_multi_category_question() -> Non
 
     assert decision.status == NEEDS_CLARIFICATION
     assert decision.reason == "ambiguous_question"
+    assert decision.approved_context == ()
+
+
+def test_policy_asks_for_clarification_on_generic_broad_question() -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="Tell me about Niccolo",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    chunk_text=(
+                        "experience: Niccolo Ferrari is a Senior Machine "
+                        "Learning Engineer and Researcher."
+                    ),
+                    combined_score=0.91,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NEEDS_CLARIFICATION
+    assert decision.reason == "ambiguous_question"
+    assert decision.approved_context == ()
+
+
+def test_policy_rejects_category_keyword_question_without_supported_profile() -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="What jobs does Niccolo have?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    chunk_text="experience: Niccolo worked at NAIS S.r.l.",
+                    combined_score=0.99,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "unsupported_question_category"
     assert decision.approved_context == ()
 
 
