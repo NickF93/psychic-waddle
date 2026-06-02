@@ -1088,6 +1088,8 @@ Items:
 
 - Documentation: keep `knowledge/profile.json` as the first complete tracked
   reviewed profile.
+- Review: audit current tracked profile facts against
+  `../CV/CV/CVNiccoloFerrari_short.tex` and the shared M9 intent profiles.
 - Implementation: add or refine only source-backed aggregate facts that express
   real recruiter intents.
 - Implementation: keep workplace/current-role/skills/education/publications/
@@ -1101,7 +1103,28 @@ Items:
 - Checkpoint: broad recruiter questions have source-backed broad chunks.
 - Final track/doc: update knowledge maintenance docs.
 
-### Sprint 9.8: Runtime Acceptance And Public Smoke
+### Sprint 9.8: Knowledge Content Double Audit
+
+Items:
+
+- Review: perform a second pass over the final tracked profile after Sprint 9.7
+  changes.
+- Review: map every broad aggregate group to a CV section or source locator that
+  supports it.
+- Review: confirm there are no hallucinated employers, titles, dates, degrees,
+  papers, repositories, contact channels, private fields, visitor questions, or
+  recruiter-derived raw text.
+- Test: every required broad recruiter intent has at least one aggregate fact.
+- Test: each aggregate fact uses the category accepted by the matching intent
+  profile and satisfies its required evidence terms.
+- Validation: run tracked knowledge validation and focused tracked-knowledge
+  tests after the second pass.
+- Checkpoint: the committed profile is source-backed, privacy-safe, and not
+  tuned to one question wording.
+- Final track/doc: document aggregate review rules if the maintenance workflow
+  needs clarification.
+
+### Sprint 9.9: Runtime Acceptance And Public Smoke
 
 Items:
 
@@ -1122,7 +1145,7 @@ Items:
 - Checkpoint: the VPS upgrade path detects the original workplace regression.
 - Final track/doc: update public deployment and runtime docs.
 
-### Sprint 9.9: Full Remediation Audit And Closure
+### Sprint 9.10: Full Remediation Audit And Closure
 
 Items:
 
