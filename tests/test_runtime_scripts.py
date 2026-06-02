@@ -533,10 +533,12 @@ def test_public_smoke_supports_local_default_and_public_override() -> None:
     assert "PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION" in smoke
     assert '{"question":"What is Niccolo favorite pizza topping?","language":"en"}' in smoke
     assert '{"code": "question_recorded"}' in smoke
-    assert '"answerable", "not_answerable", "needs_clarification"' in smoke
     assert "PUBLIC_DIRECT_API_PROBE_URL" in smoke
     assert "2??) fail" in smoke
     assert "direct API probe skipped" in smoke
+    assert "json_workplace_answer_is_valid" in smoke
+    assert "workplace smoke expected answerable status" in smoke
+    assert "workplace smoke missing expected employer evidence" in smoke
 
 
 def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> None:
@@ -560,6 +562,7 @@ def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> N
     assert "unexpected origin rejected: https://example.invalid" in result.stdout
     assert "direct API probe passed: http://public-api-closed:8000/health returned 000" in result.stdout
     assert "public smoke passed: http://127.0.0.1:18080" in result.stdout
+    assert "question collection smoke skipped" in result.stdout
 
     calls = [json.loads(line) for line in fake_curl_log.read_text().splitlines()]
     assert any("origin: https://pigreco.xyz" in call for call in calls)
@@ -569,6 +572,82 @@ def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> N
     assert any("http://127.0.0.1:18080/api/assistant/ready" in call for call in calls)
     assert any("http://127.0.0.1:18080/api/assistant/chat" in call for call in calls)
     assert any("http://public-api-closed:8000/health" in call for call in calls)
+    assert not any(
+        any("favorite pizza topping" in part for part in call)
+        for call in calls
+    )
+
+
+def test_public_smoke_fails_when_workplace_chat_is_not_answerable(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["FAKE_CURL_WORKPLACE_RESPONSE"] = (
+        '{"status":"not_answerable","answer":"No verified context.","notices":[]}'
+    )
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert "workplace smoke expected answerable status" in result.stderr
+    assert "No verified context" not in result.stderr
+
+
+def test_public_smoke_fails_when_workplace_answer_lacks_expected_evidence(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["FAKE_CURL_WORKPLACE_RESPONSE"] = (
+        '{"status":"answerable","answer":"Niccolo worked at NAIS S.r.l.","notices":[]}'
+    )
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert "workplace smoke missing expected employer evidence" in result.stderr
+    assert "Niccolo worked at NAIS" not in result.stderr
+
+
+def test_public_smoke_fails_when_workplace_answer_lacks_nais_evidence(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["FAKE_CURL_WORKPLACE_RESPONSE"] = (
+        '{"status":"answerable","answer":"Niccolo worked at Bonfiglioli Engineering.","notices":[]}'
+    )
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert "workplace smoke missing expected employer evidence" in result.stderr
+    assert "Bonfiglioli Engineering" not in result.stderr
 
 
 def test_public_smoke_can_validate_question_collection_notice(
@@ -596,6 +675,56 @@ def test_public_smoke_can_validate_question_collection_notice(
         any("What is Niccolo favorite pizza topping?" in part for part in call)
         for call in calls
     )
+
+
+def test_public_smoke_question_collection_requires_not_answerable(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION"] = "true"
+    env["FAKE_CURL_QUESTION_COLLECTION_RESPONSE"] = (
+        '{"status":"answerable","answer":"Wrong answer.","notices":[]}'
+    )
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert "question collection smoke expected not_answerable status" in result.stderr
+    assert "Wrong answer" not in result.stderr
+
+
+def test_public_smoke_question_collection_requires_recorded_notice(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION"] = "true"
+    env["FAKE_CURL_QUESTION_COLLECTION_RESPONSE"] = (
+        '{"status":"not_answerable","answer":"No verified context.","notices":[]}'
+    )
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert "question collection smoke expected question_recorded notice" in result.stderr
+    assert "No verified context" not in result.stderr
 
 
 def test_public_smoke_fails_when_direct_api_probe_returns_success(
@@ -716,9 +845,15 @@ elif url.endswith("/api/assistant/ready"):
     print('{"status":"ready"}')
 elif url.endswith("/api/assistant/chat"):
     if "favorite pizza topping" in body:
-        print('{"status":"not_answerable","answer":"No verified context.","notices":[{"code":"question_recorded"}]}')
+        print(os.environ.get(
+            "FAKE_CURL_QUESTION_COLLECTION_RESPONSE",
+            '{"status":"not_answerable","answer":"No verified context.","notices":[{"code":"question_recorded"}]}',
+        ))
     else:
-        print('{"status":"answerable","answer":"OK","notices":[]}')
+        print(os.environ.get(
+            "FAKE_CURL_WORKPLACE_RESPONSE",
+            '{"status":"answerable","answer":"Niccolo worked at NAIS S.r.l. and Bonfiglioli Engineering.","notices":[]}',
+        ))
 else:
     print(f"unexpected curl args: {args}", file=sys.stderr)
     sys.exit(2)

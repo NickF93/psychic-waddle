@@ -25,18 +25,29 @@ json_status_is() {
     python3 -c 'import json, sys; data = json.load(sys.stdin); assert data.get("status") == sys.argv[1], data' "$EXPECTED_STATUS"
 }
 
-json_chat_status_is_public() {
-    python3 -c 'import json, sys; data = json.load(sys.stdin); assert data.get("status") in {"answerable", "not_answerable", "needs_clarification"}, data; assert isinstance(data.get("answer"), str), data'
+json_workplace_answer_is_valid() {
+    python3 -c 'import json, sys
+data = json.load(sys.stdin)
+assert data.get("status") == "answerable", "workplace smoke expected answerable status"
+answer = data.get("answer")
+assert isinstance(answer, str), "workplace smoke expected string answer"
+normalized = answer.casefold()
+missing = [
+    evidence
+    for evidence in ("nais", "bonfiglioli")
+    if evidence not in normalized
+]
+assert not missing, "workplace smoke missing expected employer evidence"'
 }
 
 json_question_collection_notice_is_present() {
     python3 -c 'import json, sys
 data = json.load(sys.stdin)
-assert data.get("status") == "not_answerable", data
-assert isinstance(data.get("answer"), str), data
+assert data.get("status") == "not_answerable", "question collection smoke expected not_answerable status"
+assert isinstance(data.get("answer"), str), "question collection smoke expected string answer"
 notices = data.get("notices")
-assert isinstance(notices, list), data
-assert {"code": "question_recorded"} in notices, data'
+assert isinstance(notices, list), "question collection smoke expected notices list"
+assert {"code": "question_recorded"} in notices, "question collection smoke expected question_recorded notice"'
 }
 
 curl_headers_status() {
@@ -110,7 +121,7 @@ CHAT_RESPONSE=$(curl -fsS -X POST "$PUBLIC_SMOKE_BASE_URL/api/assistant/chat" \
     -H "content-type: application/json" \
     -H "origin: $PUBLIC_SMOKE_ALLOWED_ORIGIN" \
     -d "$CHAT_BODY")
-printf '%s\n' "$CHAT_RESPONSE" | json_chat_status_is_public
+printf '%s\n' "$CHAT_RESPONSE" | json_workplace_answer_is_valid
 
 if [ "$PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION" = true ]; then
     QUESTION_COLLECTION_RESPONSE=$(curl -fsS -X POST "$PUBLIC_SMOKE_BASE_URL/api/assistant/chat" \
