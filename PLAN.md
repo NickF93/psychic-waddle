@@ -1164,7 +1164,7 @@ Items:
   - "What publications does Niccolo have?" returns `answerable`.
   - "What is Niccolo's favorite pizza topping?" returns `not_answerable`.
 - Checkpoint: M9 is ready for explicit review and merge approval.
-- Final track/doc: remediation report or updated release notes.
+- Final track/doc: `docs/m9-remediation-closure.md`.
 
 Acceptance:
 
@@ -1176,7 +1176,7 @@ Acceptance:
   destruction.
 - Public smoke catches the original workplace failure mode.
 - Unsupported personal or off-topic questions remain safely not answerable.
-- Authoritative docs agree with implemented M8 privacy behavior and planned M9
+- Authoritative docs agree with implemented M8 privacy behavior and implemented M9
   remediation architecture.
 
 ---
