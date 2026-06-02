@@ -15,6 +15,7 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
     intents = tuple(profile.intent for profile in QUESTION_INTENT_PROFILES)
 
     assert intents == (
+        "professional_overview",
         "workplace",
         "current_role",
         "skills",
@@ -29,6 +30,9 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
 @pytest.mark.parametrize(
     ("question", "expected_intents"),
     (
+        ("What is Niccolo's experience?", ("professional_overview",)),
+        ("What is his professional background?", ("professional_overview",)),
+        ("Can you summarize his career?", ("professional_overview",)),
         ("Where did Niccolo work?", ("workplace",)),
         ("Who employs him now?", ("current_role",)),
         ("What is his current role?", ("current_role",)),
@@ -48,6 +52,9 @@ def test_detect_question_intents_for_natural_recruiter_phrasings(
 @pytest.mark.parametrize(
     "question",
     (
+        "Tell me about Niccolo",
+        "Describe Niccolo",
+        "Give me an overview of his profile",
         "What is his favorite pizza topping?",
         "What is his private phone number?",
         "What is his home address?",
@@ -62,7 +69,9 @@ def test_detect_question_intents_rejects_unsupported_questions(
 
 
 def test_categories_for_intents_returns_stable_unique_categories() -> None:
-    assert categories_for_intents(("workplace", "current_role")) == ("experience",)
+    assert categories_for_intents(
+        ("professional_overview", "workplace", "current_role")
+    ) == ("experience",)
     assert categories_for_intents(("publications", "projects", "contact")) == (
         "research",
         "projects",
@@ -84,6 +93,17 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
 @pytest.mark.parametrize(
     ("text", "intent"),
     (
+        (
+            "Niccolo Ferrari is a Senior Machine Learning Engineer and Researcher "
+            "with a Ph.D. research background.",
+            "professional_overview",
+        ),
+        (
+            "Niccolo Ferrari's work history includes Senior Machine Learning "
+            "Engineer at NAIS S.r.l. and Machine Learning Engineer at "
+            "Bonfiglioli Engineering.",
+            "professional_overview",
+        ),
         (
             "Niccolo Ferrari worked at NAIS S.r.l. in Bologna.",
             "workplace",
@@ -113,6 +133,10 @@ def test_text_satisfies_intent_evidence_uses_required_terms(
 @pytest.mark.parametrize(
     ("text", "intent"),
     (
+        (
+            "experience: Niccolo Ferrari has public profile information.",
+            "professional_overview",
+        ),
         (
             "Niccolo Ferrari worked on Ph.D. research in deep learning.",
             "workplace",

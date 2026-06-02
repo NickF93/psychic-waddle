@@ -13,6 +13,7 @@ from portfolio_rag_assistant.knowledge import (
 )
 
 QuestionIntent = Literal[
+    "professional_overview",
     "workplace",
     "current_role",
     "skills",
@@ -133,6 +134,59 @@ def _require_non_empty_terms(value: frozenset[str], field_name: str) -> None:
 
 
 QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
+    QuestionIntentProfile(
+        intent="professional_overview",
+        accepted_categories=("experience",),
+        trigger_groups=(
+            frozenset(
+                (
+                    "background",
+                    "career",
+                    "experience",
+                )
+            ),
+        ),
+        lexical_expansion_terms=frozenset(
+            (
+                "career",
+                "current role",
+                "professional background",
+                "professional experience",
+                "professional profile",
+                "responsibilities",
+                "role",
+                "roles",
+                "work experience",
+                "work history",
+            )
+        ),
+        required_evidence_groups=(
+            frozenset(
+                (
+                    "built",
+                    "coordinates",
+                    "current role",
+                    "currently works",
+                    "deployed",
+                    "designed",
+                    "engineer",
+                    "internship",
+                    "internships",
+                    "leads",
+                    "machine learning engineer",
+                    "ph d research",
+                    "professional experience",
+                    "research background",
+                    "researcher",
+                    "senior machine learning engineer",
+                    "technical lead",
+                    "work history",
+                    "worked at",
+                    "works at",
+                )
+            ),
+        ),
+    ),
     QuestionIntentProfile(
         intent="workplace",
         accepted_categories=("experience",),
