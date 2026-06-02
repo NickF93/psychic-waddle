@@ -166,6 +166,11 @@ Production HTTPS smoke uses an explicit base URL:
 PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-smoke.sh
 ```
 
+The public smoke script requires "Where did Niccolo work?" to return
+`answerable` and to mention both NAIS and Bonfiglioli. This catches stale
+knowledge, stale embeddings, retrieval, policy, or generation regressions on the
+tracked profile.
+
 Question collection notice validation is opt-in because it writes one pending
 review record:
 

@@ -279,21 +279,19 @@ The smoke script validates:
 - CORS preflight rejection for an unexpected origin;
 - `GET /api/assistant/health` through Nginx;
 - `GET /api/assistant/ready` through Nginx;
-- `POST /api/assistant/chat` through Nginx;
+- `POST /api/assistant/chat` through Nginx using "Where did Niccolo work?";
+- `answerable` status for the workplace smoke question;
+- workplace answer evidence containing both NAIS and Bonfiglioli from the
+  tracked profile;
 - optional question collection notice validation through
   `PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=true`;
 - optional direct API-port exposure through `PUBLIC_DIRECT_API_PROBE_URL`.
 
-Milestone 9 must harden this smoke path so it also detects answerability
-regressions against tracked knowledge:
-
-- a known workplace question, such as "Where did Niccolo work?", returns
-  `answerable`;
-- the workplace answer contains source-backed employer evidence from the tracked
-  profile;
-- an unsupported personal question remains `not_answerable`;
-- question collection notice validation stays opt-in because it intentionally
-  records an unanswered question.
+The unsupported personal-question check is intentionally tied to
+`PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=true`. That opt-in path sends "What is
+Niccolo's favorite pizza topping?", requires `not_answerable`, and requires the
+`question_recorded` notice. It records one pending question review event when
+question collection is enabled.
 
 Expected output for a normal production smoke run without the optional direct
 API probe:
@@ -302,6 +300,7 @@ API probe:
 cors preflight passed: https://pigreco.xyz
 cors preflight passed: https://www.pigreco.xyz
 unexpected origin rejected: https://example.invalid
+workplace answerability smoke passed
 direct API probe skipped: set PUBLIC_DIRECT_API_PROBE_URL to check public port 8000
 public smoke passed: https://vps.madnick.ovh
 ```

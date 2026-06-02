@@ -466,6 +466,7 @@ Expected output without the optional direct API-port probe:
 cors preflight passed: https://pigreco.xyz
 cors preflight passed: https://www.pigreco.xyz
 unexpected origin rejected: https://example.invalid
+workplace answerability smoke passed
 direct API probe skipped: set PUBLIC_DIRECT_API_PROBE_URL to check public port 8000
 public smoke passed: https://vps.madnick.ovh
 ```
