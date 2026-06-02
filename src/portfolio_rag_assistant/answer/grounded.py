@@ -44,11 +44,17 @@ _INSUFFICIENT_CONTEXT_PHRASES = frozenset(
         "available verified context is not enough",
         "context is not enough",
         "do not have verified public context",
+        "do not have enough context",
+        "don't have enough context",
+        "do not have enough information",
+        "don't have enough information",
         "does not provide information",
         "does not mention",
         "insufficient context",
         "not enough context",
         "not enough information",
+        "cannot answer from the approved context",
+        "can't answer from the approved context",
         "cannot determine",
         "can't determine",
         "non ho contesto pubblico verificato",
@@ -224,9 +230,16 @@ def _format_source(source: AnswerSourceReference) -> str:
 
 def _is_insufficient_context_answer(answer_text: str) -> bool:
     normalized = " ".join(answer_text.casefold().split())
-    if normalized == _INSUFFICIENT_CONTEXT_SENTINEL.casefold():
+    if (
+        _strip_boundary_punctuation(normalized)
+        == _INSUFFICIENT_CONTEXT_SENTINEL.casefold()
+    ):
         return True
     return any(phrase in normalized for phrase in _INSUFFICIENT_CONTEXT_PHRASES)
+
+
+def _strip_boundary_punctuation(value: str) -> str:
+    return value.strip(" \t\r\n.!?;:'\"`")
 
 
 def _require_non_empty_text(value: str, field_name: str) -> None:

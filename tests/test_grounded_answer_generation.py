@@ -90,9 +90,13 @@ def test_grounded_generator_prompt_uses_only_approved_context() -> None:
     "provider_answer",
     (
         "INSUFFICIENT_APPROVED_CONTEXT",
+        "  insufficient_approved_context.  ",
         "The approved context is insufficient to answer that.",
         "The available verified context is not enough to determine that.",
+        "I don't have enough context to answer that reliably.",
+        "I cannot answer from the approved context.",
         "Non ho contesto pubblico verificato per rispondere.",
+        "Il contesto non è sufficiente per rispondere.",
     ),
 )
 def test_grounded_generator_demotes_insufficient_answerable_output(
@@ -117,6 +121,7 @@ def test_grounded_generator_demotes_insufficient_answerable_output(
     )
     assert response.sources == ()
     assert len(provider.chat_requests) == 1
+    assert provider.embed_requests == ()
 
 
 def test_not_answerable_decision_returns_fallback_without_provider_call() -> None:
