@@ -116,6 +116,30 @@ def test_policy_rejects_category_match_without_intent_support() -> None:
     assert decision.approved_context == ()
 
 
+def test_policy_rejects_workplace_question_with_non_workplace_work_context() -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="Where did Niccolo work?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    chunk_text=(
+                        "experience: Niccolo worked on Ph.D. research in "
+                        "deep learning and computer vision."
+                    ),
+                    combined_score=0.98,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "insufficient_intent_support"
+    assert decision.approved_context == ()
+
+
 def test_policy_allows_workplace_question_with_work_history_context() -> None:
     decision = DeterministicAnswerPolicy().decide(
         AnswerPolicyRequest(
@@ -185,6 +209,55 @@ def test_policy_allows_current_role_question_with_current_context() -> None:
 
     assert decision.status == ANSWERABLE
     assert decision.approved_context[0].chunk_id == 1
+
+
+def test_policy_allows_professional_overview_with_matching_evidence() -> None:
+    chunk_text = (
+        "experience: Niccolo Ferrari is a Senior Machine Learning Engineer "
+        "and Researcher with a Ph.D. research background."
+    )
+
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="What is Niccolo's experience?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    chunk_text=chunk_text,
+                    combined_score=0.96,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == ANSWERABLE
+    assert decision.approved_context[0].chunk_text == chunk_text
+
+
+def test_policy_rejects_professional_overview_with_category_only_context() -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="What is Niccolo's experience?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    chunk_text=(
+                        "experience: Niccolo Ferrari has public profile "
+                        "information."
+                    ),
+                    combined_score=0.99,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "insufficient_intent_support"
+    assert decision.approved_context == ()
 
 
 @pytest.mark.parametrize(
@@ -260,6 +333,61 @@ def test_policy_allows_common_recruiter_intents_with_matching_evidence(
     assert decision.approved_context[0].chunk_text == chunk_text
 
 
+@pytest.mark.parametrize(
+    ("question", "category", "chunk_text"),
+    (
+        (
+            "What are Niccolo's main machine learning skills?",
+            "skills",
+            "skills: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "What is Niccolo's education?",
+            "education",
+            "education: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "What publications does Niccolo have?",
+            "research",
+            "research: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "What research software does Niccolo publish?",
+            "projects",
+            "projects: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "Where can I find Niccolo's public profile links?",
+            "contact",
+            "contact: Niccolo Ferrari has public profile information.",
+        ),
+    ),
+)
+def test_policy_rejects_common_recruiter_intents_with_category_only_context(
+    question: str,
+    category: str,
+    chunk_text: str,
+) -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question=question,
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category=category,
+                    chunk_text=chunk_text,
+                    combined_score=0.99,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "insufficient_intent_support"
+    assert decision.approved_context == ()
+
+
 def test_policy_treats_github_repository_question_as_project_intent() -> None:
     decision = DeterministicAnswerPolicy().decide(
         AnswerPolicyRequest(
@@ -283,6 +411,31 @@ def test_policy_treats_github_repository_question_as_project_intent() -> None:
     assert tuple(context.category for context in decision.approved_context) == (
         "projects",
     )
+
+
+def test_policy_rejects_private_email_question_even_with_contact_context() -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="What is Niccolo's private email?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="contact",
+                    chunk_text=(
+                        "contact: Niccolo Ferrari's public professional profile "
+                        "links include GitHub, LinkedIn, portfolio website, and "
+                        "ORCID."
+                    ),
+                    combined_score=0.96,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "unsupported_question_category"
+    assert decision.approved_context == ()
 
 
 @pytest.mark.parametrize(
@@ -339,6 +492,51 @@ def test_policy_asks_for_clarification_on_broad_multi_category_question() -> Non
 
     assert decision.status == NEEDS_CLARIFICATION
     assert decision.reason == "ambiguous_question"
+    assert decision.approved_context == ()
+
+
+def test_policy_asks_for_clarification_on_generic_broad_question() -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="Tell me about Niccolo",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    chunk_text=(
+                        "experience: Niccolo Ferrari is a Senior Machine "
+                        "Learning Engineer and Researcher."
+                    ),
+                    combined_score=0.91,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NEEDS_CLARIFICATION
+    assert decision.reason == "ambiguous_question"
+    assert decision.approved_context == ()
+
+
+def test_policy_rejects_category_keyword_question_without_supported_profile() -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="What jobs does Niccolo have?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="experience",
+                    chunk_text="experience: Niccolo worked at NAIS S.r.l.",
+                    combined_score=0.99,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "unsupported_question_category"
     assert decision.approved_context == ()
 
 

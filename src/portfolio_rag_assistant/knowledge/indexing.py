@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -32,12 +33,12 @@ async def index_embeddings(
     model: str,
     batch_size: int = 32,
 ) -> EmbeddingIndexResult:
-    """Generate embeddings for public chunks missing the selected backend/model."""
+    """Generate embeddings for public chunks missing or stale for backend/model."""
 
     if batch_size <= 0:
         raise EmbeddingIndexingError("batch_size must be positive")
 
-    chunks = store.list_public_chunks_missing_embedding(backend, model)
+    chunks = store.list_public_chunks_requiring_embedding(backend, model)
     indexed_count = 0
 
     for chunk_batch in _batched(chunks, batch_size):
@@ -53,13 +54,21 @@ async def index_embeddings(
             backend=backend,
             model=model,
             embeddings=tuple(
-                ChunkEmbeddingInput(chunk_id=chunk.id, embedding=embedding)
+                ChunkEmbeddingInput(
+                    chunk_id=chunk.id,
+                    chunk_text_hash=_chunk_text_hash(chunk.chunk_text),
+                    embedding=embedding,
+                )
                 for chunk, embedding in zip(chunk_batch, response.embeddings, strict=True)
             ),
         )
         indexed_count += len(chunk_batch)
 
     return EmbeddingIndexResult(indexed_count=indexed_count)
+
+
+def _chunk_text_hash(chunk_text: str) -> str:
+    return hashlib.sha256(chunk_text.encode("utf-8")).hexdigest()
 
 
 def _batched(

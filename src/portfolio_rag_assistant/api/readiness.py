@@ -73,10 +73,17 @@ def _require_schema(connection: ReadinessConnection) -> None:
             to_regclass('public.sources') IS NOT NULL,
             to_regclass('public.facts') IS NOT NULL,
             to_regclass('public.chunks') IS NOT NULL,
-            to_regclass('public.chunk_embeddings') IS NOT NULL
+            to_regclass('public.chunk_embeddings') IS NOT NULL,
+            EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'chunk_embeddings'
+                  AND column_name = 'chunk_text_hash'
+            )
         """
     ).fetchone()
-    if row != (True, True, True, True):
+    if row != (True, True, True, True, True):
         raise ReadinessCheckError("knowledge schema is not ready")
 
 
@@ -98,11 +105,24 @@ def _require_embedding_availability(
         """
         SELECT EXISTS (
             SELECT 1
-            FROM chunk_embeddings
-            JOIN chunks ON chunks.id = chunk_embeddings.chunk_id
+            FROM chunks
             WHERE chunks.public_visible = true
-              AND chunk_embeddings.embedding_backend = %s
-              AND chunk_embeddings.embedding_model = %s
+        )
+        AND NOT EXISTS (
+            SELECT 1
+            FROM chunks
+            WHERE chunks.public_visible = true
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM chunk_embeddings
+                  WHERE chunk_embeddings.chunk_id = chunks.id
+                    AND chunk_embeddings.embedding_backend = %s
+                    AND chunk_embeddings.embedding_model = %s
+                    AND chunk_embeddings.chunk_text_hash = encode(
+                        digest(convert_to(chunks.chunk_text, 'UTF8'), 'sha256'),
+                        'hex'
+                    )
+              )
         )
         """,
         (embedding_backend, embedding_model),

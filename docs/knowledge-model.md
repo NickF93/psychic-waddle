@@ -14,8 +14,10 @@ I/O, API behavior, or anonymous question collection.
 Schema changes are raw SQL migrations in `migrations/`, applied in
 lexicographic order.
 
-The initial schema requires PostgreSQL with the `pgvector` extension available.
-Container setup and runtime migration execution are handled by later sprints.
+The schema requires PostgreSQL with the `pgvector` and `pgcrypto` extensions
+available. `pgcrypto` is used only to backfill deterministic embedding content
+hashes during migration. Container setup and runtime migration execution are
+handled by later sprints.
 
 ## Tables
 
@@ -70,12 +72,18 @@ Required fields:
 - `chunk_id`: required reference to `chunks`.
 - `embedding_backend`: one of `ollama`, `llama-cpp`, or `openai-compatible`.
 - `embedding_model`: exact embedding model name used for the vector.
+- `chunk_text_hash`: SHA-256 hex digest of the exact chunk text embedded.
 - `embedding_dimension`: vector dimension recorded for validation.
 - `embedding`: `pgvector` value.
 
 Embeddings are unique per chunk, backend, and model. This supports multiple
 embedding backends without forcing one global vector dimension. Retrieval must
 filter by the configured backend and model before comparing vectors.
+
+An embedding is current only when `chunk_text_hash` matches the current
+`chunks.chunk_text` value. Knowledge reloads may update chunk text in place;
+`knowledge index-embeddings` must regenerate stale rows for the configured
+backend/model pair instead of requiring database destruction.
 
 Approximate nearest-neighbor indexes are intentionally absent from Sprint 2.1.
 Retrieval-specific indexing belongs to Sprint 3.1.

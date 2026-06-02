@@ -171,11 +171,37 @@ def test_migration_command_is_not_duplicated() -> None:
     assert migration_scripts == ["postgres-migrate.sh"]
 
 
+def test_runtime_compose_exec_calls_disable_tty_allocation() -> None:
+    unsafe_exec_lines: list[str] = []
+
+    for path in sorted(SCRIPTS.glob("*.sh")):
+        for line_number, line in enumerate(_read(path).splitlines(), start=1):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if " exec " not in stripped:
+                continue
+            if not (
+                stripped.startswith("compose exec ")
+                or " compose exec " in stripped
+                or stripped.startswith("compose_profile ")
+                or " compose_profile " in stripped
+            ):
+                continue
+            if " exec -T " not in stripped:
+                unsafe_exec_lines.append(f"{path.name}:{line_number}: {stripped}")
+
+    assert unsafe_exec_lines == []
+
+
 def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
     assert "require_backend CHAT_BACKEND ollama" in _script("ollama-chat-setup.sh")
     assert "configured_value CHAT_MODEL" in _script("ollama-chat-setup.sh")
     assert "compose_profile_up_wait ollama ollama" in _script("ollama-chat-setup.sh")
-    assert "ollama pull" in _script("ollama-chat-setup.sh")
+    assert (
+        'compose_profile ollama exec -T ollama ollama pull "$CHAT_MODEL_NAME"'
+        in _script("ollama-chat-setup.sh")
+    )
     assert "require_backend EMBEDDING_BACKEND ollama" in _script(
         "ollama-embeddings-setup.sh"
     )
@@ -185,7 +211,10 @@ def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
     assert "compose_profile_up_wait ollama ollama" in _script(
         "ollama-embeddings-setup.sh"
     )
-    assert "ollama pull" in _script("ollama-embeddings-setup.sh")
+    assert (
+        'compose_profile ollama exec -T ollama ollama pull "$EMBEDDING_MODEL_NAME"'
+        in _script("ollama-embeddings-setup.sh")
+    )
 
     for name in (
         "ollama-chat-start.sh",
@@ -252,8 +281,8 @@ def test_letsencrypt_scripts_use_explicit_tls_contract() -> None:
     assert "--deploy-hook" in renew
     assert "MARKER_MOUNT=/var/lib/portfolio-rag-assistant-renewal" in renew
     assert "no certificates renewed; nginx reload skipped" in renew
-    assert "compose_profile public-tls exec nginx-tls nginx -t" in renew
-    assert "compose_profile public-tls exec nginx-tls nginx -s reload" in renew
+    assert "compose_profile public-tls exec -T nginx-tls nginx -t" in renew
+    assert "compose_profile public-tls exec -T nginx-tls nginx -s reload" in renew
 
 
 def test_public_certbot_operator_scripts_are_bounded() -> None:
@@ -533,10 +562,13 @@ def test_public_smoke_supports_local_default_and_public_override() -> None:
     assert "PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION" in smoke
     assert '{"question":"What is Niccolo favorite pizza topping?","language":"en"}' in smoke
     assert '{"code": "question_recorded"}' in smoke
-    assert '"answerable", "not_answerable", "needs_clarification"' in smoke
     assert "PUBLIC_DIRECT_API_PROBE_URL" in smoke
     assert "2??) fail" in smoke
     assert "direct API probe skipped" in smoke
+    assert "json_workplace_answer_is_valid" in smoke
+    assert "workplace smoke expected answerable status" in smoke
+    assert "workplace smoke missing expected employer evidence" in smoke
+    assert "workplace answerability smoke passed" in smoke
 
 
 def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> None:
@@ -558,8 +590,10 @@ def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> N
     assert "cors preflight passed: https://pigreco.xyz" in result.stdout
     assert "cors preflight passed: https://www.pigreco.xyz" in result.stdout
     assert "unexpected origin rejected: https://example.invalid" in result.stdout
+    assert "workplace answerability smoke passed" in result.stdout
     assert "direct API probe passed: http://public-api-closed:8000/health returned 000" in result.stdout
     assert "public smoke passed: http://127.0.0.1:18080" in result.stdout
+    assert "question collection smoke skipped" in result.stdout
 
     calls = [json.loads(line) for line in fake_curl_log.read_text().splitlines()]
     assert any("origin: https://pigreco.xyz" in call for call in calls)
@@ -569,6 +603,82 @@ def test_public_smoke_executes_public_checks_with_fake_curl(tmp_path: Path) -> N
     assert any("http://127.0.0.1:18080/api/assistant/ready" in call for call in calls)
     assert any("http://127.0.0.1:18080/api/assistant/chat" in call for call in calls)
     assert any("http://public-api-closed:8000/health" in call for call in calls)
+    assert not any(
+        any("favorite pizza topping" in part for part in call)
+        for call in calls
+    )
+
+
+def test_public_smoke_fails_when_workplace_chat_is_not_answerable(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["FAKE_CURL_WORKPLACE_RESPONSE"] = (
+        '{"status":"not_answerable","answer":"No verified context.","notices":[]}'
+    )
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert "workplace smoke expected answerable status" in result.stderr
+    assert "No verified context" not in result.stderr
+
+
+def test_public_smoke_fails_when_workplace_answer_lacks_expected_evidence(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["FAKE_CURL_WORKPLACE_RESPONSE"] = (
+        '{"status":"answerable","answer":"Niccolo worked at NAIS S.r.l.","notices":[]}'
+    )
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert "workplace smoke missing expected employer evidence" in result.stderr
+    assert "Niccolo worked at NAIS" not in result.stderr
+
+
+def test_public_smoke_fails_when_workplace_answer_lacks_nais_evidence(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["FAKE_CURL_WORKPLACE_RESPONSE"] = (
+        '{"status":"answerable","answer":"Niccolo worked at Bonfiglioli Engineering.","notices":[]}'
+    )
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert "workplace smoke missing expected employer evidence" in result.stderr
+    assert "Bonfiglioli Engineering" not in result.stderr
 
 
 def test_public_smoke_can_validate_question_collection_notice(
@@ -596,6 +706,56 @@ def test_public_smoke_can_validate_question_collection_notice(
         any("What is Niccolo favorite pizza topping?" in part for part in call)
         for call in calls
     )
+
+
+def test_public_smoke_question_collection_requires_not_answerable(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION"] = "true"
+    env["FAKE_CURL_QUESTION_COLLECTION_RESPONSE"] = (
+        '{"status":"answerable","answer":"Wrong answer.","notices":[]}'
+    )
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert "question collection smoke expected not_answerable status" in result.stderr
+    assert "Wrong answer" not in result.stderr
+
+
+def test_public_smoke_question_collection_requires_recorded_notice(
+    tmp_path: Path,
+) -> None:
+    fake_curl_log = tmp_path / "curl.log"
+    _write_fake_curl(tmp_path)
+    env = _fake_curl_env(tmp_path, fake_curl_log)
+    env["PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION"] = "true"
+    env["FAKE_CURL_QUESTION_COLLECTION_RESPONSE"] = (
+        '{"status":"not_answerable","answer":"No verified context.","notices":[]}'
+    )
+
+    result = subprocess.run(
+        (str(SCRIPTS / "public-smoke.sh"),),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode != 0
+    assert "question collection smoke expected question_recorded notice" in result.stderr
+    assert "No verified context" not in result.stderr
 
 
 def test_public_smoke_fails_when_direct_api_probe_returns_success(
@@ -716,9 +876,15 @@ elif url.endswith("/api/assistant/ready"):
     print('{"status":"ready"}')
 elif url.endswith("/api/assistant/chat"):
     if "favorite pizza topping" in body:
-        print('{"status":"not_answerable","answer":"No verified context.","notices":[{"code":"question_recorded"}]}')
+        print(os.environ.get(
+            "FAKE_CURL_QUESTION_COLLECTION_RESPONSE",
+            '{"status":"not_answerable","answer":"No verified context.","notices":[{"code":"question_recorded"}]}',
+        ))
     else:
-        print('{"status":"answerable","answer":"OK","notices":[]}')
+        print(os.environ.get(
+            "FAKE_CURL_WORKPLACE_RESPONSE",
+            '{"status":"answerable","answer":"Niccolo worked at NAIS S.r.l. and Bonfiglioli Engineering.","notices":[]}',
+        ))
 else:
     print(f"unexpected curl args: {args}", file=sys.stderr)
     sys.exit(2)

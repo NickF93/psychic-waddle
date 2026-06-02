@@ -48,6 +48,6 @@ if [ ! -f "$MARKER_DIR/$MARKER_FILE" ]; then
     exit 0
 fi
 
-compose_profile public-tls exec nginx-tls nginx -t
-compose_profile public-tls exec nginx-tls nginx -s reload
+compose_profile public-tls exec -T nginx-tls nginx -t
+compose_profile public-tls exec -T nginx-tls nginx -s reload
 info "certificate renewed and nginx reloaded"

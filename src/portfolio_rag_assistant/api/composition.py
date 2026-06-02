@@ -130,7 +130,6 @@ def build_runtime_services(
         provider=embedding_provider,
         embedding_backend=embedding_settings.backend,
         embedding_model=embedding_settings.model,
-        min_score=retrieval_settings.min_score,
     )
     return RuntimeServices(
         chat_service=PublicChatService(

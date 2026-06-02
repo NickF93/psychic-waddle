@@ -21,6 +21,10 @@ def test_database_readiness_accepts_schema_and_configured_embeddings() -> None:
     asyncio.run(service.check())
 
     assert connection.calls[1][1] == ("ollama", "nomic-embed-text")
+    assert "chunk_embeddings.chunk_text_hash = encode" in connection.calls[1][0]
+    assert "digest(convert_to(chunks.chunk_text, 'UTF8'), 'sha256')" in (
+        connection.calls[1][0]
+    )
 
 
 def test_database_readiness_rejects_missing_schema() -> None:
@@ -36,6 +40,18 @@ def test_database_readiness_rejects_missing_schema() -> None:
 
 
 def test_database_readiness_rejects_missing_configured_embeddings() -> None:
+    service = DatabaseReadinessService(
+        connection=FakeReadinessConnection(schema_ready=True, embeddings_ready=False),
+        embedding_backend="ollama",
+        embedding_model="nomic-embed-text",
+        question_collection_enabled=False,
+    )
+
+    with pytest.raises(ReadinessCheckError, match="configured embeddings"):
+        asyncio.run(service.check())
+
+
+def test_database_readiness_rejects_stale_configured_embeddings() -> None:
     service = DatabaseReadinessService(
         connection=FakeReadinessConnection(schema_ready=True, embeddings_ready=False),
         embedding_backend="ollama",
@@ -123,7 +139,9 @@ class FakeReadinessConnection:
         if "question_events" in query:
             return FakeCursor((self._question_schema_ready,))
         if "to_regclass" in query:
-            return FakeCursor((True, True, True, True) if self._schema_ready else None)
+            return FakeCursor(
+                (True, True, True, True, True) if self._schema_ready else None
+            )
         if "FROM chunk_embeddings" in query:
             return FakeCursor((self._embeddings_ready,))
         raise AssertionError(f"unexpected query: {query}")

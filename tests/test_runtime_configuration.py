@@ -386,9 +386,13 @@ def test_public_tls_edge_uses_real_certificate_volume_and_redirects_http() -> No
     assert "listen 443 ssl;" in nginx_tls
     assert "ssl_certificate /etc/letsencrypt/live/portfolio-rag-assistant/fullchain.pem;" in nginx_tls
     assert "ssl_certificate_key /etc/letsencrypt/live/portfolio-rag-assistant/privkey.pem;" in nginx_tls
-    assert "return 308 https://vps.madnick.ovh$uri;" in nginx_tls
-    assert "return 308 https://$host" not in nginx_tls
-    assert "$request_uri" not in nginx_tls
+    redirect_lines = [
+        line.strip()
+        for line in nginx_tls.splitlines()
+        if line.strip().startswith("return 308")
+    ]
+    assert redirect_lines == ["return 308 https://$host$request_uri;"]
+    assert "vps.madnick.ovh" not in " ".join(redirect_lines)
     assert "self-signed" not in nginx_tls
     assert "snakeoil" not in nginx_tls
 

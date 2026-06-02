@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol, cast
 
+from portfolio_rag_assistant.intent import (
+    QuestionIntent,
+    categories_for_intents,
+    detect_question_intents,
+    profile_for_intent,
+)
 from portfolio_rag_assistant.knowledge import KnowledgeCategory
 from portfolio_rag_assistant.provider import EmbeddingProvider, EmbeddingRequest
 from portfolio_rag_assistant.retrieval.contract import (
@@ -16,6 +22,8 @@ from portfolio_rag_assistant.retrieval.contract import (
     RetrievalScore,
     RetrievalStoreError,
 )
+
+_RRF_RANK_CONSTANT = 60.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,15 +38,15 @@ class RetrievalCandidate:
     source_locator: str | None
     vector_score: float | None = None
     keyword_score: float | None = None
+    intent_score: float | None = None
+    vector_rank: int | None = None
+    keyword_rank: int | None = None
+    intent_rank: int | None = None
+    rrf_score: float = 0.0
 
     @property
     def combined_score(self) -> float:
-        scores = (
-            score
-            for score in (self.vector_score, self.keyword_score)
-            if score is not None
-        )
-        return max(scores, default=0.0)
+        return self.rrf_score
 
     def to_context(self) -> RetrievedContext:
         """Convert the internal candidate into the public retrieval contract."""
@@ -84,13 +92,11 @@ class PostgreSQLRetriever:
         provider: EmbeddingProvider,
         embedding_backend: str,
         embedding_model: str,
-        min_score: float,
     ) -> None:
         self._connection = connection
         self._provider = provider
         self._embedding_backend = _require_text(embedding_backend, "embedding_backend")
         self._embedding_model = _require_text(embedding_model, "embedding_model")
-        self._min_score = _require_score(min_score, "min_score")
 
     async def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
         """Return ranked public source-backed context for a question."""
@@ -109,12 +115,19 @@ class PostgreSQLRetriever:
             question=request.question,
             limit=request.top_k,
         )
+        intents = detect_question_intents(request.question)
+        intent_candidates = self._search_intent_keywords(
+            intents=intents,
+            limit=request.top_k,
+        )
         results = tuple(
             candidate.to_context()
             for candidate in _rank_candidates(
-                _merge_candidates(vector_candidates, keyword_candidates),
+                vector_candidates=vector_candidates,
+                keyword_candidates=keyword_candidates,
+                intent_candidates=intent_candidates,
+                attempted_channel_count=2 + int(bool(intents)),
                 top_k=request.top_k,
-                min_score=self._min_score,
             )
         )
         return RetrievalResponse(question=request.question, results=results)
@@ -191,13 +204,68 @@ class PostgreSQLRetriever:
         )
         return tuple(_keyword_candidate_from_row(row) for row in cursor.fetchall())
 
+    def _search_intent_keywords(
+        self,
+        *,
+        intents: tuple[QuestionIntent, ...],
+        limit: int,
+    ) -> tuple[RetrievalCandidate, ...]:
+        if not intents:
+            return ()
+
+        cursor = self._connection.execute(
+            """
+            WITH intent_query AS (
+                SELECT websearch_to_tsquery('english', %s) AS value
+            )
+            SELECT
+                chunks.id,
+                chunks.chunk_text,
+                chunks.category,
+                sources.source_uri,
+                sources.title,
+                chunks.source_locator,
+                LEAST(
+                    1.0,
+                    ts_rank_cd(
+                        to_tsvector('english', chunks.chunk_text),
+                        intent_query.value
+                    )::double precision
+                ) AS intent_score
+            FROM chunks
+            JOIN sources ON sources.id = chunks.source_id
+            CROSS JOIN intent_query
+            WHERE chunks.public_visible = true
+              AND chunks.category = ANY(%s::text[])
+              AND to_tsvector('english', chunks.chunk_text) @@ intent_query.value
+            ORDER BY intent_score DESC, chunks.id ASC
+            LIMIT %s
+            """,
+            (
+                _intent_evidence_query_text(intents),
+                list(categories_for_intents(intents)),
+                limit,
+            ),
+        )
+        return tuple(_intent_candidate_from_row(row) for row in cursor.fetchall())
+
 
 def _rank_candidates(
-    candidates: tuple[RetrievalCandidate, ...],
     *,
+    vector_candidates: tuple[RetrievalCandidate, ...],
+    keyword_candidates: tuple[RetrievalCandidate, ...],
+    intent_candidates: tuple[RetrievalCandidate, ...],
+    attempted_channel_count: int,
     top_k: int,
-    min_score: float,
 ) -> tuple[RetrievalCandidate, ...]:
+    candidates = tuple(
+        _with_rrf_score(candidate, attempted_channel_count)
+        for candidate in _merge_candidates(
+            _ranked_vector_candidates(vector_candidates),
+            _ranked_keyword_candidates(keyword_candidates),
+            _ranked_intent_candidates(intent_candidates),
+        )
+    )
     return tuple(
         candidate
         for candidate in sorted(
@@ -206,10 +274,10 @@ def _rank_candidates(
                 -item.combined_score,
                 -(item.vector_score or 0.0),
                 -(item.keyword_score or 0.0),
+                -(item.intent_score or 0.0),
                 item.chunk_id,
             ),
         )
-        if candidate.combined_score >= min_score
     )[:top_k]
 
 
@@ -240,6 +308,11 @@ def _merge_candidate(
         source_locator=left.source_locator,
         vector_score=_max_optional(left.vector_score, right.vector_score),
         keyword_score=_max_optional(left.keyword_score, right.keyword_score),
+        intent_score=_max_optional(left.intent_score, right.intent_score),
+        vector_rank=_min_optional(left.vector_rank, right.vector_rank),
+        keyword_rank=_min_optional(left.keyword_rank, right.keyword_rank),
+        intent_rank=_min_optional(left.intent_rank, right.intent_rank),
+        rrf_score=max(left.rrf_score, right.rrf_score),
     )
 
 
@@ -249,6 +322,64 @@ def _max_optional(left: float | None, right: float | None) -> float | None:
     if right is None:
         return left
     return max(left, right)
+
+
+def _min_optional(left: int | None, right: int | None) -> int | None:
+    if left is None:
+        return right
+    if right is None:
+        return left
+    return min(left, right)
+
+
+def _ranked_vector_candidates(
+    candidates: tuple[RetrievalCandidate, ...],
+) -> tuple[RetrievalCandidate, ...]:
+    return tuple(
+        replace(candidate, vector_rank=rank)
+        for rank, candidate in enumerate(candidates, start=1)
+    )
+
+
+def _ranked_keyword_candidates(
+    candidates: tuple[RetrievalCandidate, ...],
+) -> tuple[RetrievalCandidate, ...]:
+    return tuple(
+        replace(candidate, keyword_rank=rank)
+        for rank, candidate in enumerate(candidates, start=1)
+    )
+
+
+def _ranked_intent_candidates(
+    candidates: tuple[RetrievalCandidate, ...],
+) -> tuple[RetrievalCandidate, ...]:
+    return tuple(
+        replace(candidate, intent_rank=rank)
+        for rank, candidate in enumerate(candidates, start=1)
+    )
+
+
+def _with_rrf_score(
+    candidate: RetrievalCandidate,
+    attempted_channel_count: int,
+) -> RetrievalCandidate:
+    if attempted_channel_count < 1:
+        return candidate
+    max_score = attempted_channel_count * _rrf_contribution(rank=1)
+    score = sum(
+        _rrf_contribution(rank=rank)
+        for rank in (
+            candidate.vector_rank,
+            candidate.keyword_rank,
+            candidate.intent_rank,
+        )
+        if rank is not None
+    )
+    return replace(candidate, rrf_score=min(1.0, score / max_score))
+
+
+def _rrf_contribution(*, rank: int) -> float:
+    return 1.0 / (_RRF_RANK_CONSTANT + rank)
 
 
 def _vector_candidate_from_row(row: tuple[Any, ...]) -> RetrievalCandidate:
@@ -275,6 +406,49 @@ def _keyword_candidate_from_row(row: tuple[Any, ...]) -> RetrievalCandidate:
     )
 
 
+def _intent_candidate_from_row(row: tuple[Any, ...]) -> RetrievalCandidate:
+    return RetrievalCandidate(
+        chunk_id=int(row[0]),
+        chunk_text=str(row[1]),
+        category=cast(KnowledgeCategory, str(row[2])),
+        source_uri=str(row[3]),
+        source_title=str(row[4]),
+        source_locator=_optional_text(row[5]),
+        intent_score=float(row[6]),
+    )
+
+
+def _intent_evidence_query_text(
+    intents: tuple[QuestionIntent, ...],
+) -> str:
+    terms: list[str] = []
+    seen_terms: set[str] = set()
+    for intent in intents:
+        for term in sorted(profile_for_intent(intent).lexical_expansion_terms):
+            formatted_term = _format_websearch_intent_term(term)
+            term_key = formatted_term.casefold()
+            if term_key in seen_terms:
+                continue
+            terms.append(formatted_term)
+            seen_terms.add(term_key)
+    return " OR ".join(terms)
+
+
+def _format_websearch_intent_term(term: str) -> str:
+    cleaned_term = " ".join(term.split())
+    if not cleaned_term:
+        raise RetrievalConfigurationError(
+            "intent lexical expansion terms must not be blank"
+        )
+    if '"' in cleaned_term:
+        raise RetrievalConfigurationError(
+            "intent lexical expansion terms must not contain double quotes"
+        )
+    if " " in cleaned_term:
+        return f'"{cleaned_term}"'
+    return cleaned_term
+
+
 def _format_vector(embedding: tuple[float, ...]) -> str:
     if not embedding:
         raise RetrievalStoreError("query embedding must not be empty")
@@ -291,9 +465,3 @@ def _require_text(value: str, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise RetrievalConfigurationError(f"{field_name} must be set")
     return value.strip()
-
-
-def _require_score(value: float, field_name: str) -> float:
-    if not isinstance(value, float) or not 0 <= value <= 1:
-        raise RetrievalConfigurationError(f"{field_name} must be between 0 and 1")
-    return value

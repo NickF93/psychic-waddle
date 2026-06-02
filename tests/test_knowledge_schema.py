@@ -9,13 +9,26 @@ from pathlib import Path
 
 import pytest
 
-MIGRATION_PATH = (
+KNOWLEDGE_MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]
     / "migrations"
     / "0001_knowledge_schema.sql"
 )
-MIGRATION_SQL = MIGRATION_PATH.read_text(encoding="utf-8")
-NORMALIZED_SQL = re.sub(r"\s+", " ", MIGRATION_SQL.lower())
+EMBEDDING_HASH_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "migrations"
+    / "0003_embedding_content_hash.sql"
+)
+KNOWLEDGE_MIGRATION_SQL = KNOWLEDGE_MIGRATION_PATH.read_text(encoding="utf-8")
+EMBEDDING_HASH_MIGRATION_SQL = EMBEDDING_HASH_MIGRATION_PATH.read_text(
+    encoding="utf-8"
+)
+NORMALIZED_SQL = re.sub(r"\s+", " ", KNOWLEDGE_MIGRATION_SQL.lower())
+NORMALIZED_EMBEDDING_HASH_SQL = re.sub(
+    r"\s+",
+    " ",
+    EMBEDDING_HASH_MIGRATION_SQL.lower(),
+)
 KNOWLEDGE_CATEGORIES = (
     "experience",
     "education",
@@ -29,6 +42,10 @@ EMBEDDING_BACKENDS = ("ollama", "llama-cpp", "openai-compatible")
 
 def test_migration_enables_pgvector() -> None:
     assert "create extension if not exists vector;" in NORMALIZED_SQL
+
+
+def test_embedding_hash_migration_enables_pgcrypto() -> None:
+    assert "create extension if not exists pgcrypto;" in NORMALIZED_EMBEDDING_HASH_SQL
 
 
 def test_migration_defines_knowledge_authority_tables() -> None:
@@ -88,6 +105,21 @@ def test_chunk_embeddings_are_separated_by_backend_and_model() -> None:
     )
 
 
+def test_embedding_hash_migration_requires_content_hash() -> None:
+    assert "alter table chunk_embeddings add column chunk_text_hash text" in (
+        NORMALIZED_EMBEDDING_HASH_SQL
+    )
+    assert "alter column chunk_text_hash set not null" in (
+        NORMALIZED_EMBEDDING_HASH_SQL
+    )
+    assert "constraint chunk_embeddings_text_hash_sha256 check" in (
+        NORMALIZED_EMBEDDING_HASH_SQL
+    )
+    assert "digest(convert_to(chunks.chunk_text, 'utf8'), 'sha256')" in (
+        NORMALIZED_EMBEDDING_HASH_SQL
+    )
+
+
 def test_schema_does_not_define_retrieval_indexes_yet() -> None:
     assert " using hnsw " not in NORMALIZED_SQL
     assert " using ivfflat " not in NORMALIZED_SQL
@@ -109,7 +141,7 @@ def test_migration_applies_to_postgresql_when_database_url_is_set() -> None:
             f"""
             SET search_path TO "{schema_name}", public;
 
-            {MIGRATION_SQL}
+            {KNOWLEDGE_MIGRATION_SQL}
 
             INSERT INTO sources (source_uri, title, reviewed_at)
             VALUES ('file://cv', 'Curated CV', now());
@@ -145,6 +177,25 @@ def test_migration_applies_to_postgresql_when_database_url_is_set() -> None:
             SELECT id, 'ollama', 'nomic-embed-text', 3, '[0.1,0.2,0.3]'::vector
             FROM chunks
             WHERE chunk_index = 0;
+
+            {EMBEDDING_HASH_MIGRATION_SQL}
+
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM chunk_embeddings
+                    WHERE chunk_text_hash = encode(
+                        digest(
+                            convert_to('Niccolo worked at NAIS s.r.l.', 'UTF8'),
+                            'sha256'
+                        ),
+                        'hex'
+                    )
+                ) THEN
+                    RAISE EXCEPTION 'embedding hash migration did not backfill';
+                END IF;
+            END $$;
             """,
         )
     finally:

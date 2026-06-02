@@ -52,7 +52,7 @@ Implement Milestones 0 through 4 first. These define the reliable core:
 architecture, provider abstraction, verified knowledge, retrieval, answer policy,
 and grounded answer generation.
 
-Milestones 5 through 9 are intentionally deferred until the core proves it can
+Milestones 5 through 10 are intentionally deferred until the core proves it can
 answer correctly and refuse safely.
 
 ---
@@ -917,11 +917,360 @@ Items:
 
 ---
 
-## Milestone 9: Release Validation
+## Milestone 9: Answerability Remediation
+
+**Feature:** structurally remediate recruiter-question reliability before
+release validation.
+
+Milestone 9 fixes the known weakness where a source-backed question such as
+"Where did Niccolo work?" can fail even though tracked knowledge contains the
+answer. The remediation must improve retrieval recall, intent completeness,
+embedding freshness, public smoke validation, and stale authoritative
+documentation without making unsupported questions answerable.
+
+The milestone must preserve the core architecture: retrieval gathers plausible
+reviewed context, answer policy decides answerability deterministically, and
+the LLM only phrases already-approved answers.
+
+### Sprint 9.1: Authoritative Remediation Plan
+
+This sprint is documentation-only. It must not change runtime code, database
+schema, scripts, tests, or tracked knowledge.
+
+Items:
+
+- Documentation: update this plan so Milestone 9 owns answerability
+  remediation and the former release-validation milestone moves to Milestone
+  10.
+- Documentation: reconcile `AGENTS.md`, `docs/architecture.md`, retrieval,
+  ingestion, answer policy, answer generation, and public deployment docs with
+  the M8 raw unanswered-question contract and the M9 remediation target.
+- Documentation: state that answerability is decided before generation.
+- Documentation: state that retrieval returns plausible candidate context while
+  policy decides whether evidence is intent-complete.
+- Documentation: state that changed chunk text must invalidate or refresh
+  embeddings for the configured backend and model.
+- Documentation: define the planned bounded `QuestionIntentProfile` authority.
+- Documentation: define planned recruiter intent profiles for workplaces,
+  current role, skills, education, publications, projects, and public contacts.
+- Documentation: define future retrieval remediation with vector search,
+  PostgreSQL full-text search, intent-expanded lexical retrieval, and rank
+  fusion.
+- Documentation: define future policy remediation that forbids category-only
+  answerability approval.
+- Documentation: define future public smoke assertions for answerable and
+  unsupported questions.
+- Validation: confirm the sprint changes only documentation.
+- Checkpoint: the full M9 implementation plan is decision-complete before any
+  software remediation starts.
+- Final track/doc: this plan and affected authority docs.
+
+### Sprint 9.2: Shared Question Intent Profiles
+
+Items:
+
+- Implementation: add a bounded question-intent authority that contains no
+  provider, database, API, generation, or storage logic.
+- Implementation: define profiles for workplace/work history, current role,
+  skills, education, publications, projects/repositories, and public contact
+  links.
+- Implementation: each profile defines trigger terms, accepted knowledge
+  categories, lexical expansion terms, and required evidence terms.
+- Implementation: make retrieval and policy consume the same profile
+  definitions instead of duplicating fragile keyword maps.
+- Test: cover positive and negative profile detection for natural recruiter
+  phrasings.
+- Validation: unsupported personal, private, speculative, and off-topic
+  questions do not match an answerable recruiter intent.
+- Checkpoint: intent definitions are shared, bounded, deterministic, and
+  inspectable.
+- Final track/doc: update answer policy and retrieval docs.
+
+### Sprint 9.3: Hybrid Retrieval Candidate Generation And Fusion
+
+Items:
+
+- Implementation: keep vector retrieval through the configured embedding
+  backend and model.
+- Implementation: keep PostgreSQL full-text retrieval with
+  `websearch_to_tsquery('english', question)`.
+- Implementation: add intent-expanded lexical retrieval for detected recruiter
+  intents.
+- Implementation: merge vector, keyword, and intent-expanded candidates by
+  chunk identity.
+- Implementation: replace direct raw-score comparison between vector scores and
+  PostgreSQL text-rank scores with rank fusion, preferably reciprocal rank
+  fusion.
+- Implementation: keep raw vector and keyword scores as diagnostics only.
+- Implementation: avoid treating fused rank as visitor analytics or persisted
+  request metadata.
+- Test: prove exact employer/workplace chunks can be retrieved for natural
+  questions such as "Where did Niccolo work?".
+- Test: prove vector-only, keyword-only, and overlap candidates are ordered
+  deterministically.
+- Validation: retrieval still does not decide answerability, generate wording,
+  persist visitor data, or mutate knowledge.
+- Checkpoint: candidate generation favors recall while policy remains the
+  answerability gate.
+- Final track/doc: update `docs/retrieval.md`.
+
+### Sprint 9.4: Embedding Freshness
+
+Items:
+
+- Implementation: add a stable content hash for the chunk text associated with
+  each stored embedding.
+- Implementation: define an embedding as stale when the stored content hash
+  differs from the current public chunk text for the same backend and model.
+- Implementation: make `knowledge index-embeddings` index missing and stale
+  embeddings.
+- Implementation: preserve separate embeddings for different backend/model
+  pairs.
+- Implementation: make `public-load-knowledge.sh` and `public-upgrade.sh`
+  refresh changed knowledge without database destruction.
+- Test: changing a public fact changes the generated chunk and causes
+  re-embedding for the configured backend and model.
+- Test: unchanged chunks are not re-embedded.
+- Test: embeddings for other backend/model pairs are not deleted or rewritten.
+- Validation: `indexed 0 chunk embeddings` is correct only when no public chunk
+  text changed for the configured backend and model.
+- Checkpoint: tracked knowledge can be safely updated on the VPS without
+  destroying PostgreSQL data.
+- Final track/doc: update ingestion and knowledge maintenance docs.
+
+### Sprint 9.5: Policy Intent Completeness
+
+Items:
+
+- Implementation: require intent-complete evidence before returning
+  `answerable`.
+- Implementation: reject category-only matches as insufficient.
+- Implementation: workplace questions require employer, workplace, company,
+  role, or work-history evidence.
+- Implementation: current-role questions require current employer or current
+  role evidence.
+- Implementation: skills questions require skills, technologies, tooling,
+  specialization, or domain evidence.
+- Implementation: education, publication, project, and contact questions use
+  their corresponding intent evidence terms.
+- Test: "Where did Niccolo work?" is answerable only with workplace evidence.
+- Test: "What is Niccolo's current role?" is answerable only with current-role
+  evidence.
+- Test: "What are Niccolo's main machine learning skills?" is answerable only
+  with skills evidence.
+- Test: "What is Niccolo's favorite pizza topping?" remains `not_answerable`.
+- Validation: strong unrelated retrieval cannot make an unsupported question
+  answerable.
+- Checkpoint: answerability is deterministic and intent-complete.
+- Final track/doc: update `docs/answer-policy.md`.
+
+### Sprint 9.6: Answer Generation Consistency
+
+Items:
+
+- Implementation: keep the LLM as a phrasing-only authority.
+- Implementation: require answerable decisions to provide sufficient approved
+  context before generation.
+- Implementation: keep a deterministic guard that demotes generated
+  insufficiency output to `not_answerable` with no sources.
+- Test: answerable public responses never contain "not enough context",
+  "insufficient context", or equivalent insufficiency wording.
+- Test: provider sentinel or clear insufficiency wording returns the standard
+  not-answerable fallback and no sources.
+- Validation: generation does not retrieve, search, decide answerability, or
+  persist visitor data.
+- Checkpoint: public status, answer text, and sources remain consistent.
+- Final track/doc: update `docs/answer-generation.md` if needed.
+
+### Sprint 9.7: Knowledge Refinement
+
+Items:
+
+- Documentation: keep `knowledge/profile.json` as the first complete tracked
+  reviewed profile.
+- Review: audit current tracked profile facts against
+  `../CV/CV/CVNiccoloFerrari_short.tex` and the shared M9 intent profiles.
+- Implementation: add or refine only source-backed aggregate facts that express
+  real recruiter intents.
+- Implementation: keep workplace/current-role/skills/education/publications/
+  projects/contact aggregates when grounded in reviewed source material.
+- Implementation: reject question-specific hacks that exist only to satisfy one
+  phrasing.
+- Test: tracked knowledge validates with all aggregate facts.
+- Test: tracked knowledge privacy checks continue to reject private contact
+  details, visitor questions, and unreviewed assumptions.
+- Validation: visitor question records never auto-promote into tracked facts.
+- Checkpoint: broad recruiter questions have source-backed broad chunks.
+- Final track/doc: update knowledge maintenance docs.
+
+### Sprint 9.8: Knowledge Content Double Audit
+
+Items:
+
+- Review: perform a second pass over the final tracked profile after Sprint 9.7
+  changes.
+- Review: map every broad aggregate group to a CV section or source locator that
+  supports it.
+- Review: confirm there are no hallucinated employers, titles, dates, degrees,
+  papers, repositories, contact channels, private fields, visitor questions, or
+  recruiter-derived raw text.
+- Test: every required broad recruiter intent has at least one aggregate fact.
+- Test: each aggregate fact uses the category accepted by the matching intent
+  profile and satisfies its required evidence terms.
+- Validation: run tracked knowledge validation and focused tracked-knowledge
+  tests after the second pass.
+- Checkpoint: the committed profile is source-backed, privacy-safe, and not
+  tuned to one question wording.
+- Final track/doc: document aggregate review rules if the maintenance workflow
+  needs clarification.
+
+### Sprint 9.9: Runtime Acceptance And Public Smoke
+
+Items:
+
+- Implementation: strengthen public smoke validation so it can assert a known
+  answerable workplace question.
+- Implementation: assert the workplace answer contains expected source-backed
+  evidence such as NAIS and Bonfiglioli when using the tracked profile.
+- Implementation: assert an unsupported personal question returns
+  `not_answerable`.
+- Implementation: keep question-collection notice validation explicitly opt-in
+  because it intentionally records an unanswered question.
+- Test: runtime script tests cover the new smoke behavior without requiring
+  real provider calls where possible.
+- Validation: `public-upgrade.sh` preserves data and still refreshes changed
+  knowledge and embeddings.
+- Validation: no public smoke response leaks source URIs, retrieval scores,
+  prompts, stack traces, secrets, or private data.
+- Checkpoint: the VPS upgrade path detects the original workplace regression.
+- Final track/doc: update public deployment and runtime docs.
+
+### Sprint 9.10: Full Remediation Audit And Closure
+
+Items:
+
+- Review: audit retrieval, policy, generation, ingestion, runtime scripts,
+  tests, and docs for bugs, regressions, stale contracts, exposed secrets,
+  weak abstractions, shortcuts, and architectural drift.
+- Remediation: fix only root causes; do not add legacy shims, compatibility
+  aliases, hidden fallbacks, or workaround behavior.
+- Validation: run the full test suite.
+- Validation: run tracked knowledge validation.
+- Validation: run public runtime smoke where provider services are available.
+- Validation: verify expected manual questions:
+  - "Where did Niccolo work?" returns `answerable`.
+  - "What is Niccolo's current role?" returns `answerable`.
+  - "What are Niccolo's main machine learning skills?" returns `answerable`.
+  - "What publications does Niccolo have?" returns `answerable`.
+  - "What is Niccolo's favorite pizza topping?" returns `not_answerable`.
+- Checkpoint: M9 is ready for explicit review and merge approval.
+- Final track/doc: `docs/m9-remediation-closure.md`.
+
+### Sprint 9.11: Runtime Retrieval Failure Reopen
+
+Items:
+
+- Documentation: mark the previous M9 closure report as superseded by the live
+  isolated Docker failure.
+- Documentation: record that the failure is retrieval candidate generation, not
+  `llama3.2`, policy, answer generation, tracked knowledge, or embedding
+  freshness.
+- Documentation: record the direct root cause: intent-expanded PostgreSQL
+  search currently builds a space-joined string that
+  `websearch_to_tsquery('english', ...)` interprets as an over-strict AND
+  query.
+- Documentation: record the architectural root cause: retrieval currently
+  applies `RETRIEVAL_MIN_SCORE` before policy sees candidates, contradicting
+  the architecture contract that the threshold belongs to answer policy.
+- Checkpoint: M9 is open until runtime proof passes in the isolated project
+  stack.
+- Final track/doc: update this plan and the M9 closure report.
+
+### Sprint 9.12: Structured Intent Evidence Retrieval
+
+Items:
+
+- Implementation: replace concatenated intent-expanded query text with a
+  controlled OR query built only from profile-owned evidence terms.
+- Implementation: do not include raw visitor question text in intent-expanded
+  retrieval; vector and keyword retrieval already search the question.
+- Implementation: remove broad workplace retrieval expansion terms such as
+  standalone `work` and `worked`; keep precise evidence terms such as
+  `professional workplaces`, `work history`, employer, workplace, company, and
+  employment.
+- Test: assert intent search parameters use OR semantics and no longer contain
+  the raw question.
+- Test: assert unsupported questions do not run intent-expanded retrieval.
+- Checkpoint: natural workplace questions can retrieve source-backed workplace
+  aggregate chunks without increasing `RETRIEVAL_TOP_K`.
+- Final track/doc: update `docs/retrieval.md`.
+
+### Sprint 9.13: Policy-Owned Score Threshold
+
+Items:
+
+- Implementation: remove `RETRIEVAL_MIN_SCORE` from the retriever constructor,
+  state, ranking function, and retrieval result filtering.
+- Implementation: keep `RETRIEVAL_MIN_SCORE` in runtime configuration because
+  `PublicChatService` passes it to `AnswerPolicyRequest`.
+- Implementation: retrieval returns the top ranked candidate contexts; policy
+  alone decides which candidates meet the score threshold.
+- Test: prove retrieval does not discard candidates below policy threshold.
+- Checkpoint: retrieval is candidate generation only, and answerability remains
+  policy-owned.
+- Final track/doc: update retrieval and API composition tests.
+
+### Sprint 9.14: Real PostgreSQL Retrieval Regression Coverage
+
+Items:
+
+- Test: add real PostgreSQL coverage for the workplace failure shape when
+  `TEST_DATABASE_URL` is available.
+- Test: insert tracked-profile-style workplace aggregate chunks plus noisy
+  experience chunks, then prove `Where did Niccolo work?` retrieves workplace
+  evidence with `top_k=4`.
+- Test: keep fake-cursor tests for query shape and RRF behavior, but do not use
+  them as the only authority for PostgreSQL full-text semantics.
+- Checkpoint: real SQL semantics cover the AND/OR regression.
+- Final track/doc: update retrieval tests.
+
+### Sprint 9.15: Isolated Runtime Proof And Server Commands
+
+Items:
+
+- Validation: clean only the project debug stack using
+  `COMPOSE_PROJECT_NAME=psychic-waddle-debug`.
+- Validation: rebuild, reset, migrate, load tracked knowledge, index
+  embeddings, and run public smoke from `/tmp/psychic-waddle-debug.env`.
+- Validation: manually prove workplace, current role, machine-learning skills,
+  and publications questions are `answerable`.
+- Validation: manually prove pizza topping remains `not_answerable`.
+- Validation: clean the isolated project debug stack after proof.
+- Documentation: update final server commands after the runtime proof.
+- Checkpoint: M9 is ready for explicit PR review only after live project smoke
+  passes.
+- Final track/doc: update M9 closure documentation.
+
+Acceptance:
+
+- Answerability depends on intent-complete reviewed evidence, not category-only
+  retrieval.
+- Retrieval no longer compares vector and keyword raw scores as if they were the
+  same confidence scale.
+- Changed tracked knowledge refreshes stale embeddings without database
+  destruction.
+- Public smoke catches the original workplace failure mode.
+- Unsupported personal or off-topic questions remain safely not answerable.
+- Authoritative docs agree with implemented M8 privacy behavior and implemented M9
+  remediation architecture.
+
+---
+
+## Milestone 10: Release Validation
 
 **Feature:** prove reliability before recruiters see it.
 
-### Sprint 9.1: Evaluation Suite
+### Sprint 10.1: Evaluation Suite
 
 Items:
 
@@ -933,7 +1282,7 @@ Items:
 - Checkpoint: minimum acceptance score is met before deploy.
 - Final track/doc: release report.
 
-### Sprint 9.2: Release Smoke
+### Sprint 10.2: Release Smoke
 
 Items:
 

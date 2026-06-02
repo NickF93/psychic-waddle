@@ -7,22 +7,16 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Literal, Protocol, runtime_checkable
 
-from portfolio_rag_assistant.knowledge import (
-    ALLOWED_KNOWLEDGE_CATEGORIES,
-    KnowledgeCategory,
+from portfolio_rag_assistant.intent import (
+    QuestionIntent,
+    categories_for_intents,
+    detect_question_intents,
+    profile_for_intent,
+    text_satisfies_intent_evidence,
 )
 from portfolio_rag_assistant.retrieval import RetrievedContext
 
 AnswerDecisionStatus = Literal["answerable", "not_answerable", "needs_clarification"]
-QuestionIntent = Literal[
-    "workplace",
-    "current_role",
-    "skills",
-    "education",
-    "publications",
-    "projects",
-    "contact",
-]
 
 ANSWERABLE: AnswerDecisionStatus = "answerable"
 NOT_ANSWERABLE: AnswerDecisionStatus = "not_answerable"
@@ -34,87 +28,6 @@ ANSWER_POLICY_STATUSES: frozenset[str] = frozenset(
 
 MINIMUM_SOURCE_COUNT = 1
 
-_CATEGORY_KEYWORDS: dict[KnowledgeCategory, frozenset[str]] = {
-    "experience": frozenset(
-        (
-            "career",
-            "company",
-            "companies",
-            "employer",
-            "employers",
-            "experience",
-            "job",
-            "jobs",
-            "role",
-            "roles",
-            "work",
-            "worked",
-            "working",
-        )
-    ),
-    "education": frozenset(
-        (
-            "academic",
-            "bachelor",
-            "degree",
-            "education",
-            "master",
-            "phd",
-            "studied",
-            "study",
-            "thesis",
-            "university",
-        )
-    ),
-    "projects": frozenset(
-        (
-            "app",
-            "built",
-            "developed",
-            "github",
-            "portfolio",
-            "project",
-            "projects",
-            "repository",
-            "software",
-        )
-    ),
-    "research": frozenset(
-        (
-            "experiment",
-            "experiments",
-            "paper",
-            "publication",
-            "publications",
-            "research",
-        )
-    ),
-    "skills": frozenset(
-        (
-            "framework",
-            "frameworks",
-            "language",
-            "languages",
-            "skill",
-            "skills",
-            "stack",
-            "technology",
-            "technologies",
-            "tool",
-            "tools",
-        )
-    ),
-    "contact": frozenset(
-        (
-            "contact",
-            "email",
-            "linkedin",
-            "reach",
-            "website",
-        )
-    ),
-}
-
 _BROAD_QUESTION_KEYWORDS = frozenset(
     (
         "about",
@@ -124,289 +37,6 @@ _BROAD_QUESTION_KEYWORDS = frozenset(
         "overview",
         "profile",
         "summary",
-    )
-)
-
-
-@dataclass(frozen=True, slots=True)
-class _IntentRule:
-    category: KnowledgeCategory
-    trigger_groups: tuple[frozenset[str], ...]
-    evidence_groups: tuple[frozenset[str], ...]
-
-
-_INTENT_RULES: dict[QuestionIntent, _IntentRule] = {
-    "workplace": _IntentRule(
-        category="experience",
-        trigger_groups=(
-            frozenset(
-                (
-                    "where",
-                    "dove",
-                    "company",
-                    "companies",
-                    "employer",
-                    "employers",
-                    "workplace",
-                    "workplaces",
-                )
-            ),
-            frozenset(
-                (
-                    "work",
-                    "worked",
-                    "works",
-                    "working",
-                    "lavorato",
-                    "lavora",
-                    "company",
-                    "companies",
-                    "employer",
-                    "employers",
-                    "workplace",
-                    "workplaces",
-                )
-            ),
-        ),
-        evidence_groups=(
-            frozenset(
-                (
-                    "workplace",
-                    "workplaces",
-                    "worked",
-                    "works",
-                    "currently",
-                    "previously",
-                    "employer",
-                    "employers",
-                    "company",
-                    "companies",
-                    "history",
-                    "internship",
-                    "internships",
-                    "role",
-                    "roles",
-                )
-            ),
-        ),
-    ),
-    "current_role": _IntentRule(
-        category="experience",
-        trigger_groups=(
-            frozenset(
-                (
-                    "current",
-                    "currently",
-                    "now",
-                    "present",
-                    "today",
-                )
-            ),
-            frozenset(
-                (
-                    "role",
-                    "title",
-                    "position",
-                    "ruolo",
-                )
-            ),
-        ),
-        evidence_groups=(
-            frozenset(("current", "currently", "since", "serves", "lead", "technical")),
-            frozenset(("role", "title", "position", "engineer", "researcher", "lead")),
-        ),
-    ),
-    "skills": _IntentRule(
-        category="skills",
-        trigger_groups=(
-            frozenset(
-                (
-                    "skill",
-                    "skills",
-                    "stack",
-                    "technology",
-                    "technologies",
-                    "tool",
-                    "tools",
-                    "framework",
-                    "frameworks",
-                    "competenze",
-                )
-            ),
-        ),
-        evidence_groups=(
-            frozenset(
-                (
-                    "skill",
-                    "skills",
-                    "technology",
-                    "technologies",
-                    "tool",
-                    "tools",
-                    "framework",
-                    "frameworks",
-                    "language",
-                    "languages",
-                    "uses",
-                    "include",
-                    "includes",
-                )
-            ),
-        ),
-    ),
-    "education": _IntentRule(
-        category="education",
-        trigger_groups=(
-            frozenset(
-                (
-                    "education",
-                    "degree",
-                    "degrees",
-                    "phd",
-                    "master",
-                    "bachelor",
-                    "university",
-                    "studied",
-                    "study",
-                    "formazione",
-                )
-            ),
-        ),
-        evidence_groups=(
-            frozenset(
-                (
-                    "education",
-                    "degree",
-                    "degrees",
-                    "phd",
-                    "master",
-                    "bachelor",
-                    "university",
-                    "studied",
-                    "completed",
-                )
-            ),
-        ),
-    ),
-    "publications": _IntentRule(
-        category="research",
-        trigger_groups=(
-            frozenset(
-                (
-                    "publication",
-                    "publications",
-                    "paper",
-                    "papers",
-                    "doi",
-                    "arxiv",
-                    "thesis",
-                    "pubblicazioni",
-                )
-            ),
-        ),
-        evidence_groups=(
-            frozenset(
-                (
-                    "publication",
-                    "publications",
-                    "published",
-                    "paper",
-                    "papers",
-                    "doi",
-                    "arxiv",
-                    "thesis",
-                    "research",
-                    "submitted",
-                    "released",
-                )
-            ),
-        ),
-    ),
-    "projects": _IntentRule(
-        category="projects",
-        trigger_groups=(
-            frozenset(
-                (
-                    "project",
-                    "projects",
-                    "repository",
-                    "repositories",
-                    "repo",
-                    "repos",
-                    "software",
-                    "code",
-                    "progetti",
-                )
-            ),
-        ),
-        evidence_groups=(
-            frozenset(
-                (
-                    "project",
-                    "projects",
-                    "repository",
-                    "repositories",
-                    "repo",
-                    "repos",
-                    "software",
-                    "code",
-                    "github",
-                    "implementation",
-                    "source",
-                )
-            ),
-        ),
-    ),
-    "contact": _IntentRule(
-        category="contact",
-        trigger_groups=(
-            frozenset(
-                (
-                    "contact",
-                    "reach",
-                    "linkedin",
-                    "website",
-                    "profile",
-                    "profiles",
-                    "orcid",
-                    "portfolio",
-                    "link",
-                    "links",
-                    "github",
-                    "contatto",
-                )
-            ),
-        ),
-        evidence_groups=(
-            frozenset(
-                (
-                    "contact",
-                    "linkedin",
-                    "website",
-                    "profile",
-                    "profiles",
-                    "orcid",
-                    "portfolio",
-                    "link",
-                    "links",
-                    "github",
-                    "public",
-                )
-            ),
-        ),
-    ),
-}
-
-_PROJECT_CONTEXT_WORDS = frozenset(
-    (
-        "project",
-        "projects",
-        "repository",
-        "repositories",
-        "repo",
-        "repos",
-        "software",
-        "code",
     )
 )
 
@@ -486,38 +116,30 @@ class DeterministicAnswerPolicy:
         if not usable_context:
             return _not_answerable("low_confidence_context")
 
-        question_intents = _infer_question_intents(request.question)
-        question_categories = _question_categories(
-            question=request.question,
-            intents=question_intents,
-        )
-        if question_categories:
-            context_categories = {context.category for context in usable_context}
-            if not set(question_categories).issubset(context_categories):
-                return _not_answerable("unsupported_question_category")
-            approved_context = tuple(
-                context
-                for context in usable_context
-                if context.category in question_categories
-            )
-        else:
-            available_categories = {context.category for context in usable_context}
-            if not _is_broad_question(request.question):
-                return _not_answerable("unsupported_question_category")
-            if len(available_categories) > 1:
+        question_intents = detect_question_intents(request.question)
+        if not question_intents:
+            if _is_broad_question(request.question):
                 return AnswerPolicyDecision(
                     status=NEEDS_CLARIFICATION,
                     reason="ambiguous_question",
                 )
-            approved_context = usable_context
+            return _not_answerable("unsupported_question_category")
 
-        if question_intents:
-            approved_context = _contexts_with_intent_support(
-                approved_context,
-                question_intents,
-            )
-            if not approved_context:
-                return _not_answerable("insufficient_intent_support")
+        question_categories = categories_for_intents(question_intents)
+        context_categories = {context.category for context in usable_context}
+        if not set(question_categories).issubset(context_categories):
+            return _not_answerable("unsupported_question_category")
+        approved_context = tuple(
+            context
+            for context in usable_context
+            if context.category in question_categories
+        )
+        approved_context = _contexts_with_intent_support(
+            approved_context,
+            question_intents,
+        )
+        if not approved_context:
+            return _not_answerable("insufficient_intent_support")
 
         if _source_count(approved_context) < MINIMUM_SOURCE_COUNT:
             return _not_answerable("insufficient_source_support")
@@ -538,40 +160,6 @@ def _contexts_at_or_above_score(
     )
 
 
-def _infer_question_categories(question: str) -> tuple[KnowledgeCategory, ...]:
-    words = _normalized_words(question)
-    categories = tuple(
-        category
-        for category in sorted(ALLOWED_KNOWLEDGE_CATEGORIES)
-        if words & _CATEGORY_KEYWORDS[category]
-    )
-    return categories
-
-
-def _infer_question_intents(question: str) -> tuple[QuestionIntent, ...]:
-    words = _normalized_words(question)
-    intents: list[QuestionIntent] = []
-    for intent, rule in _INTENT_RULES.items():
-        if not _word_groups_match(words, rule.trigger_groups):
-            continue
-        if intent == "contact" and "github" in words and words & _PROJECT_CONTEXT_WORDS:
-            continue
-        intents.append(intent)
-    return tuple(intents)
-
-
-def _question_categories(
-    *,
-    question: str,
-    intents: tuple[QuestionIntent, ...],
-) -> tuple[KnowledgeCategory, ...]:
-    if intents:
-        return tuple(
-            dict.fromkeys(_INTENT_RULES[intent].category for intent in intents)
-        )
-    return _infer_question_categories(question)
-
-
 def _contexts_with_intent_support(
     contexts: tuple[RetrievedContext, ...],
     intents: tuple[QuestionIntent, ...],
@@ -579,12 +167,12 @@ def _contexts_with_intent_support(
     selected: list[RetrievedContext] = []
     selected_chunk_ids: set[int] = set()
     for intent in intents:
-        rule = _INTENT_RULES[intent]
+        profile = profile_for_intent(intent)
         matching_contexts = tuple(
             context
             for context in contexts
-            if context.category == rule.category
-            and _context_matches_intent(context, rule)
+            if context.category in profile.accepted_categories
+            and text_satisfies_intent_evidence(context.chunk_text, intent)
         )
         if not matching_contexts:
             return ()
@@ -594,20 +182,6 @@ def _contexts_with_intent_support(
             selected.append(context)
             selected_chunk_ids.add(context.chunk_id)
     return tuple(selected)
-
-
-def _context_matches_intent(context: RetrievedContext, rule: _IntentRule) -> bool:
-    return _word_groups_match(
-        _normalized_words(context.chunk_text),
-        rule.evidence_groups,
-    )
-
-
-def _word_groups_match(
-    words: frozenset[str],
-    groups: tuple[frozenset[str], ...],
-) -> bool:
-    return all(words & group for group in groups)
 
 
 def _is_broad_question(question: str) -> bool:
