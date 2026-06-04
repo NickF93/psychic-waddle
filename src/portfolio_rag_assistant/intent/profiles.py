@@ -64,13 +64,6 @@ class QuestionIntentProfile:
                 _require_non_empty_terms(group, field_name)
 
 
-def _word_groups_match(
-    words: frozenset[str],
-    groups: tuple[frozenset[str], ...],
-) -> bool:
-    return all(words & group for group in groups)
-
-
 def _term_groups_match(
     text: str,
     groups: tuple[frozenset[str], ...],
@@ -594,7 +587,7 @@ def detect_question_intents(question: str) -> tuple[QuestionIntent, ...]:
     words = _normalized_words(question)
     intents: list[QuestionIntent] = []
     for profile in QUESTION_INTENT_PROFILES:
-        if not _word_groups_match(words, profile.trigger_groups):
+        if not _term_groups_match(question, profile.trigger_groups):
             continue
         if (
             profile.intent == "contact"
