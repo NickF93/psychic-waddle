@@ -121,6 +121,26 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
             "Niccolo Ferrari currently works at NAIS S.r.l.",
             "current_role",
         ),
+        (
+            "Niccolo Ferrari uses Docker for reproducible machine learning "
+            "environments.",
+            "skills",
+        ),
+        (
+            "Niccolo Ferrari's production deployment skills include C++, "
+            "ONNX, OpenVINO, and TensorRT.",
+            "skills",
+        ),
+        (
+            "Niccolo Ferrari's computer vision architecture experience includes "
+            "CNNs, ResNet, ViT, and YOLO models.",
+            "skills",
+        ),
+        (
+            "Niccolo Ferrari's areas of specialization include industrial "
+            "computer vision and visual inspection.",
+            "skills",
+        ),
     ),
 )
 def test_text_satisfies_intent_evidence_uses_required_terms(
@@ -155,6 +175,18 @@ def test_text_satisfies_intent_evidence_uses_required_terms(
         ),
         (
             "skills: Niccolo Ferrari has public profile information.",
+            "skills",
+        ),
+        (
+            "skills: Niccolo Ferrari uses public profile information.",
+            "skills",
+        ),
+        (
+            "skills: Niccolo Ferrari's skills include public profile information.",
+            "skills",
+        ),
+        (
+            "skills: Niccolo Ferrari's skills includes public profile information.",
             "skills",
         ),
         (

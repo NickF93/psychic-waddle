@@ -388,6 +388,37 @@ def test_policy_rejects_common_recruiter_intents_with_category_only_context(
     assert decision.approved_context == ()
 
 
+@pytest.mark.parametrize(
+    "chunk_text",
+    (
+        "skills: Niccolo Ferrari uses public profile information.",
+        "skills: Niccolo Ferrari's skills include public profile information.",
+        "skills: Niccolo Ferrari's skills includes public profile information.",
+    ),
+)
+def test_policy_rejects_skills_context_with_generic_evidence_verbs_only(
+    chunk_text: str,
+) -> None:
+    decision = DeterministicAnswerPolicy().decide(
+        AnswerPolicyRequest(
+            question="What are Niccolo's main machine learning skills?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="skills",
+                    chunk_text=chunk_text,
+                    combined_score=0.99,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "insufficient_intent_support"
+    assert decision.approved_context == ()
+
+
 def test_policy_treats_github_repository_question_as_project_intent() -> None:
     decision = DeterministicAnswerPolicy().decide(
         AnswerPolicyRequest(
