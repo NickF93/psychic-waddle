@@ -81,7 +81,9 @@ The system prompt requires the model to:
   information, and source evidence;
 - return the exact internal sentinel `INSUFFICIENT_APPROVED_CONTEXT` if it cannot
   answer directly from approved context;
-- omit citations and source labels because the application attaches sources.
+- omit citations and source labels because the application attaches sources;
+- for fit or suitability questions, summarize approved evidence only and avoid
+  yes/no hiring verdicts, hiring recommendations, or predictions.
 
 If an answerable provider response returns the sentinel or a whole-answer
 insufficiency refusal, the generator deterministically demotes the response to
