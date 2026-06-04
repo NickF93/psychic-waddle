@@ -84,6 +84,50 @@ def test_grounded_generator_prompt_uses_only_approved_context() -> None:
     assert "Do not add citations or source labels" in system_prompt
     assert "INSUFFICIENT_APPROVED_CONTEXT" in system_prompt
     assert "available verified context is not enough" not in system_prompt
+    assert "summarize approved evidence only" in system_prompt
+    assert "Do not give" in system_prompt
+    assert "hiring recommendation" in system_prompt
+
+
+def test_grounded_generator_keeps_fit_answers_as_evidence_summaries() -> None:
+    provider_answer = (
+        "The approved context shows industrial computer vision experience and "
+        "skills in anomaly detection, segmentation, C++ inference, Python, "
+        "PyTorch, TensorFlow, Halcon, OpenCV, ONNX, OpenVINO, TensorRT, and "
+        "Docker."
+    )
+    provider = FakeProvider(provider_answer)
+    generator = GroundedAnswerGenerator(provider, "chat-model")
+
+    response = _run(
+        generator.generate(
+            AnswerGenerationRequest(
+                question=(
+                    "Is Niccolo a good fit for industrial computer vision roles?"
+                ),
+                decision=_answerable_decision(
+                    chunk_text=(
+                        "skills: Niccolo Ferrari's main technical skills combine "
+                        "industrial computer vision, anomaly detection, "
+                        "segmentation, C++ inference, Python, PyTorch, "
+                        "TensorFlow, Halcon, OpenCV, ONNX, OpenVINO, TensorRT, "
+                        "and Docker."
+                    ),
+                ),
+                language="en",
+            )
+        )
+    )
+
+    system_prompt = provider.chat_requests[0].messages[0].content
+    assert "fit or suitability questions" in system_prompt
+    assert response.status == ANSWERABLE
+    assert "recommend" not in response.answer_text.casefold()
+    assert "yes" not in response.answer_text.casefold()
+    assert response.answer_text == (
+        f"{provider_answer}\n\n"
+        "Sources: Niccolo Ferrari CV (Experience section)."
+    )
 
 
 @pytest.mark.parametrize(
