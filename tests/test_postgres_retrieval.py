@@ -67,11 +67,11 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
     )
     assert provider.chat_requests == ()
     assert tuple(result.chunk_id for result in response.results) == (1, 3)
-    assert response.results[0].score.combined_score == pytest.approx(2 / 3)
+    assert response.results[0].score.combined_score == pytest.approx(1.0)
     assert response.results[0].score.vector_score == 0.72
     assert response.results[0].score.keyword_score == 0.9
     assert response.results[1].score.combined_score == pytest.approx(
-        ((1 / 62) + (1 / 61)) / (3 / 61)
+        ((1 / 62) + (1 / 61)) / (2 / 61)
     )
     assert response.results[1].score.vector_score is None
     assert response.results[1].score.keyword_score == 0.5
@@ -184,11 +184,38 @@ def test_postgres_retriever_fuses_candidate_ranks() -> None:
     response = asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=2)))
 
     assert tuple(result.chunk_id for result in response.results) == (1, 2)
-    assert response.results[0].score.combined_score > (
+    assert response.results[0].score.combined_score < (
         response.results[1].score.combined_score
     )
     assert response.results[0].score.vector_score == 0.4
     assert response.results[0].score.keyword_score == 0.1
+
+
+def test_postgres_retriever_threshold_score_ignores_missing_optional_channels() -> None:
+    connection = FakeRetrievalConnection(
+        vector_rows=(
+            _row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.72),
+        ),
+        keyword_rows=(
+            _row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.9),
+        ),
+        intent_rows=(
+            _row(2, "experience: weaker intent-only workplace context", 0.8),
+        ),
+    )
+    retriever = PostgreSQLRetriever(
+        connection=connection,
+        provider=FakeEmbeddingProvider(((0.1, 0.2),)),
+        embedding_backend="ollama",
+        embedding_model="nomic-embed-text",
+    )
+
+    response = asyncio.run(
+        retriever.retrieve(RetrievalRequest(question="Where did Niccolo work?", top_k=2))
+    )
+
+    assert response.results[0].chunk_id == 1
+    assert response.results[0].score.combined_score >= 0.7
 
 
 def test_postgres_retriever_does_not_apply_policy_score_threshold() -> None:
@@ -210,7 +237,7 @@ def test_postgres_retriever_does_not_apply_policy_score_threshold() -> None:
     )
 
     assert tuple(result.chunk_id for result in response.results) == (1,)
-    assert response.results[0].score.combined_score == pytest.approx(0.5)
+    assert response.results[0].score.combined_score == pytest.approx(1.0)
 
 
 def test_postgres_retriever_does_not_expand_unsupported_questions() -> None:

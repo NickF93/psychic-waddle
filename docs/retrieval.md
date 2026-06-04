@@ -46,10 +46,10 @@ records may be returned by concrete retrieval implementations.
 Scores are diagnostics for ranking and answer policy. They are not visitor
 analytics and must not be stored as visitor-derived data.
 
-`combined_score` is a deterministic fused ranking signal. It is not a direct
-comparison between raw vector similarity and PostgreSQL text-rank values. Raw
-vector and keyword scores remain diagnostics because their numeric scales are
-not equivalent confidence values.
+`combined_score` is a deterministic rank-quality signal used by answer policy.
+It is not a direct comparison between raw vector similarity and PostgreSQL
+text-rank values. Raw vector and keyword scores remain diagnostics because
+their numeric scales are not equivalent confidence values.
 
 ## Boundaries
 
@@ -100,17 +100,21 @@ The retriever:
   vector.
 - Runs intent-expanded lexical search for detected supported recruiter intents.
 - Merges vector, keyword, and intent-expanded candidates by chunk id.
-- Ranks deterministically with reciprocal rank fusion over candidate ordering,
-  then stable raw-score and chunk-id tie-breakers.
+- Ranks deterministically with raw reciprocal-rank-fusion sums over candidate
+  ordering, then stable raw-score and chunk-id tie-breakers.
 - Returns only source-backed `RetrievedContext` records.
 
 RRF uses a fixed internal rank constant of `60`. The raw RRF sum is normalized
 to the existing `0..1` `combined_score` contract by dividing by the maximum
-possible RRF score for the channels attempted by that request. Retrieval must
-not treat raw vector similarity and `ts_rank_cd` as directly comparable
-confidence scores. Retrieval gathers candidate evidence; `AnswerPolicy` applies
-`RETRIEVAL_MIN_SCORE` and decides whether that evidence is intent-complete and
-answerable.
+possible RRF score for the channels where that chunk actually appeared. Missing
+optional channels do not reduce policy threshold eligibility. The raw RRF sum
+remains the ordering key so chunks found by multiple channels are still favored
+in ranking.
+
+Retrieval must not treat raw vector similarity and `ts_rank_cd` as directly
+comparable confidence scores. Retrieval gathers candidate evidence;
+`AnswerPolicy` applies `RETRIEVAL_MIN_SCORE` and decides whether that evidence
+is intent-complete and answerable.
 
 ## Question Intent Expansion
 

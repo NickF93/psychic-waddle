@@ -49,6 +49,9 @@ The default policy uses only local, inspectable signals:
 
 - `RetrievedContext.score.combined_score` must be at least the configured
   `RETRIEVAL_MIN_SCORE` value passed into the policy request.
+- Retrieval computes `combined_score` as matched-channel rank quality. It is
+  bounded from `0` to `1` and is not reduced because an optional retrieval
+  channel did not return the same chunk.
 - At least one reviewed source must support the approved context.
 - Supported recruiter questions are detected with shared `QuestionIntentProfile`
   definitions for professional overview, workplace, current role, skills,
