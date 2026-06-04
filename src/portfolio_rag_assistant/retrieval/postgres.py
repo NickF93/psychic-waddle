@@ -42,11 +42,12 @@ class RetrievalCandidate:
     vector_rank: int | None = None
     keyword_rank: int | None = None
     intent_rank: int | None = None
-    rrf_score: float = 0.0
+    rrf_order_score: float = 0.0
+    rank_quality_score: float = 0.0
 
     @property
     def combined_score(self) -> float:
-        return self.rrf_score
+        return self.rank_quality_score
 
     def to_context(self) -> RetrievedContext:
         """Convert the internal candidate into the public retrieval contract."""
@@ -126,7 +127,6 @@ class PostgreSQLRetriever:
                 vector_candidates=vector_candidates,
                 keyword_candidates=keyword_candidates,
                 intent_candidates=intent_candidates,
-                attempted_channel_count=2 + int(bool(intents)),
                 top_k=request.top_k,
             )
         )
@@ -255,11 +255,10 @@ def _rank_candidates(
     vector_candidates: tuple[RetrievalCandidate, ...],
     keyword_candidates: tuple[RetrievalCandidate, ...],
     intent_candidates: tuple[RetrievalCandidate, ...],
-    attempted_channel_count: int,
     top_k: int,
 ) -> tuple[RetrievalCandidate, ...]:
     candidates = tuple(
-        _with_rrf_score(candidate, attempted_channel_count)
+        _with_rrf_score(candidate)
         for candidate in _merge_candidates(
             _ranked_vector_candidates(vector_candidates),
             _ranked_keyword_candidates(keyword_candidates),
@@ -271,7 +270,7 @@ def _rank_candidates(
         for candidate in sorted(
             candidates,
             key=lambda item: (
-                -item.combined_score,
+                -item.rrf_order_score,
                 -(item.vector_score or 0.0),
                 -(item.keyword_score or 0.0),
                 -(item.intent_score or 0.0),
@@ -312,7 +311,8 @@ def _merge_candidate(
         vector_rank=_min_optional(left.vector_rank, right.vector_rank),
         keyword_rank=_min_optional(left.keyword_rank, right.keyword_rank),
         intent_rank=_min_optional(left.intent_rank, right.intent_rank),
-        rrf_score=max(left.rrf_score, right.rrf_score),
+        rrf_order_score=max(left.rrf_order_score, right.rrf_order_score),
+        rank_quality_score=max(left.rank_quality_score, right.rank_quality_score),
     )
 
 
@@ -359,15 +359,22 @@ def _ranked_intent_candidates(
     )
 
 
-def _with_rrf_score(
-    candidate: RetrievalCandidate,
-    attempted_channel_count: int,
-) -> RetrievalCandidate:
-    if attempted_channel_count < 1:
+def _with_rrf_score(candidate: RetrievalCandidate) -> RetrievalCandidate:
+    matched_ranks = _matched_channel_ranks(candidate)
+    if not matched_ranks:
         return candidate
-    max_score = attempted_channel_count * _rrf_contribution(rank=1)
-    score = sum(
-        _rrf_contribution(rank=rank)
+    order_score = sum(_rrf_contribution(rank=rank) for rank in matched_ranks)
+    max_rank_quality_score = len(matched_ranks) * _rrf_contribution(rank=1)
+    return replace(
+        candidate,
+        rrf_order_score=order_score,
+        rank_quality_score=min(1.0, order_score / max_rank_quality_score),
+    )
+
+
+def _matched_channel_ranks(candidate: RetrievalCandidate) -> tuple[int, ...]:
+    return tuple(
+        rank
         for rank in (
             candidate.vector_rank,
             candidate.keyword_rank,
@@ -375,7 +382,6 @@ def _with_rrf_score(
         )
         if rank is not None
     )
-    return replace(candidate, rrf_score=min(1.0, score / max_score))
 
 
 def _rrf_contribution(*, rank: int) -> float:
