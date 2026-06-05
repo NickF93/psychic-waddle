@@ -154,6 +154,44 @@ def test_runtime_smoke_requires_intent_catalog_settings() -> None:
     assert "INTENT_PROFILES_PATH must be set" in stderr.getvalue()
 
 
+def test_runtime_smoke_rejects_stale_semantic_calibration(monkeypatch) -> None:
+    provider_calls: list[str] = []
+    stdout = StringIO()
+    stderr = StringIO()
+
+    monkeypatch.setattr(
+        cli,
+        "build_chat_provider",
+        lambda settings: provider_calls.append("chat"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "build_embedding_provider",
+        lambda settings: provider_calls.append("embedding"),
+    )
+
+    exit_code = cli.run(
+        ("runtime", "smoke"),
+        env={
+            **_db_env(),
+            "CHAT_BACKEND": "openai-compatible",
+            "CHAT_BASE_URL": "https://api.example.test/v1",
+            "CHAT_MODEL": "chat-model",
+            "EMBEDDING_BACKEND": "ollama",
+            "EMBEDDING_BASE_URL": "http://localhost:11434/api",
+            "EMBEDDING_MODEL": "different-embedding-model",
+            "INTENT_PROFILES_PATH": str(ROOT / "config" / "intent-profiles.json"),
+            "QUESTION_COLLECTION_ENABLED": "false",
+        },
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    assert exit_code == 2
+    assert "intent semantic calibration must match" in stderr.getvalue()
+    assert provider_calls == []
+
+
 def test_questions_list_uses_review_store(monkeypatch) -> None:
     store = FakeQuestionReviewStore(events=(_question_event(11),))
     rendered: list[tuple[QuestionEvent, ...]] = []

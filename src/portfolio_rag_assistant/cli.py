@@ -247,7 +247,13 @@ def _run_runtime_smoke(env: Mapping[str, str], stdout: TextIO) -> int:
     embedding_settings = load_embedding_provider_settings(env)
     question_collection_settings = load_question_collection_settings(env)
     intent_catalog_settings = load_intent_catalog_settings(env)
-    load_intent_catalog(intent_catalog_settings.path)
+    intent_catalog = load_intent_catalog(intent_catalog_settings.path)
+    _require_matching_semantic_calibration(
+        configured_backend=embedding_settings.backend,
+        configured_model=embedding_settings.model,
+        calibrated_backend=intent_catalog.semantic_calibration.embedding_backend,
+        calibrated_model=intent_catalog.semantic_calibration.embedding_model,
+    )
     chat_provider = build_chat_provider(chat_settings)
     embedding_provider = build_embedding_provider(embedding_settings)
 
@@ -274,6 +280,23 @@ def _run_runtime_smoke(env: Mapping[str, str], stdout: TextIO) -> int:
         file=stdout,
     )
     return 0
+
+
+def _require_matching_semantic_calibration(
+    *,
+    configured_backend: str,
+    configured_model: str,
+    calibrated_backend: str,
+    calibrated_model: str,
+) -> None:
+    if (
+        configured_backend != calibrated_backend
+        or configured_model != calibrated_model
+    ):
+        raise CommandError(
+            "intent semantic calibration must match configured embedding backend "
+            "and model"
+        )
 
 
 async def _check_provider_reachability(

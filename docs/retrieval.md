@@ -19,8 +19,8 @@ The `Retriever` protocol exposes one async operation:
 - `question`: non-empty visitor question text.
 - `top_k`: positive maximum number of ranked chunks to return.
 
-`RetrievalResponse` contains the original question and ranked
-`RetrievedContext` records.
+`RetrievalResponse` contains the original question, ranked `RetrievedContext`
+records, and the intent authority's `IntentResolution`.
 
 Each `RetrievedContext` is a public source-backed chunk with:
 
@@ -58,6 +58,7 @@ Retrieval may:
 - Read reviewed knowledge through the knowledge store.
 - Use `EmbeddingProvider.embed()` to embed the visitor question.
 - Use bounded question-intent profiles for deterministic lexical expansion.
+- Use semantic candidate intents resolved from reviewed catalog anchors.
 - Rank public chunks.
 - Return source metadata needed by answer policy and later answer generation.
 
@@ -98,7 +99,10 @@ The retriever:
 - Runs keyword search with PostgreSQL full-text search using
   `websearch_to_tsquery('english', question)` and the matching English text
   vector.
-- Runs intent-expanded lexical search for detected supported recruiter intents.
+- Resolves lexical required intents plus semantic candidate intents after the
+  single question embedding call.
+- Runs intent-expanded lexical search for required and candidate recruiter
+  intents.
 - Merges vector, keyword, and intent-expanded candidates by chunk id.
 - Ranks deterministically with raw reciprocal-rank-fusion sums over candidate
   ordering, then stable raw-score and chunk-id tie-breakers.
@@ -130,19 +134,24 @@ Question-intent expansion is bounded to supported recruiter intents:
 - public contact links.
 
 Each configured intent profile supplies positive trigger groups, accepted
-knowledge categories, semantic example questions, lexical expansion terms, and
-required evidence groups.
-Retrieval may use catalog-owned detected intents to improve recall. Detected
-intent expansion is bounded to matching profiles' controlled lexical expansion
-terms, joined as a PostgreSQL full-text OR query, and searches only those
-profiles' accepted knowledge categories. The raw visitor question is not
-appended to the intent-expanded query because vector and keyword retrieval
-already search the question. Policy uses the same configured catalog to verify
-evidence completeness. If the catalog is missing or invalid, runtime startup
-fails instead of falling back to built-in vocabulary.
+knowledge categories, semantic example questions, semantic thresholds, lexical
+expansion terms, and required evidence groups. Lexical matches become required
+intents. Semantic matches start as candidate intents unless a reviewed required
+threshold promotes them.
 
-Semantic example questions are not used by retrieval in the current runtime.
-They are reviewed preparation data for a future calibrated semantic resolver.
+Retrieval may use catalog-owned required and candidate intents to improve
+candidate gathering. Intent expansion is bounded to matching profiles'
+controlled lexical expansion terms, joined as a PostgreSQL full-text OR query,
+and searches only those profiles' accepted knowledge categories. The raw visitor
+question is not appended to the intent-expanded query because vector and keyword
+retrieval already search the question. Retrieval transports the same
+`IntentResolution` to policy; it does not decide answerability.
+
+Semantic anchor embeddings are in-memory runtime artifacts owned by the intent
+resolver. They are not written to PostgreSQL and are not reviewed knowledge. If
+the catalog is missing, invalid, or calibrated for a different embedding
+backend/model, runtime startup fails instead of falling back to built-in
+vocabulary or silently disabling semantic matching.
 
 ## Sprint 3.2 Scope
 

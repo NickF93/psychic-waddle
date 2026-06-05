@@ -367,13 +367,18 @@ INTENT_PROFILES_PATH=config/intent-profiles.json
 ```
 
 The intent catalog is reviewed matcher configuration. It is loaded by runtime
-composition and injected into retrieval and answer policy. It is not knowledge
-and must not be ingested into PostgreSQL.
+composition and used to build the semantic intent resolver shared by retrieval
+and policy flow. It is not knowledge and must not be ingested into PostgreSQL.
 
 Startup fails before provider or database authorities are built if
 `INTENT_PROFILES_PATH` is missing, points to a missing file, points outside the
 allowed public runtime `config/` directory, or loads invalid catalog JSON. There
 is no built-in intent catalog fallback.
+
+The catalog's semantic calibration backend/model must match
+`EMBEDDING_BACKEND` and `EMBEDDING_MODEL`. Changing the embedding model requires
+reviewed semantic threshold recalibration as well as normal knowledge
+re-indexing.
 
 ## Optional Local Model Profiles
 

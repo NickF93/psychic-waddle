@@ -48,7 +48,7 @@ def test_chat_service_orchestrates_answerable_flow() -> None:
         approved_context=(context,),
     )
     retriever = FakeRetriever(
-        RetrievalResponse(
+        _retrieval_response(
             question="Where did Niccolo work?",
             results=(context,),
         ),
@@ -85,6 +85,7 @@ def test_chat_service_orchestrates_answerable_flow() -> None:
         AnswerPolicyRequest(
             question="Where did Niccolo work?",
             retrieved_context=(context,),
+            intent_resolution=_intent_resolution("Where did Niccolo work?"),
             min_score=0.25,
         ),
     )
@@ -113,7 +114,7 @@ def test_chat_service_returns_not_answerable_generator_response() -> None:
     collector = FakeQuestionCollector(recorded=True)
     service = _service(
         retriever=FakeRetriever(
-            RetrievalResponse(question="Private phone?", results=()),
+            _retrieval_response(question="Private phone?", results=()),
             [],
         ),
         policy=FakePolicy(
@@ -152,7 +153,7 @@ def test_chat_service_returns_clarification_generator_response() -> None:
     collector = FakeQuestionCollector(recorded=True)
     service = _service(
         retriever=FakeRetriever(
-            RetrievalResponse(question="Tell me about Niccolo", results=(_context(),)),
+            _retrieval_response(question="Tell me about Niccolo", results=(_context(),)),
             [],
         ),
         policy=FakePolicy(
@@ -189,7 +190,7 @@ def test_chat_service_does_not_collect_answerable_questions() -> None:
     collector = FakeQuestionCollector(recorded=True)
     service = _service(
         retriever=FakeRetriever(
-            RetrievalResponse(question="Where did Niccolo work?", results=(_context(),)),
+            _retrieval_response(question="Where did Niccolo work?", results=(_context(),)),
             [],
         ),
         policy=FakePolicy(
@@ -246,7 +247,7 @@ def test_chat_service_collects_demoted_answerable_generation() -> None:
     )
     service = _service(
         retriever=FakeRetriever(
-            RetrievalResponse(question="Where did Niccolo work?", results=(context,)),
+            _retrieval_response(question="Where did Niccolo work?", results=(context,)),
             [],
         ),
         policy=policy,
@@ -279,7 +280,7 @@ def test_chat_service_collects_real_policy_not_answerable_question() -> None:
     collector = FakeQuestionCollector(recorded=True)
     service = _service(
         retriever=FakeRetriever(
-            RetrievalResponse(
+            _retrieval_response(
                 question="What is Niccolo favorite pizza topping?",
                 results=(_context(),),
             ),
@@ -315,7 +316,7 @@ def test_chat_service_does_not_collect_real_policy_answerable_question() -> None
     collector = FakeQuestionCollector(recorded=True)
     service = _service(
         retriever=FakeRetriever(
-            RetrievalResponse(question="Where did Niccolo work?", results=(_context(),)),
+            _retrieval_response(question="Where did Niccolo work?", results=(_context(),)),
             [],
         ),
         policy=DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()),
@@ -343,7 +344,7 @@ def test_chat_service_does_not_collect_real_policy_answerable_question() -> None
 def test_chat_service_ignores_question_collection_failures() -> None:
     service = _service(
         retriever=FakeRetriever(
-            RetrievalResponse(question="Private phone?", results=()),
+            _retrieval_response(question="Private phone?", results=()),
             [],
         ),
         policy=FakePolicy(
@@ -421,6 +422,22 @@ def _context() -> RetrievedContext:
         source_locator="Experience section",
         score=RetrievalScore(combined_score=0.91),
     )
+
+
+def _retrieval_response(
+    *,
+    question: str,
+    results: tuple[RetrievedContext, ...],
+) -> RetrievalResponse:
+    return RetrievalResponse(
+        question=question,
+        results=results,
+        intent_resolution=_intent_resolution(question),
+    )
+
+
+def _intent_resolution(question: str):
+    return tracked_intent_catalog().resolve_lexical_intents(question)
 
 
 def _run(awaitable):

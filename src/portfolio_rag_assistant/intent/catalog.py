@@ -11,18 +11,29 @@ from portfolio_rag_assistant.intent.profiles import (
     IntentCatalog,
     QuestionIntentProfile,
     QuestionIntentProfileError,
+    SemanticCalibration,
     _question_intent_from_catalog,
 )
 from portfolio_rag_assistant.knowledge import KnowledgeCategory
 
-_SCHEMA_VERSION = 3
-_TOP_LEVEL_KEYS = frozenset(("schema_version", "profiles"))
+_SCHEMA_VERSION = 4
+_TOP_LEVEL_KEYS = frozenset(("schema_version", "semantic_calibration", "profiles"))
+_SEMANTIC_CALIBRATION_KEYS = frozenset(
+    (
+        "embedding_backend",
+        "embedding_model",
+        "precision_floor",
+        "minimum_required_support",
+    )
+)
 _PROFILE_KEYS = frozenset(
     (
         "intent",
         "accepted_categories",
         "trigger_groups",
         "semantic_example_questions",
+        "semantic_candidate_threshold",
+        "semantic_required_threshold",
         "lexical_expansion_terms",
         "required_evidence_groups",
     )
@@ -52,7 +63,12 @@ def load_intent_catalog(path: str | Path) -> IntentCatalog:
             f"intent catalog schema_version must be {_SCHEMA_VERSION}"
         )
 
-    return IntentCatalog(profiles=_load_profiles(catalog["profiles"]))
+    return IntentCatalog(
+        semantic_calibration=_load_semantic_calibration(
+            catalog["semantic_calibration"]
+        ),
+        profiles=_load_profiles(catalog["profiles"]),
+    )
 
 
 def _require_catalog_path(path: str | Path) -> Path:
@@ -80,6 +96,33 @@ def _load_profiles(value: object) -> tuple[QuestionIntentProfile, ...]:
     return profiles
 
 
+def _load_semantic_calibration(value: object) -> SemanticCalibration:
+    calibration = _require_mapping(value, "semantic_calibration")
+    _require_exact_keys(
+        calibration,
+        _SEMANTIC_CALIBRATION_KEYS,
+        "semantic_calibration",
+    )
+    return SemanticCalibration(
+        embedding_backend=_require_text(
+            calibration["embedding_backend"],
+            "semantic_calibration.embedding_backend",
+        ),
+        embedding_model=_require_text(
+            calibration["embedding_model"],
+            "semantic_calibration.embedding_model",
+        ),
+        precision_floor=_require_float(
+            calibration["precision_floor"],
+            "semantic_calibration.precision_floor",
+        ),
+        minimum_required_support=_require_positive_int(
+            calibration["minimum_required_support"],
+            "semantic_calibration.minimum_required_support",
+        ),
+    )
+
+
 def _load_profile(value: object, index: int) -> QuestionIntentProfile:
     profile = _require_mapping(value, f"profiles[{index}]")
     _require_exact_keys(profile, _PROFILE_KEYS, f"profiles[{index}]")
@@ -104,6 +147,14 @@ def _load_profile(value: object, index: int) -> QuestionIntentProfile:
         semantic_example_questions=_require_string_list(
             profile["semantic_example_questions"],
             f"profiles[{index}].semantic_example_questions",
+        ),
+        semantic_candidate_threshold=_require_float(
+            profile["semantic_candidate_threshold"],
+            f"profiles[{index}].semantic_candidate_threshold",
+        ),
+        semantic_required_threshold=_require_optional_float(
+            profile["semantic_required_threshold"],
+            f"profiles[{index}].semantic_required_threshold",
         ),
         lexical_expansion_terms=frozenset(
             _require_string_list(
@@ -173,3 +224,23 @@ def _require_text(value: object, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise QuestionIntentProfileError(f"{field_name} must be a non-empty string")
     return value.strip()
+
+
+def _require_float(value: object, field_name: str) -> float:
+    if not isinstance(value, float) or isinstance(value, bool):
+        raise QuestionIntentProfileError(f"{field_name} must be a float")
+    return value
+
+
+def _require_optional_float(value: object, field_name: str) -> float | None:
+    if value is None:
+        return None
+    return _require_float(value, field_name)
+
+
+def _require_positive_int(value: object, field_name: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise QuestionIntentProfileError(f"{field_name} must be a positive integer")
+    if value <= 0:
+        raise QuestionIntentProfileError(f"{field_name} must be a positive integer")
+    return value

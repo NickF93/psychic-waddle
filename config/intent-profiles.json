@@ -1,5 +1,11 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
+  "semantic_calibration": {
+    "embedding_backend": "ollama",
+    "embedding_model": "nomic-embed-text",
+    "precision_floor": 1.0,
+    "minimum_required_support": 2
+  },
   "profiles": [
     {
       "intent": "professional_overview",
@@ -23,6 +29,8 @@
         "What professional story should I know about Niccolo?",
         "How would you describe Niccolo's professional path?"
       ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
       "lexical_expansion_terms": [
         "career",
         "current role",
@@ -98,6 +106,8 @@
         "Tell me the places where Niccolo has held roles.",
         "Which professional settings has Niccolo worked in?"
       ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
       "lexical_expansion_terms": [
         "companies",
         "company",
@@ -167,6 +177,8 @@
         "Which position does Niccolo hold at the moment?",
         "What is Niccolo responsible for in his present job?"
       ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
       "lexical_expansion_terms": [
         "current",
         "current employer",
@@ -242,6 +254,8 @@
         "Which machine learning capabilities does Niccolo offer?",
         "What engineering abilities are strongest in Niccolo's profile?"
       ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
       "lexical_expansion_terms": [
         "frameworks",
         "industrial computer vision",
@@ -338,6 +352,8 @@
         "Which academic path did Niccolo follow?",
         "What formal training does Niccolo list?"
       ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
       "lexical_expansion_terms": [
         "bachelor",
         "degree",
@@ -388,6 +404,8 @@
         "Has Niccolo contributed scholarly articles?",
         "What scientific writing is associated with Niccolo?"
       ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
       "lexical_expansion_terms": [
         "arxiv",
         "doi",
@@ -449,6 +467,8 @@
         "Which implementations can I inspect from Niccolo?",
         "What public technical artifacts has Niccolo released?"
       ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
       "lexical_expansion_terms": [
         "code",
         "github",
@@ -511,6 +531,8 @@
         "Where is Niccolo visible professionally online?",
         "Which public profiles identify Niccolo?"
       ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
       "lexical_expansion_terms": [
         "github",
         "linkedin",

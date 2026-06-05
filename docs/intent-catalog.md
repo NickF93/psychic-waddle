@@ -9,8 +9,9 @@ The catalog owns domain vocabulary only:
 - supported recruiter intent identifiers;
 - accepted reviewed-knowledge categories for each intent;
 - trigger term groups used to recognize supported questions;
-- semantic example questions reserved for future embedding-based intent
-  calibration;
+- semantic example questions used as embedding anchors for semantic intent
+  routing;
+- semantic calibration metadata and per-profile semantic thresholds;
 - lexical expansion terms used by retrieval;
 - required evidence term groups used by answer policy.
 
@@ -44,8 +45,16 @@ by the configured catalog, not raw strings fabricated by consumers.
 
 The top-level object must contain exactly:
 
-- `schema_version`: currently `3`;
+- `schema_version`: currently `4`;
+- `semantic_calibration`;
 - `profiles`: non-empty list of profile objects.
+
+`semantic_calibration` must contain exactly:
+
+- `embedding_backend`;
+- `embedding_model`;
+- `precision_floor`;
+- `minimum_required_support`.
 
 Each profile object must contain exactly:
 
@@ -53,6 +62,8 @@ Each profile object must contain exactly:
 - `accepted_categories`;
 - `trigger_groups`;
 - `semantic_example_questions`;
+- `semantic_candidate_threshold`;
+- `semantic_required_threshold`;
 - `lexical_expansion_terms`;
 - `required_evidence_groups`.
 
@@ -63,19 +74,27 @@ term matches a normalized word. A multi-word term matches the exact normalized
 phrase.
 
 `semantic_example_questions` is a non-empty list of reviewed example questions
-for a future semantic intent matcher. These examples are embedding anchors only.
-They are loaded and validated, but they do not affect lexical intent detection,
-retrieval, policy, or answerability in the current runtime.
+used as embedding anchors by the semantic intent resolver. They are not visitor
+facts and are not written to PostgreSQL.
 
-## Semantic Preparation
+`semantic_candidate_threshold` is the minimum cosine similarity for a semantic
+match to become a candidate intent. `semantic_required_threshold` is either a
+reviewed float threshold or `null`. A `null` required threshold means that
+semantic matches for that profile remain candidate-only and cannot satisfy the
+answerability gate.
 
-Future semantic intent resolution must remain generic:
+## Semantic Resolution
+
+Semantic intent resolution must remain generic:
 
 - resolver code must not branch on concrete intent IDs;
-- per-intent semantic thresholds must live in reviewed catalog data when
-  thresholds are introduced;
-- semantic matches must start as candidate intents unless calibrated evidence
-  proves they are precise enough to become required intents.
+- per-intent semantic thresholds must live in reviewed catalog data;
+- semantic matches remain candidate intents unless calibrated evidence proves
+  they are precise enough to become required intents.
+
+The runtime embedding backend and model must match `semantic_calibration`.
+Mismatch is a hard startup/configuration error. There is no fallback that
+silently disables semantic matching or downgrades required thresholds.
 
 The labeled evaluation fixture under `tests/fixtures/` is calibration data, not
 runtime configuration. It must remain disjoint from catalog semantic anchors

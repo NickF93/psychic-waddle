@@ -127,19 +127,22 @@ Owns verified facts, chunks, sources, and embeddings only.
 Owns bounded recruiter-intent definitions only.
 
 - Defines deterministic positive trigger terms or exact normalized trigger
-  phrases, semantic example questions, accepted knowledge categories, lexical
-  expansion terms, and required evidence terms for supported recruiter intents
-  from the reviewed `config/intent-profiles.json` runtime catalog.
+  phrases, semantic example questions, semantic thresholds, accepted knowledge
+  categories, lexical expansion terms, and required evidence terms for supported
+  recruiter intents from the reviewed `config/intent-profiles.json` runtime
+  catalog.
 - Owns catalog-produced intent identifiers; retrieval and policy must not
   fabricate intent IDs from raw strings.
+- Owns `IntentResolution`, whose required intents feed answerability and whose
+  candidate intents may help retrieval only.
 - Covered intents are professional overview, workplaces and work history,
   current role, skills, education, publications, projects and repositories, and
   public contact links.
 - May be read by retrieval for deterministic query expansion.
 - May be read by policy for deterministic evidence-completeness checks.
-- Semantic example questions are reviewed preparation data for a future
-  embedding matcher. They must not change retrieval, policy, or answerability
-  until an explicit semantic resolver is implemented and calibrated.
+- Semantic example questions are reviewed embedding anchors for the semantic
+  resolver. Anchor vectors are in-memory runtime artifacts, not PostgreSQL
+  knowledge.
 - Must not call providers, search PostgreSQL, rank chunks, generate answers,
   persist data, collect questions, or inspect request metadata.
 - The catalog is matcher configuration, not portfolio knowledge, and must not be
@@ -148,10 +151,10 @@ Owns bounded recruiter-intent definitions only.
   missing fields, invalid schema versions, duplicate intents, invalid knowledge
   categories, and empty term groups. There is no default catalog or hidden
   fallback.
-- Future semantic intent resolution must use one generic resolver, with no
-  concrete-intent branches. Per-intent thresholds must be reviewed catalog data
-  when introduced, and semantic matches must remain candidate intents unless
-  calibrated to become required intents.
+- Semantic intent resolution must use one generic resolver, with no
+  concrete-intent branches. Per-intent thresholds must be reviewed catalog data,
+  and semantic matches must remain candidate intents unless calibrated to become
+  required intents.
 
 ### `Retriever`
 
@@ -159,8 +162,9 @@ Owns search, ranking, and retrieval diagnostics only.
 
 - Performs vector search, keyword search, and hybrid ranking over reviewed
   knowledge.
-- May use `QuestionIntentProfile` definitions to add deterministic lexical
-  expansion for supported recruiter intents.
+- May use required and candidate intents from `IntentResolution` to add bounded
+  lexical expansion for supported recruiter intents.
+- Transports `IntentResolution` to policy but must not decide answerability.
 - Must treat vector scores and text-rank scores as different diagnostic scales
   unless a rank-fusion algorithm combines their result ordering.
 - Returns ranked context with scores and minimal diagnostics needed by policy.
@@ -245,6 +249,8 @@ names, or hidden fallbacks are allowed.
 - `RETRIEVAL_MIN_SCORE`: minimum score required by answer policy.
 - `INTENT_PROFILES_PATH`: explicit path to the reviewed intent catalog. The
   path is mandatory at runtime and must load before the public API is served.
+  Catalog semantic calibration metadata must match the configured embedding
+  backend and model.
 - `QUESTION_COLLECTION_ENABLED`: enables anonymous question signal storage.
 
 Milestone 0 defines names and ownership only. Runtime validation, defaults, and

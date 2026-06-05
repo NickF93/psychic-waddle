@@ -63,6 +63,11 @@ The default policy uses only local, inspectable signals:
   an unbounded synonym engine.
 - Detected catalog-owned intents map to their accepted knowledge categories and
   required evidence terms.
+- Policy receives the `IntentResolution` returned by retrieval. It uses only
+  `required_intents` for category and evidence gating.
+- Candidate semantic intents may help retrieval gather context, but candidate
+  intents are invisible to the policy evidence gate and cannot make an answer
+  answerable.
 - Required evidence may be a normalized word or an exact normalized phrase,
   such as `worked at`, `work history`, `current role`, or `current employer`.
 - Category labels and chunk prefixes alone are not evidence. A chunk such as
@@ -102,20 +107,20 @@ Question-intent vocabulary is bounded and reviewed. It covers explicit
 recruiter phrasings, common English/Italian variants, and punctuation-normalized
 forms that are represented in `QuestionIntentProfile`.
 
-The policy receives catalog-owned intent values from runtime composition. It
-must not fabricate intent IDs from raw strings, read a default catalog, or use a
-hidden fallback when `INTENT_PROFILES_PATH` is missing or invalid.
+The policy receives catalog-owned required intent values through
+`IntentResolution`. It must not fabricate intent IDs from raw strings, run its
+own raw-question intent detection, read a default catalog, or use a hidden
+fallback when `INTENT_PROFILES_PATH` is missing or invalid.
 
 It is not a general semantic synonym system. New aliases, language variants, or
 question patterns must be added deliberately with tests. Broad category labels,
 generic verbs such as `uses`, `include`, or `includes`, and unsupported private
 or off-topic phrasing must not make context answerable by themselves.
 
-Catalog semantic example questions are preparation data only. The current
-policy ignores semantic matches because no calibrated semantic resolver exists.
-Future semantic matches must remain candidate intents unless the resolver has
-calibrated thresholds proving that they are precise enough to become required
-policy intents.
+Catalog semantic example questions are embedding anchors for the semantic
+resolver. Semantic matches remain candidate intents unless the catalog contains
+a reviewed required threshold calibrated for the configured embedding backend
+and model. Candidate-only semantic matches do not reach policy answerability.
 
 ## Refusal And Clarification Behavior
 

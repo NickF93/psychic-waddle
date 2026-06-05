@@ -4,6 +4,7 @@ import asyncio
 
 import pytest
 
+from portfolio_rag_assistant.intent import IntentResolution
 from portfolio_rag_assistant.retrieval import (
     RetrievedContext,
     RetrievalRequest,
@@ -89,6 +90,7 @@ def test_retrieval_response_requires_retrieved_context_results() -> None:
         RetrievalResponse(
             question="Where did Niccolo work?",
             results=("not a retrieved context",),
+            intent_resolution=IntentResolution(),
         )
 
 
@@ -106,4 +108,5 @@ class FakeRetriever:
         return RetrievalResponse(
             question=request.question,
             results=self._results[: request.top_k],
+            intent_resolution=IntentResolution(),
         )

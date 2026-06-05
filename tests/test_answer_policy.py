@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from intent_catalog_helpers import tracked_intent_catalog
+from portfolio_rag_assistant.intent import IntentResolution
 from portfolio_rag_assistant.policy import (
     ANSWERABLE,
     NEEDS_CLARIFICATION,
@@ -20,7 +21,7 @@ def test_policy_allows_relevant_source_backed_context() -> None:
     policy = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog())
 
     decision = policy.decide(
-        AnswerPolicyRequest(
+        _request(
             question="Where did Niccolò work?",
             retrieved_context=(
                 _context(
@@ -43,7 +44,7 @@ def test_policy_allows_relevant_source_backed_context() -> None:
 
 def test_policy_rejects_empty_retrieval_results() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Where did Niccolo work?",
             retrieved_context=(),
             min_score=0.7,
@@ -57,7 +58,7 @@ def test_policy_rejects_empty_retrieval_results() -> None:
 
 def test_policy_rejects_low_confidence_context() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Where did Niccolo work?",
             retrieved_context=(
                 _context(
@@ -76,7 +77,7 @@ def test_policy_rejects_low_confidence_context() -> None:
 
 def test_policy_rejects_unsupported_question_category() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="What degree does Niccolo have?",
             retrieved_context=(
                 _context(
@@ -95,7 +96,7 @@ def test_policy_rejects_unsupported_question_category() -> None:
 
 def test_policy_rejects_category_match_without_intent_support() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Where did Niccolo work?",
             retrieved_context=(
                 _context(
@@ -119,7 +120,7 @@ def test_policy_rejects_category_match_without_intent_support() -> None:
 
 def test_policy_rejects_workplace_question_with_non_workplace_work_context() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Where did Niccolo work?",
             retrieved_context=(
                 _context(
@@ -143,7 +144,7 @@ def test_policy_rejects_workplace_question_with_non_workplace_work_context() -> 
 
 def test_policy_allows_workplace_question_with_work_history_context() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Which employers did Niccolo have?",
             retrieved_context=(
                 _context(
@@ -167,7 +168,7 @@ def test_policy_allows_workplace_question_with_work_history_context() -> None:
 
 def test_policy_rejects_current_role_question_with_old_role_context() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="What is Niccolo's current role?",
             retrieved_context=(
                 _context(
@@ -191,7 +192,7 @@ def test_policy_rejects_current_role_question_with_old_role_context() -> None:
 
 def test_policy_allows_current_role_question_with_current_context() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="What is Niccolo's current role?",
             retrieved_context=(
                 _context(
@@ -219,7 +220,7 @@ def test_policy_allows_professional_overview_with_matching_evidence() -> None:
     )
 
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="What is Niccolo's experience?",
             retrieved_context=(
                 _context(
@@ -239,7 +240,7 @@ def test_policy_allows_professional_overview_with_matching_evidence() -> None:
 
 def test_policy_rejects_professional_overview_with_category_only_context() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="What is Niccolo's experience?",
             retrieved_context=(
                 _context(
@@ -316,7 +317,7 @@ def test_policy_allows_common_recruiter_intents_with_matching_evidence(
     chunk_text: str,
 ) -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question=question,
             retrieved_context=(
                 _context(
@@ -370,7 +371,7 @@ def test_policy_rejects_common_recruiter_intents_with_category_only_context(
     chunk_text: str,
 ) -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question=question,
             retrieved_context=(
                 _context(
@@ -401,7 +402,7 @@ def test_policy_rejects_skills_context_with_generic_evidence_verbs_only(
     chunk_text: str,
 ) -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="What are Niccolo's main machine learning skills?",
             retrieved_context=(
                 _context(
@@ -422,7 +423,7 @@ def test_policy_rejects_skills_context_with_generic_evidence_verbs_only(
 
 def test_policy_allows_fit_question_with_experience_and_skills_evidence() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Is Niccolo a good fit for industrial computer vision roles?",
             retrieved_context=(
                 _context(
@@ -486,7 +487,7 @@ def test_policy_rejects_fit_question_without_both_required_domains(
     chunk_text: str,
 ) -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Is Niccolo a good fit for industrial computer vision roles?",
             retrieved_context=(
                 _context(
@@ -507,7 +508,7 @@ def test_policy_rejects_fit_question_without_both_required_domains(
 
 def test_policy_treats_github_repository_question_as_project_intent() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Which GitHub repositories does Niccolo publish?",
             retrieved_context=(
                 _context(
@@ -532,7 +533,7 @@ def test_policy_treats_github_repository_question_as_project_intent() -> None:
 
 def test_policy_rejects_bare_ambiguous_github_question() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="What is Niccolo's GitHub?",
             retrieved_context=(
                 _context(
@@ -557,7 +558,7 @@ def test_policy_rejects_bare_ambiguous_github_question() -> None:
 
 def test_policy_rejects_private_email_question_even_with_contact_context() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="What is Niccolo's private email?",
             retrieved_context=(
                 _context(
@@ -596,7 +597,7 @@ def test_policy_rejects_uncategorized_unsupported_questions(
     question: str,
 ) -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question=question,
             retrieved_context=(
                 _context(
@@ -616,7 +617,7 @@ def test_policy_rejects_uncategorized_unsupported_questions(
 
 def test_policy_asks_for_clarification_on_broad_multi_category_question() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Tell me about Niccolo",
             retrieved_context=(
                 _context(
@@ -643,7 +644,7 @@ def test_policy_asks_for_clarification_on_broad_multi_category_question() -> Non
 
 def test_policy_asks_for_clarification_on_generic_broad_question() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Tell me about Niccolo",
             retrieved_context=(
                 _context(
@@ -667,7 +668,7 @@ def test_policy_asks_for_clarification_on_generic_broad_question() -> None:
 
 def test_policy_rejects_category_keyword_question_without_supported_profile() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="What jobs does Niccolo have?",
             retrieved_context=(
                 _context(
@@ -686,9 +687,38 @@ def test_policy_rejects_category_keyword_question_without_supported_profile() ->
     assert decision.approved_context == ()
 
 
+def test_policy_ignores_candidate_only_intents_for_answerability() -> None:
+    catalog = tracked_intent_catalog()
+    decision = DeterministicAnswerPolicy(intent_catalog=catalog).decide(
+        AnswerPolicyRequest(
+            question="Which technical strengths would he bring?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="skills",
+                    chunk_text=(
+                        "skills: Niccolo Ferrari's main technical skills combine "
+                        "industrial computer vision, anomaly detection, Python, "
+                        "PyTorch, and TensorFlow."
+                    ),
+                    combined_score=0.96,
+                ),
+            ),
+            intent_resolution=IntentResolution(
+                candidate_intents=(catalog.intent_for_identifier("skills"),),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "unsupported_question_category"
+    assert decision.approved_context == ()
+
+
 def test_policy_filters_approved_context_by_question_category() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
-        AnswerPolicyRequest(
+        _request(
             question="Which projects did Niccolo build?",
             retrieved_context=(
                 _context(
@@ -716,10 +746,20 @@ def test_policy_filters_approved_context_by_question_category() -> None:
 
 def test_answer_policy_request_validates_min_score() -> None:
     with pytest.raises(AnswerPolicyRequestError, match="min_score"):
-        AnswerPolicyRequest(
+        _request(
             question="Where did Niccolo work?",
             retrieved_context=(),
             min_score=1.1,
+        )
+
+
+def test_answer_policy_request_requires_intent_resolution() -> None:
+    with pytest.raises(AnswerPolicyRequestError, match="intent_resolution"):
+        AnswerPolicyRequest(
+            question="Where did Niccolo work?",
+            retrieved_context=(),
+            intent_resolution="not a resolution",  # type: ignore[arg-type]
+            min_score=0.7,
         )
 
 
@@ -729,6 +769,20 @@ def test_answerable_decision_requires_approved_context() -> None:
             status=ANSWERABLE,
             reason="sufficient_source_backed_context",
         )
+
+
+def _request(
+    *,
+    question: str,
+    retrieved_context: tuple[RetrievedContext, ...],
+    min_score: float,
+) -> AnswerPolicyRequest:
+    return AnswerPolicyRequest(
+        question=question,
+        retrieved_context=retrieved_context,
+        intent_resolution=tracked_intent_catalog().resolve_lexical_intents(question),
+        min_score=min_score,
+    )
 
 
 def _context(
