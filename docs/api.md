@@ -279,6 +279,10 @@ The API layer only adapts HTTP input/output and orchestrates these authorities.
 It must not copy prompt text, fallback wording, ranking logic, answerability
 logic, provider payload logic, or database query logic.
 
+The configured intent catalog is required before the API can be served. Missing
+`INTENT_PROFILES_PATH`, a missing catalog file, invalid JSON, or malformed
+catalog data fails startup instead of falling back to built-in vocabulary.
+
 ## Milestone 5 Acceptance
 
 Milestone 5 is accepted when:
