@@ -43,6 +43,10 @@ def test_tracked_intent_catalog_loads_reviewed_profiles() -> None:
         "Where is his GitHub link?",
         "What GitHub repositories does Niccolo publish?",
         "Where is his source code?",
+        "What is Niccolo's source?",
+        "Where is Niccolo's source?",
+        "Can I see Niccolo's source?",
+        "Does Niccolo have a source?",
     ),
 )
 def test_tracked_intent_catalog_uses_positive_github_routing(question: str) -> None:
@@ -160,6 +164,10 @@ def _expected_intents(question: str) -> tuple[str, ...]:
         "Where is his GitHub link?": ("contact",),
         "What GitHub repositories does Niccolo publish?": ("projects",),
         "Where is his source code?": ("projects",),
+        "What is Niccolo's source?": (),
+        "Where is Niccolo's source?": (),
+        "Can I see Niccolo's source?": (),
+        "Does Niccolo have a source?": (),
     }
     return expected_by_question[question]
 

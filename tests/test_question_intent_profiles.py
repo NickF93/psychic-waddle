@@ -83,6 +83,10 @@ def test_detect_question_intents_for_natural_recruiter_phrasings(
         "What is his home address?",
         "What is his private email?",
         "What is Niccolo's GitHub?",
+        "What is Niccolo's source?",
+        "Where is Niccolo's source?",
+        "Can I see Niccolo's source?",
+        "Does Niccolo have a source?",
         "Who won the football match yesterday?",
     ),
 )
