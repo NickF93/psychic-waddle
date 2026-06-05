@@ -82,7 +82,6 @@ class IntentCatalog:
     """Reviewed deterministic vocabulary for supported recruiter intents."""
 
     profiles: tuple[QuestionIntentProfile, ...]
-    contact_project_context_words: frozenset[str]
 
     def __post_init__(self) -> None:
         _require_non_empty_tuple(self.profiles, "profiles")
@@ -98,10 +97,6 @@ class IntentCatalog:
                     f"duplicate question intent profile: {profile.intent}"
                 )
             seen_intents.add(profile.intent)
-        _require_non_empty_terms(
-            self.contact_project_context_words,
-            "contact_project_context_words",
-        )
 
     def intent_for_identifier(self, identifier: str) -> QuestionIntent:
         """Return the catalog-owned intent identifier for a reviewed string ID."""
@@ -118,16 +113,9 @@ class IntentCatalog:
         """Return supported recruiter intents that match a question."""
 
         _require_non_empty_text(question, "question")
-        words = _normalized_words(question)
         intents: list[QuestionIntent] = []
         for profile in self.profiles:
             if not _term_groups_match(question, profile.trigger_groups):
-                continue
-            if (
-                profile.intent.identifier == "contact"
-                and "github" in words
-                and words & self.contact_project_context_words
-            ):
                 continue
             intents.append(profile.intent)
         return tuple(intents)

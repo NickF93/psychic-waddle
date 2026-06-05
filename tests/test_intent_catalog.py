@@ -26,18 +26,6 @@ def test_tracked_intent_catalog_loads_reviewed_profiles() -> None:
         "projects",
         "contact",
     )
-    assert catalog.contact_project_context_words == frozenset(
-        (
-            "project",
-            "projects",
-            "repository",
-            "repositories",
-            "repo",
-            "repos",
-            "software",
-            "code",
-        )
-    )
 
 
 @pytest.mark.parametrize(
@@ -51,10 +39,17 @@ def test_tracked_intent_catalog_loads_reviewed_profiles() -> None:
         "Where can I find his LinkedIn?",
         "What is Niccolo favorite pizza topping?",
         "What is Niccolo's GitHub?",
+        "What is Niccolo's GitHub profile?",
+        "Where is his GitHub link?",
         "What GitHub repositories does Niccolo publish?",
+        "Where is his source code?",
+        "What is Niccolo's source?",
+        "Where is Niccolo's source?",
+        "Can I see Niccolo's source?",
+        "Does Niccolo have a source?",
     ),
 )
-def test_tracked_intent_catalog_reproduces_current_detection(question: str) -> None:
+def test_tracked_intent_catalog_uses_positive_github_routing(question: str) -> None:
     catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
 
     assert _intent_identifiers(catalog.detect_question_intents(question)) == (
@@ -106,6 +101,23 @@ def test_load_intent_catalog_rejects_unknown_top_level_keys(tmp_path: Path) -> N
         load_intent_catalog(catalog_path)
 
 
+def test_load_intent_catalog_rejects_retired_frozen_disambiguation(
+    tmp_path: Path,
+) -> None:
+    catalog_path = tmp_path / "intent-profiles.json"
+    payload = _tracked_payload()
+    payload["frozen_disambiguation"] = {
+        "contact_project_context_words": ["repository"]
+    }
+    catalog_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(
+        QuestionIntentProfileError,
+        match="unknown keys: frozen_disambiguation",
+    ):
+        load_intent_catalog(catalog_path)
+
+
 def test_load_intent_catalog_rejects_unknown_profile_keys(tmp_path: Path) -> None:
     catalog_path = tmp_path / "intent-profiles.json"
     payload = _tracked_payload()
@@ -147,8 +159,15 @@ def _expected_intents(question: str) -> tuple[str, ...]:
         "Which GitHub repositories does he publish?": ("projects",),
         "Where can I find his LinkedIn?": ("contact",),
         "What is Niccolo favorite pizza topping?": (),
-        "What is Niccolo's GitHub?": ("contact",),
+        "What is Niccolo's GitHub?": (),
+        "What is Niccolo's GitHub profile?": ("contact",),
+        "Where is his GitHub link?": ("contact",),
         "What GitHub repositories does Niccolo publish?": ("projects",),
+        "Where is his source code?": ("projects",),
+        "What is Niccolo's source?": (),
+        "Where is Niccolo's source?": (),
+        "Can I see Niccolo's source?": (),
+        "Does Niccolo have a source?": (),
     }
     return expected_by_question[question]
 

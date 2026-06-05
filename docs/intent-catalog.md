@@ -10,8 +10,7 @@ The catalog owns domain vocabulary only:
 - accepted reviewed-knowledge categories for each intent;
 - trigger term groups used to recognize supported questions;
 - lexical expansion terms used by retrieval;
-- required evidence term groups used by answer policy;
-- the frozen GitHub/contact disambiguation word list retained for Sprint 11.1.
+- required evidence term groups used by answer policy.
 
 The matcher algorithm, normalization rules, rank fusion, policy thresholds, and
 knowledge category enum remain code authorities.
@@ -43,9 +42,8 @@ by the configured catalog, not raw strings fabricated by consumers.
 
 The top-level object must contain exactly:
 
-- `schema_version`: currently `1`;
-- `profiles`: non-empty list of profile objects;
-- `frozen_disambiguation`: Sprint 11.1 frozen behavior data.
+- `schema_version`: currently `2`;
+- `profiles`: non-empty list of profile objects.
 
 Each profile object must contain exactly:
 
@@ -56,13 +54,15 @@ Each profile object must contain exactly:
 - `required_evidence_groups`.
 
 Each term group is a non-empty list of non-empty strings. Trigger groups and
-required evidence groups use the existing normalized lexical matcher: every group
-must be satisfied by at least one term in the group.
+required evidence groups use positive normalized lexical phrase/group semantics:
+every group must be satisfied by at least one term in that group. A single-word
+term matches a normalized word. A multi-word term matches the exact normalized
+phrase.
 
-## Sprint 11.1 Frozen Branch
+## GitHub Ambiguity
 
-Sprint 11.1 intentionally retains the current GitHub/contact disambiguation
-branch as frozen behavior: a contact profile match containing `github` is skipped
-when project-context words are also present. The branch exists only to preserve
-behavior during the catalog migration. Sprint 11.3 removes this branch and
-models ambiguity through positive reviewed trigger groups.
+GitHub routing is modeled only through positive reviewed trigger groups. GitHub
+profile, account, link, or contact wording resolves to the contact intent.
+GitHub repository, source-code, or project wording resolves to the projects
+intent. Bare GitHub wording is intentionally ambiguous and remains unsupported
+unless the catalog later defines a positive reviewed trigger group for it.
