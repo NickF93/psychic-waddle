@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 
-from intent_catalog_helpers import tracked_intent_catalog
-from portfolio_rag_assistant.intent import SemanticIntentResolver
+from intent_catalog_helpers import TRACKED_INTENT_CATALOG, tracked_intent_catalog
+from portfolio_rag_assistant.intent import SemanticIntentResolver, load_intent_catalog
 from portfolio_rag_assistant.provider import EmbeddingRequest, EmbeddingResponse
 
 SEMANTIC_RESOLVER_SOURCE = (
@@ -99,6 +100,51 @@ def test_semantic_resolver_reuses_cached_anchor_embeddings() -> None:
     assert len(provider.requests) == 1
 
 
+def test_semantic_resolver_promotes_reviewed_required_threshold(
+    tmp_path: Path,
+) -> None:
+    catalog = _catalog_with_required_threshold(tmp_path, "skills", 0.9)
+    provider = FakeEmbeddingProvider(_anchor_embeddings_for_intent("skills", catalog))
+    resolver = SemanticIntentResolver(
+        catalog=catalog,
+        provider=provider,
+        embedding_model="nomic-embed-text",
+    )
+
+    resolution = asyncio.run(
+        resolver.resolve(
+            question="Which technical strengths would he bring?",
+            question_embedding=(1.0, 0.0),
+        )
+    )
+
+    assert tuple(
+        intent.identifier for intent in resolution.required_intents
+    ) == ("skills",)
+    assert resolution.candidate_intents == ()
+
+
+def test_semantic_required_threshold_keeps_negative_questions_unsupported(
+    tmp_path: Path,
+) -> None:
+    catalog = _catalog_with_required_threshold(tmp_path, "skills", 0.9)
+    provider = FakeEmbeddingProvider(_anchor_embeddings_for_intent("skills", catalog))
+    resolver = SemanticIntentResolver(
+        catalog=catalog,
+        provider=provider,
+        embedding_model="nomic-embed-text",
+    )
+
+    resolution = asyncio.run(
+        resolver.resolve(
+            question="What salary should I offer Niccolo?",
+            question_embedding=(-1.0, 0.0),
+        )
+    )
+
+    assert resolution.required_intents == ()
+
+
 def test_semantic_resolver_has_no_intent_specific_branches() -> None:
     source = SEMANTIC_RESOLVER_SOURCE.read_text(encoding="utf-8")
 
@@ -119,12 +165,28 @@ def _semantic_anchor_questions() -> tuple[str, ...]:
 
 def _anchor_embeddings_for_intent(
     intent_identifier: str,
+    catalog=None,
 ) -> tuple[tuple[float, ...], ...]:
+    intent_catalog = tracked_intent_catalog() if catalog is None else catalog
     return tuple(
         (1.0, 0.0) if profile.intent.identifier == intent_identifier else (-1.0, 0.0)
-        for profile in tracked_intent_catalog().profiles
+        for profile in intent_catalog.profiles
         for _question in profile.semantic_example_questions
     )
+
+
+def _catalog_with_required_threshold(
+    tmp_path: Path,
+    intent_identifier: str,
+    threshold: float,
+):
+    catalog_path = tmp_path / "intent-profiles.json"
+    payload = json.loads(TRACKED_INTENT_CATALOG.read_text(encoding="utf-8"))
+    for profile in payload["profiles"]:
+        if profile["intent"] == intent_identifier:
+            profile["semantic_required_threshold"] = threshold
+    catalog_path.write_text(json.dumps(payload), encoding="utf-8")
+    return load_intent_catalog(catalog_path)
 
 
 class FakeEmbeddingProvider:

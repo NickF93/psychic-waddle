@@ -102,6 +102,17 @@ after intent-text normalization so future threshold calibration does not measure
 against the same questions used as embedding anchors. Near-duplicate review is a
 manual governance concern.
 
+Semantic threshold calibration is an offline proposal workflow. The
+`intent calibrate-semantic` CLI command evaluates the reviewed anchors against a
+labeled fixture, writes a near-duplicate review report under `/tmp`, and prints
+proposed per-intent thresholds to stdout. It never writes
+`config/intent-profiles.json`. A human must review the report and manually
+commit any accepted `semantic_required_threshold` values into the catalog.
+
+The labeled fixture is a calibration set, not a held-out test set. Meeting the
+configured precision floor on that fixture is a necessary safety floor for
+promotion to required intent status, not a generalization guarantee.
+
 ## GitHub Ambiguity
 
 GitHub routing is modeled only through positive reviewed trigger groups. GitHub

@@ -78,15 +78,23 @@ class SemanticIntentResolver:
 
         required_intents = self._catalog.detect_question_intents(question)
         required_identifiers = {intent.identifier for intent in required_intents}
+        promoted_required_intents = list(required_intents)
         candidate_intents: list[QuestionIntent] = []
         for score in await self.score_semantic_intents(question_embedding):
             if score.intent.identifier in required_identifiers:
                 continue
             profile = self._catalog.profile_for_intent(score.intent)
+            if (
+                profile.semantic_required_threshold is not None
+                and score.score >= profile.semantic_required_threshold
+            ):
+                promoted_required_intents.append(score.intent)
+                required_identifiers.add(score.intent.identifier)
+                continue
             if score.score >= profile.semantic_candidate_threshold:
                 candidate_intents.append(score.intent)
         return IntentResolution(
-            required_intents=required_intents,
+            required_intents=tuple(promoted_required_intents),
             candidate_intents=tuple(candidate_intents),
         )
 

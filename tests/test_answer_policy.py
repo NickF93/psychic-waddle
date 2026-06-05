@@ -716,6 +716,37 @@ def test_policy_ignores_candidate_only_intents_for_answerability() -> None:
     assert decision.approved_context == ()
 
 
+def test_policy_allows_semantically_promoted_required_intent() -> None:
+    catalog = tracked_intent_catalog()
+    decision = DeterministicAnswerPolicy(intent_catalog=catalog).decide(
+        AnswerPolicyRequest(
+            question="Which technical strengths would he bring?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="skills",
+                    chunk_text=(
+                        "skills: Niccolo Ferrari's main technical skills combine "
+                        "industrial computer vision, anomaly detection, Python, "
+                        "PyTorch, and TensorFlow."
+                    ),
+                    combined_score=0.96,
+                ),
+            ),
+            intent_resolution=IntentResolution(
+                required_intents=(catalog.intent_for_identifier("skills"),),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == ANSWERABLE
+    assert decision.reason == "sufficient_source_backed_context"
+    assert tuple(context.category for context in decision.approved_context) == (
+        "skills",
+    )
+
+
 def test_policy_filters_approved_context_by_question_category() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
         _request(

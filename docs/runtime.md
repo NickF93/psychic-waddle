@@ -380,6 +380,18 @@ The catalog's semantic calibration backend/model must match
 reviewed semantic threshold recalibration as well as normal knowledge
 re-indexing.
 
+Semantic threshold proposals are generated offline and reviewed manually:
+
+```bash
+portfolio-rag-assistant intent calibrate-semantic \
+  --evaluation tests/fixtures/intent-semantic-evaluation.json \
+  --near-duplicate-report /tmp/intent-near-duplicates.json
+```
+
+The command prints proposed thresholds to stdout and writes only the
+near-duplicate review report under `/tmp`. It must not write the committed
+catalog automatically.
+
 ## Optional Local Model Profiles
 
 The default Compose stack does not start local model services.
