@@ -3,11 +3,12 @@ from __future__ import annotations
 import pytest
 
 from intent_catalog_helpers import tracked_intent_catalog
+from portfolio_rag_assistant.intent import IntentCatalog, QuestionIntent
 
 
 def test_profiles_define_unique_supported_recruiter_intents() -> None:
     catalog = tracked_intent_catalog()
-    intents = tuple(profile.intent for profile in catalog.profiles)
+    intents = tuple(profile.intent.identifier for profile in catalog.profiles)
 
     assert intents == (
         "professional_overview",
@@ -63,7 +64,9 @@ def test_detect_question_intents_for_natural_recruiter_phrasings(
     question: str,
     expected_intents: tuple[str, ...],
 ) -> None:
-    assert tracked_intent_catalog().detect_question_intents(question) == expected_intents
+    actual_intents = tracked_intent_catalog().detect_question_intents(question)
+
+    assert _intent_identifiers(actual_intents) == expected_intents
 
 
 @pytest.mark.parametrize(
@@ -89,9 +92,11 @@ def test_categories_for_intents_returns_stable_unique_categories() -> None:
     catalog = tracked_intent_catalog()
 
     assert catalog.categories_for_intents(
-        ("professional_overview", "workplace", "current_role")
+        _intents(catalog, "professional_overview", "workplace", "current_role")
     ) == ("experience",)
-    assert catalog.categories_for_intents(("publications", "projects", "contact")) == (
+    assert catalog.categories_for_intents(
+        _intents(catalog, "publications", "projects", "contact")
+    ) == (
         "research",
         "projects",
         "contact",
@@ -99,7 +104,8 @@ def test_categories_for_intents_returns_stable_unique_categories() -> None:
 
 
 def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
-    workplace = tracked_intent_catalog().profile_for_intent("workplace")
+    catalog = tracked_intent_catalog()
+    workplace = catalog.profile_for_intent(catalog.intent_for_identifier("workplace"))
 
     assert workplace.accepted_categories == ("experience",)
     assert "professional workplaces" in workplace.lexical_expansion_terms
@@ -166,7 +172,12 @@ def test_text_satisfies_intent_evidence_uses_required_terms(
     text: str,
     intent: str,
 ) -> None:
-    assert tracked_intent_catalog().text_satisfies_intent_evidence(text, intent)
+    catalog = tracked_intent_catalog()
+
+    assert catalog.text_satisfies_intent_evidence(
+        text,
+        catalog.intent_for_identifier(intent),
+    )
 
 
 @pytest.mark.parametrize(
@@ -230,4 +241,20 @@ def test_text_satisfies_intent_evidence_rejects_incomplete_evidence(
     text: str,
     intent: str,
 ) -> None:
-    assert not tracked_intent_catalog().text_satisfies_intent_evidence(text, intent)
+    catalog = tracked_intent_catalog()
+
+    assert not catalog.text_satisfies_intent_evidence(
+        text,
+        catalog.intent_for_identifier(intent),
+    )
+
+
+def _intent_identifiers(intents: tuple[QuestionIntent, ...]) -> tuple[str, ...]:
+    return tuple(intent.identifier for intent in intents)
+
+
+def _intents(
+    catalog: IntentCatalog,
+    *identifiers: str,
+) -> tuple[QuestionIntent, ...]:
+    return tuple(catalog.intent_for_identifier(identifier) for identifier in identifiers)

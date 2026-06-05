@@ -4,19 +4,41 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass
-from typing import TypeAlias
+from dataclasses import InitVar, dataclass
 
 from portfolio_rag_assistant.knowledge import (
     ALLOWED_KNOWLEDGE_CATEGORIES,
     KnowledgeCategory,
 )
 
-QuestionIntent: TypeAlias = str
-
 
 class QuestionIntentProfileError(Exception):
     """Raised when a question intent profile violates its bounded contract."""
+
+
+_QUESTION_INTENT_TOKEN = object()
+
+
+@dataclass(frozen=True, slots=True)
+class QuestionIntent:
+    """Catalog-owned identifier for one supported recruiter question intent."""
+
+    identifier: str
+    _creation_token: InitVar[object]
+
+    def __post_init__(self, _creation_token: object) -> None:
+        if _creation_token is not _QUESTION_INTENT_TOKEN:
+            raise QuestionIntentProfileError(
+                "question intents must be created by an intent catalog"
+            )
+        _require_non_empty_text(self.identifier, "intent")
+
+    def __str__(self) -> str:
+        return self.identifier
+
+
+def _question_intent_from_catalog(identifier: str) -> QuestionIntent:
+    return QuestionIntent(identifier, _creation_token=_QUESTION_INTENT_TOKEN)
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,7 +52,7 @@ class QuestionIntentProfile:
     required_evidence_groups: tuple[frozenset[str], ...]
 
     def __post_init__(self) -> None:
-        _require_non_empty_text(self.intent, "intent")
+        _require_question_intent(self.intent, "intent")
         _require_non_empty_tuple(self.accepted_categories, "accepted_categories")
         _require_non_empty_tuple(self.trigger_groups, "trigger_groups")
         _require_non_empty_terms(
@@ -81,6 +103,17 @@ class IntentCatalog:
             "contact_project_context_words",
         )
 
+    def intent_for_identifier(self, identifier: str) -> QuestionIntent:
+        """Return the catalog-owned intent identifier for a reviewed string ID."""
+
+        _require_non_empty_text(identifier, "intent")
+        for profile in self.profiles:
+            if profile.intent.identifier == identifier:
+                return profile.intent
+        raise QuestionIntentProfileError(
+            f"unsupported question intent: {identifier}"
+        )
+
     def detect_question_intents(self, question: str) -> tuple[QuestionIntent, ...]:
         """Return supported recruiter intents that match a question."""
 
@@ -91,7 +124,7 @@ class IntentCatalog:
             if not _term_groups_match(question, profile.trigger_groups):
                 continue
             if (
-                profile.intent == "contact"
+                profile.intent.identifier == "contact"
                 and "github" in words
                 and words & self.contact_project_context_words
             ):
@@ -102,6 +135,7 @@ class IntentCatalog:
     def profile_for_intent(self, intent: QuestionIntent) -> QuestionIntentProfile:
         """Return the immutable profile for one supported intent."""
 
+        _require_question_intent(intent, "intent")
         for profile in self.profiles:
             if profile.intent == intent:
                 return profile
@@ -180,6 +214,13 @@ def _normalized_words(text: str) -> frozenset[str]:
 def _require_non_empty_text(value: str, field_name: str) -> None:
     if not isinstance(value, str) or not value.strip():
         raise QuestionIntentProfileError(f"{field_name} must be a non-empty string")
+
+
+def _require_question_intent(value: object, field_name: str) -> None:
+    if not isinstance(value, QuestionIntent):
+        raise QuestionIntentProfileError(
+            f"{field_name} must be a catalog QuestionIntent"
+        )
 
 
 def _require_non_empty_tuple(value: tuple[object, ...], field_name: str) -> None:

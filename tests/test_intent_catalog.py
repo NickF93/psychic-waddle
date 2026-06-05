@@ -7,6 +7,7 @@ import pytest
 
 from intent_catalog_helpers import TRACKED_INTENT_CATALOG
 from portfolio_rag_assistant.intent import (
+    QuestionIntent,
     QuestionIntentProfileError,
     load_intent_catalog,
 )
@@ -15,7 +16,7 @@ from portfolio_rag_assistant.intent import (
 def test_tracked_intent_catalog_loads_reviewed_profiles() -> None:
     catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
 
-    assert tuple(profile.intent for profile in catalog.profiles) == (
+    assert tuple(profile.intent.identifier for profile in catalog.profiles) == (
         "professional_overview",
         "workplace",
         "current_role",
@@ -56,7 +57,9 @@ def test_tracked_intent_catalog_loads_reviewed_profiles() -> None:
 def test_tracked_intent_catalog_reproduces_current_detection(question: str) -> None:
     catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
 
-    assert catalog.detect_question_intents(question) == _expected_intents(question)
+    assert _intent_identifiers(catalog.detect_question_intents(question)) == (
+        _expected_intents(question)
+    )
 
 
 def test_tracked_intent_catalog_reproduces_current_evidence_matching() -> None:
@@ -72,6 +75,25 @@ def test_tracked_intent_catalog_reproduces_current_evidence_matching() -> None:
         )
         text = f"evidence probe {' '.join(evidence_terms)}"
         assert catalog.text_satisfies_intent_evidence(text, profile.intent)
+
+
+def test_tracked_intent_catalog_is_the_only_supported_intent_id_producer() -> None:
+    catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
+    workplace = catalog.intent_for_identifier("workplace")
+
+    assert isinstance(workplace, QuestionIntent)
+    assert workplace.identifier == "workplace"
+    assert catalog.profile_for_intent(workplace).intent == workplace
+    with pytest.raises(
+        QuestionIntentProfileError,
+        match="intent must be a catalog QuestionIntent",
+    ):
+        catalog.profile_for_intent("workplace")
+    with pytest.raises(
+        QuestionIntentProfileError,
+        match="question intents must be created by an intent catalog",
+    ):
+        QuestionIntent("fabricated", _creation_token=object())
 
 
 def test_load_intent_catalog_rejects_unknown_top_level_keys(tmp_path: Path) -> None:
@@ -129,3 +151,7 @@ def _expected_intents(question: str) -> tuple[str, ...]:
         "What GitHub repositories does Niccolo publish?": ("projects",),
     }
     return expected_by_question[question]
+
+
+def _intent_identifiers(intents: tuple[QuestionIntent, ...]) -> tuple[str, ...]:
+    return tuple(intent.identifier for intent in intents)

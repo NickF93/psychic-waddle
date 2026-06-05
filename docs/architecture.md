@@ -130,6 +130,8 @@ Owns bounded recruiter-intent definitions only.
   accepted knowledge categories, lexical expansion terms, and required evidence
   terms for supported recruiter intents from the reviewed
   `config/intent-profiles.json` runtime catalog.
+- Owns catalog-produced intent identifiers; retrieval and policy must not
+  fabricate intent IDs from raw strings.
 - Covered v1 intents are professional overview, workplaces and work history,
   current role, skills, education, publications, projects and repositories, and
   public contact links.

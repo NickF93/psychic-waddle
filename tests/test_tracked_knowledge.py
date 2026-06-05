@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from portfolio_rag_assistant.intent import QuestionIntent
 from portfolio_rag_assistant.knowledge.validation import validate_knowledge_files
 from intent_catalog_helpers import tracked_intent_catalog
 
@@ -18,7 +17,7 @@ EXPECTED_SOURCE_URI = "cv://niccolo/main"
 
 @dataclass(frozen=True, slots=True)
 class AggregateExpectation:
-    intent: QuestionIntent
+    intent: str
     source_locator: str
     fragments: tuple[str, ...]
 
@@ -120,13 +119,14 @@ def test_tracked_profile_aggregates_satisfy_intent_profiles() -> None:
 
     for expectation in AGGREGATE_EXPECTATIONS:
         fact = _find_fact(facts, *expectation.fragments)
-        profile = catalog.profile_for_intent(expectation.intent)
+        intent = catalog.intent_for_identifier(expectation.intent)
+        profile = catalog.profile_for_intent(intent)
         text = _fact_text(fact)
 
         assert fact["source_uri"] == EXPECTED_SOURCE_URI
         assert fact["source_locator"] == expectation.source_locator
         assert fact["category"] in profile.accepted_categories
-        assert catalog.text_satisfies_intent_evidence(text, expectation.intent)
+        assert catalog.text_satisfies_intent_evidence(text, intent)
 
 
 def test_tracked_profile_aggregates_are_not_question_specific_hacks() -> None:
