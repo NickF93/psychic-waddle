@@ -40,6 +40,28 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
         ("What publications does he have?", ("publications",)),
         ("Which GitHub repositories does he publish?", ("projects",)),
         ("Where can I find his LinkedIn?", ("contact",)),
+        ("Qual e il ruolo attuale di Niccolo?", ("current_role",)),
+        ("Chi e il datore di lavoro attuale di Niccolo?", ("current_role",)),
+        ("Come posso contattare Niccolo?", ("contact",)),
+        ("What pre-prints does Niccolo have?", ("publications",)),
+        ("What preprint does Niccolo have?", ("publications",)),
+        ("Quali software di ricerca ha pubblicato Niccolo?", ("projects",)),
+        ("What kind of work does Niccolo do?", ("professional_overview",)),
+        ("What type of work does Niccolo do?", ("professional_overview",)),
+        ("What is Niccolo specialized in?", ("skills",)),
+        ("What does Niccolo do with anomaly detection?", ("skills",)),
+        (
+            "Is Niccolo a good fit for industrial computer vision roles?",
+            ("professional_overview", "skills"),
+        ),
+        (
+            "Would Niccolo be suitable for industrial computer vision roles?",
+            ("professional_overview", "skills"),
+        ),
+        (
+            "Is Niccolo the right person for industrial computer vision roles?",
+            ("professional_overview", "skills"),
+        ),
     ),
 )
 def test_detect_question_intents_for_natural_recruiter_phrasings(
@@ -121,6 +143,26 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
             "Niccolo Ferrari currently works at NAIS S.r.l.",
             "current_role",
         ),
+        (
+            "Niccolo Ferrari uses Docker for reproducible machine learning "
+            "environments.",
+            "skills",
+        ),
+        (
+            "Niccolo Ferrari's production deployment skills include C++, "
+            "ONNX, OpenVINO, and TensorRT.",
+            "skills",
+        ),
+        (
+            "Niccolo Ferrari's computer vision architecture experience includes "
+            "CNNs, ResNet, ViT, and YOLO models.",
+            "skills",
+        ),
+        (
+            "Niccolo Ferrari's areas of specialization include industrial "
+            "computer vision and visual inspection.",
+            "skills",
+        ),
     ),
 )
 def test_text_satisfies_intent_evidence_uses_required_terms(
@@ -155,6 +197,18 @@ def test_text_satisfies_intent_evidence_uses_required_terms(
         ),
         (
             "skills: Niccolo Ferrari has public profile information.",
+            "skills",
+        ),
+        (
+            "skills: Niccolo Ferrari uses public profile information.",
+            "skills",
+        ),
+        (
+            "skills: Niccolo Ferrari's skills include public profile information.",
+            "skills",
+        ),
+        (
+            "skills: Niccolo Ferrari's skills includes public profile information.",
             "skills",
         ),
         (

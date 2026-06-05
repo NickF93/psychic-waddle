@@ -126,8 +126,9 @@ Owns verified facts, chunks, sources, and embeddings only.
 
 Owns bounded recruiter-intent definitions only.
 
-- Defines deterministic trigger terms, accepted knowledge categories, lexical
-  expansion terms, and required evidence terms for supported recruiter intents.
+- Defines deterministic trigger terms or exact normalized trigger phrases,
+  accepted knowledge categories, lexical expansion terms, and required evidence
+  terms for supported recruiter intents.
 - Covered v1 intents are professional overview, workplaces and work history,
   current role, skills, education, publications, projects and repositories, and
   public contact links.
@@ -172,6 +173,8 @@ Owns final wording only.
 - Converts an approved policy decision and approved retrieved context into a
   concise recruiter-facing answer.
 - Preserves the visitor's language when supported by the prompt contract.
+- For fit or suitability questions, summarizes approved evidence only and must
+  not provide a yes/no hiring verdict, hiring recommendation, or prediction.
 - Must return a consistent not-answerable response if the provider indicates
   that approved context is insufficient.
 - Must not add facts absent from approved context, override policy, retrieve

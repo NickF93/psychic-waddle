@@ -64,13 +64,6 @@ class QuestionIntentProfile:
                 _require_non_empty_terms(group, field_name)
 
 
-def _word_groups_match(
-    words: frozenset[str],
-    groups: tuple[frozenset[str], ...],
-) -> bool:
-    return all(words & group for group in groups)
-
-
 def _term_groups_match(
     text: str,
     groups: tuple[frozenset[str], ...],
@@ -143,6 +136,11 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
                     "background",
                     "career",
                     "experience",
+                    "good fit for",
+                    "kind of work",
+                    "right person for",
+                    "suitable for",
+                    "type of work",
                 )
             ),
         ),
@@ -150,6 +148,7 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
             (
                 "career",
                 "current role",
+                "industrial computer vision",
                 "professional background",
                 "professional experience",
                 "professional profile",
@@ -262,9 +261,23 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
         intent="current_role",
         accepted_categories=("experience",),
         trigger_groups=(
-            frozenset(("current", "currently", "now", "present", "today")),
             frozenset(
                 (
+                    "adesso",
+                    "attuale",
+                    "current",
+                    "currently",
+                    "now",
+                    "ora",
+                    "present",
+                    "ruolo attuale",
+                    "today",
+                )
+            ),
+            frozenset(
+                (
+                    "datore",
+                    "datore di lavoro",
                     "role",
                     "title",
                     "position",
@@ -283,9 +296,14 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
                 "current employer",
                 "current role",
                 "currently",
+                "currently works",
+                "datore di lavoro",
                 "employer",
                 "position",
                 "role",
+                "ruolo attuale",
+                "senior machine learning engineer",
+                "technical lead",
                 "title",
             )
         ),
@@ -323,6 +341,7 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
         trigger_groups=(
             frozenset(
                 (
+                    "anomaly detection",
                     "skill",
                     "skills",
                     "stack",
@@ -332,6 +351,17 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
                     "tools",
                     "framework",
                     "frameworks",
+                    "good fit for",
+                    "industrial computer vision",
+                    "right person for",
+                    "specialise",
+                    "specialised",
+                    "specialization",
+                    "specializations",
+                    "specialize",
+                    "specialized",
+                    "specialized in",
+                    "suitable for",
                     "competenze",
                 )
             ),
@@ -339,11 +369,14 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
         lexical_expansion_terms=frozenset(
             (
                 "frameworks",
+                "industrial computer vision",
                 "languages",
                 "machine learning",
                 "ml",
+                "segmentation",
                 "skills",
                 "stack",
+                "technical skills",
                 "technologies",
                 "tools",
             )
@@ -352,28 +385,58 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
             frozenset(
                 (
                     "anomaly detection",
+                    "autoencoders",
+                    "bash",
+                    "c",
+                    "c++",
+                    "cnn",
+                    "cnns",
                     "computer vision",
+                    "deep learning",
+                    "docker",
                     "domain",
                     "domains",
+                    "edge ai",
+                    "embedded inference",
                     "framework",
                     "frameworks",
+                    "ganomaly",
                     "halcon",
+                    "industrial computer vision",
+                    "java",
+                    "knowledge distillation",
                     "language",
                     "languages",
+                    "linux",
                     "machine learning",
+                    "mlflow",
+                    "numpy",
                     "opencv",
+                    "openvino",
+                    "onnx",
+                    "pandas",
+                    "patchcore",
                     "pytorch",
+                    "production machine learning",
+                    "real time computer vision",
+                    "resnet",
+                    "scikit learn",
+                    "segmentation",
                     "specialization",
                     "specializations",
+                    "sql",
+                    "tensorboard",
+                    "tensorrt",
                     "technical skills",
                     "technology",
                     "technologies",
                     "tool",
                     "tools",
                     "tensorflow",
-                    "uses",
-                    "include",
-                    "includes",
+                    "vae",
+                    "vit",
+                    "visual inspection",
+                    "yolo",
                     "python",
                 )
             ),
@@ -437,6 +500,11 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
                     "papers",
                     "doi",
                     "arxiv",
+                    "authored",
+                    "preprint",
+                    "preprints",
+                    "pre-print",
+                    "pre-prints",
                     "thesis",
                     "pubblicazioni",
                 )
@@ -448,9 +516,14 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
                 "doi",
                 "paper",
                 "papers",
+                "preprint",
+                "preprints",
+                "pre-print",
+                "pre-prints",
                 "publication",
                 "publications",
                 "research",
+                "submitted",
                 "thesis",
             )
         ),
@@ -485,7 +558,10 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
                     "repos",
                     "software",
                     "code",
+                    "codice",
                     "progetti",
+                    "pubblicato",
+                    "software di ricerca",
                 )
             ),
         ),
@@ -495,11 +571,13 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
                 "github",
                 "project",
                 "projects",
+                "public research software",
                 "repositories",
                 "repository",
                 "research software",
                 "software",
                 "source",
+                "source code",
             )
         ),
         required_evidence_groups=(
@@ -536,7 +614,11 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
                     "link",
                     "links",
                     "github",
+                    "come posso contattare",
+                    "contattare",
+                    "contattarlo",
                     "contatto",
+                    "raggiungere",
                 )
             ),
         ),
@@ -550,6 +632,7 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
                 "profile",
                 "profiles",
                 "public",
+                "public professional profile links",
                 "website",
             )
         ),
@@ -594,7 +677,7 @@ def detect_question_intents(question: str) -> tuple[QuestionIntent, ...]:
     words = _normalized_words(question)
     intents: list[QuestionIntent] = []
     for profile in QUESTION_INTENT_PROFILES:
-        if not _word_groups_match(words, profile.trigger_groups):
+        if not _term_groups_match(question, profile.trigger_groups):
             continue
         if (
             profile.intent == "contact"

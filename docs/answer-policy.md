@@ -56,6 +56,10 @@ The default policy uses only local, inspectable signals:
 - Supported recruiter questions are detected with shared `QuestionIntentProfile`
   definitions for professional overview, workplace, current role, skills,
   education, publications, projects, and contact/profile questions.
+- Intent triggers may be normalized words or exact normalized phrases. This
+  supports bounded recruiter phrasing such as `kind of work`, `ruolo attuale`,
+  `datore di lavoro`, `pre-prints`, and `come posso contattare` without adding
+  an unbounded synonym engine.
 - Detected profiles map to their accepted knowledge categories and required
   evidence terms.
 - Required evidence may be a normalized word or an exact normalized phrase,
@@ -78,6 +82,10 @@ The default policy uses only local, inspectable signals:
   as employer, company, workplace, internship, `worked at`, or `work history`.
 - Current-role questions require current/present role or employer evidence,
   not merely a previous role in the experience category.
+- Fit or suitability phrasing maps to the existing professional-overview and
+  skills profiles. It does not create a separate suitability intent. Because
+  both profiles match, answerability requires both experience evidence and
+  skills evidence.
 - If the question is broad and the usable context spans multiple domains, the
   policy asks for clarification.
 - If no domain is inferred and the question is not a broad profile question,
@@ -86,6 +94,17 @@ The default policy uses only local, inspectable signals:
 
 The policy does not use model classification. If the deterministic signals are
 not enough, the safe result is `not_answerable` or `needs_clarification`.
+
+## Vocabulary Coverage Limits
+
+Question-intent vocabulary is bounded and reviewed. It covers explicit
+recruiter phrasings, common English/Italian variants, and punctuation-normalized
+forms that are represented in `QuestionIntentProfile`.
+
+It is not a general semantic synonym system. New aliases, language variants, or
+question patterns must be added deliberately with tests. Broad category labels,
+generic verbs such as `uses`, `include`, or `includes`, and unsupported private
+or off-topic phrasing must not make context answerable by themselves.
 
 ## Refusal And Clarification Behavior
 
