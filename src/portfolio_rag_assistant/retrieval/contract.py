@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
+from portfolio_rag_assistant.intent import IntentResolution
 from portfolio_rag_assistant.knowledge import (
     ALLOWED_KNOWLEDGE_CATEGORIES,
     KnowledgeCategory,
@@ -90,10 +91,13 @@ class RetrievalResponse:
 
     question: str
     results: tuple[RetrievedContext, ...]
+    intent_resolution: IntentResolution
 
     def __post_init__(self) -> None:
         _require_non_empty_text(self.question, "question")
         _require_tuple_of_type(self.results, RetrievedContext, "results")
+        if not isinstance(self.intent_resolution, IntentResolution):
+            raise ValueError("intent_resolution must be an IntentResolution")
 
 
 @runtime_checkable

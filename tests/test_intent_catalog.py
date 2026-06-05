@@ -7,6 +7,7 @@ import pytest
 
 from intent_catalog_helpers import TRACKED_INTENT_CATALOG
 from portfolio_rag_assistant.intent import (
+    IntentResolution,
     QuestionIntent,
     QuestionIntentProfileError,
     load_intent_catalog,
@@ -27,6 +28,18 @@ def test_tracked_intent_catalog_loads_reviewed_profiles() -> None:
         "contact",
     )
     assert all(profile.semantic_example_questions for profile in catalog.profiles)
+    assert catalog.semantic_calibration.embedding_backend == "ollama"
+    assert catalog.semantic_calibration.embedding_model == "nomic-embed-text"
+    assert catalog.semantic_calibration.precision_floor == 1.0
+    assert catalog.semantic_calibration.minimum_required_support == 2
+    assert all(
+        profile.semantic_candidate_threshold == 0.75
+        for profile in catalog.profiles
+    )
+    assert all(
+        profile.semantic_required_threshold is None
+        for profile in catalog.profiles
+    )
 
 
 @pytest.mark.parametrize(
@@ -111,6 +124,17 @@ def test_tracked_intent_catalog_is_the_only_supported_intent_id_producer() -> No
         QuestionIntent("fabricated", _creation_token=object())
 
 
+def test_tracked_intent_catalog_resolves_lexical_required_intents() -> None:
+    catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
+
+    resolution = catalog.resolve_lexical_intents("Where did Niccolo work?")
+
+    assert isinstance(resolution, IntentResolution)
+    assert _intent_identifiers(resolution.required_intents) == ("workplace",)
+    assert resolution.candidate_intents == ()
+    assert _intent_identifiers(resolution.retrieval_intents) == ("workplace",)
+
+
 def test_load_intent_catalog_rejects_unknown_top_level_keys(tmp_path: Path) -> None:
     catalog_path = tmp_path / "intent-profiles.json"
     payload = _tracked_payload()
@@ -165,7 +189,39 @@ def test_load_intent_catalog_rejects_unknown_profile_keys(tmp_path: Path) -> Non
         ),
         (
             lambda payload: payload.__setitem__("schema_version", 1),
-            "schema_version must be 3",
+            "schema_version must be 4",
+        ),
+        (
+            lambda payload: payload.pop("semantic_calibration"),
+            "missing keys: semantic_calibration",
+        ),
+        (
+            lambda payload: payload["semantic_calibration"].__setitem__(
+                "unexpected",
+                True,
+            ),
+            "semantic_calibration has unknown keys: unexpected",
+        ),
+        (
+            lambda payload: payload["semantic_calibration"].__setitem__(
+                "embedding_backend",
+                "",
+            ),
+            "semantic_calibration.embedding_backend must be a non-empty string",
+        ),
+        (
+            lambda payload: payload["semantic_calibration"].__setitem__(
+                "precision_floor",
+                1,
+            ),
+            "semantic_calibration.precision_floor must be a float",
+        ),
+        (
+            lambda payload: payload["semantic_calibration"].__setitem__(
+                "minimum_required_support",
+                0,
+            ),
+            "semantic_calibration.minimum_required_support must be a positive integer",
         ),
         (
             lambda payload: payload["profiles"][0].pop("trigger_groups"),
@@ -223,6 +279,28 @@ def test_load_intent_catalog_rejects_unknown_profile_keys(tmp_path: Path) -> Non
                 [""],
             ),
             "semantic_example_questions\\[0\\] must be a non-empty string",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "semantic_candidate_threshold",
+                1,
+            ),
+            "semantic_candidate_threshold must be a float",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "semantic_candidate_threshold",
+                1.1,
+            ),
+            "semantic_candidate_threshold must be between 0 and 1",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "semantic_required_threshold",
+                0.7,
+            ),
+            "semantic_required_threshold must be at least "
+            "semantic_candidate_threshold",
         ),
         (
             lambda payload: payload["profiles"][0].__setitem__(

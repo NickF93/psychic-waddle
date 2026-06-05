@@ -91,10 +91,15 @@ def test_runtime_api_composition_uses_separate_chat_and_embedding_authorities() 
             password="p@ss/word:%",
         )
     ]
+    anchor_questions = _semantic_anchor_questions()
     assert embedding_provider.embedding_requests == (
         EmbeddingRequest(
             model="nomic-embed-text",
             inputs=("Where did Niccolo work?",),
+        ),
+        EmbeddingRequest(
+            model="nomic-embed-text",
+            inputs=anchor_questions,
         ),
     )
     assert chat_provider.chat_requests == ()
@@ -197,6 +202,37 @@ def test_runtime_api_composition_requires_intent_catalog_settings() -> None:
             ),
             connection_factory=lambda settings: FakeRetrievalConnection(),
         )
+
+
+def test_runtime_api_composition_rejects_stale_semantic_calibration() -> None:
+    env = _env()
+    env["EMBEDDING_MODEL"] = "different-embedding-model"
+    provider_calls: list[str] = []
+    connection_calls: list[str] = []
+
+    with pytest.raises(
+        APICompositionError,
+        match="intent semantic calibration must match",
+    ):
+        create_runtime_api_app(
+            env=env,
+            chat_provider_factory=lambda settings: _record_unexpected_chat_provider(
+                "chat",
+                provider_calls,
+            ),
+            embedding_provider_factory=lambda settings: (
+                _record_unexpected_embedding_provider(
+                    "embedding",
+                    provider_calls,
+                )
+            ),
+            connection_factory=lambda settings: _record_unexpected_connection(
+                connection_calls
+            ),
+        )
+
+    assert provider_calls == []
+    assert connection_calls == []
 
 
 @pytest.mark.parametrize(
@@ -411,4 +447,22 @@ class FakeEmbeddingProvider:
 
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse:
         self.embedding_requests = (*self.embedding_requests, request)
-        return EmbeddingResponse(model=request.model, embeddings=self._embeddings)
+        if len(self.embedding_requests) == 1:
+            embeddings = self._embeddings
+        else:
+            embeddings = tuple(
+                tuple(-value for value in self._embeddings[0])
+                for _input in request.inputs
+            )
+        return EmbeddingResponse(model=request.model, embeddings=embeddings)
+
+
+def _semantic_anchor_questions() -> tuple[str, ...]:
+    payload = json.loads(
+        (ROOT / "config" / "intent-profiles.json").read_text(encoding="utf-8")
+    )
+    return tuple(
+        question
+        for profile in payload["profiles"]
+        for question in profile["semantic_example_questions"]
+    )

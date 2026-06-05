@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from intent_catalog_helpers import tracked_intent_catalog
+from portfolio_rag_assistant.intent import SemanticIntentResolver
 from portfolio_rag_assistant.provider import (
     ChatRequest,
     ChatResponse,
@@ -52,12 +53,9 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
         ),
     )
     provider = FakeEmbeddingProvider(((1.0, 0.0),))
-    retriever = PostgreSQLRetriever(
+    retriever = _retriever(
         connection=connection,
         provider=provider,
-        embedding_backend="ollama",
-        embedding_model="nomic-embed-text",
-        intent_catalog=tracked_intent_catalog(),
     )
 
     response = asyncio.run(
@@ -66,6 +64,10 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
 
     assert provider.embedding_requests == (
         EmbeddingRequest(model="nomic-embed-text", inputs=("Where did Niccolo work?",)),
+        EmbeddingRequest(
+            model="nomic-embed-text",
+            inputs=_semantic_anchor_questions(),
+        ),
     )
     assert provider.chat_requests == ()
     assert tuple(result.chunk_id for result in response.results) == (1, 3)
@@ -82,12 +84,11 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
 def test_postgres_retriever_queries_only_public_backend_model_chunks() -> None:
     connection = FakeRetrievalConnection(vector_rows=(), keyword_rows=())
     provider = FakeEmbeddingProvider(((0.1, 0.2),))
-    retriever = PostgreSQLRetriever(
+    retriever = _retriever(
         connection=connection,
         provider=provider,
         embedding_backend="openai-compatible",
         embedding_model="text-embedding-3-small",
-        intent_catalog=tracked_intent_catalog(),
     )
 
     asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=4)))
@@ -132,12 +133,10 @@ def test_postgres_retriever_uses_bounded_intent_expansion() -> None:
             ),
         ),
     )
-    retriever = PostgreSQLRetriever(
+    provider = FakeEmbeddingProvider(((0.1, 0.2),))
+    retriever = _retriever(
         connection=connection,
-        provider=FakeEmbeddingProvider(((0.1, 0.2),)),
-        embedding_backend="ollama",
-        embedding_model="nomic-embed-text",
-        intent_catalog=tracked_intent_catalog(),
+        provider=provider,
     )
 
     response = asyncio.run(
@@ -178,12 +177,10 @@ def test_postgres_retriever_fuses_candidate_ranks() -> None:
             _row(1, "experience: appears in both vector and keyword", 0.1),
         ),
     )
-    retriever = PostgreSQLRetriever(
+    provider = FakeEmbeddingProvider(((0.1, 0.2),))
+    retriever = _retriever(
         connection=connection,
-        provider=FakeEmbeddingProvider(((0.1, 0.2),)),
-        embedding_backend="ollama",
-        embedding_model="nomic-embed-text",
-        intent_catalog=tracked_intent_catalog(),
+        provider=provider,
     )
 
     response = asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=2)))
@@ -208,12 +205,10 @@ def test_postgres_retriever_threshold_score_ignores_missing_optional_channels() 
             _row(2, "experience: weaker intent-only workplace context", 0.8),
         ),
     )
-    retriever = PostgreSQLRetriever(
+    provider = FakeEmbeddingProvider(((0.1, 0.2),))
+    retriever = _retriever(
         connection=connection,
-        provider=FakeEmbeddingProvider(((0.1, 0.2),)),
-        embedding_backend="ollama",
-        embedding_model="nomic-embed-text",
-        intent_catalog=tracked_intent_catalog(),
+        provider=provider,
     )
 
     response = asyncio.run(
@@ -231,12 +226,10 @@ def test_postgres_retriever_does_not_apply_policy_score_threshold() -> None:
         ),
         keyword_rows=(),
     )
-    retriever = PostgreSQLRetriever(
+    provider = FakeEmbeddingProvider(((0.1, 0.2),))
+    retriever = _retriever(
         connection=connection,
-        provider=FakeEmbeddingProvider(((0.1, 0.2),)),
-        embedding_backend="ollama",
-        embedding_model="nomic-embed-text",
-        intent_catalog=tracked_intent_catalog(),
+        provider=provider,
     )
 
     response = asyncio.run(
@@ -257,12 +250,10 @@ def test_postgres_retriever_does_not_expand_unsupported_questions() -> None:
             _row(2, "experience: should not be queried for pizza questions", 0.99),
         ),
     )
-    retriever = PostgreSQLRetriever(
+    provider = FakeEmbeddingProvider(((0.1, 0.2),))
+    retriever = _retriever(
         connection=connection,
-        provider=FakeEmbeddingProvider(((0.1, 0.2),)),
-        embedding_backend="ollama",
-        embedding_model="nomic-embed-text",
-        intent_catalog=tracked_intent_catalog(),
+        provider=provider,
     )
 
     response = asyncio.run(
@@ -279,24 +270,64 @@ def test_postgres_retriever_does_not_expand_unsupported_questions() -> None:
     assert not any("WITH intent_query" in query for query, _params in connection.calls)
 
 
+def test_postgres_retriever_uses_candidate_intents_for_retrieval_only() -> None:
+    connection = FakeRetrievalConnection(
+        vector_rows=(),
+        keyword_rows=(),
+        intent_rows=(
+            _row(
+                9,
+                (
+                    "skills: Niccolo Ferrari's technical skills include "
+                    "industrial computer vision and anomaly detection."
+                ),
+                0.75,
+            ),
+        ),
+    )
+    provider = FakeEmbeddingProvider(
+        ((1.0, 0.0),),
+        semantic_anchor_embedding=(1.0, 0.0),
+    )
+    retriever = _retriever(connection=connection, provider=provider)
+
+    response = asyncio.run(
+        retriever.retrieve(
+            RetrievalRequest(
+                question="Which technical strengths would he bring?",
+                top_k=4,
+            )
+        )
+    )
+
+    assert response.intent_resolution.required_intents == ()
+    assert response.intent_resolution.candidate_intents
+    assert tuple(result.chunk_id for result in response.results) == (9,)
+    intent_query, intent_params = connection.calls[2]
+    assert "WITH intent_query" in intent_query
+    assert "skills" in intent_params[1]
+
+
 def test_postgres_retriever_rejects_invalid_configuration() -> None:
+    provider = FakeEmbeddingProvider(((1.0,),))
     with pytest.raises(RetrievalConfigurationError):
         PostgreSQLRetriever(
             connection=FakeRetrievalConnection(vector_rows=(), keyword_rows=()),
-            provider=FakeEmbeddingProvider(((1.0,),)),
+            provider=provider,
             embedding_backend=" ",
             embedding_model="model",
-            intent_catalog=tracked_intent_catalog(),
+            intent_resolver=SemanticIntentResolver(
+                catalog=tracked_intent_catalog(),
+                provider=provider,
+                embedding_model="model",
+            ),
         )
 
 
 def test_postgres_retriever_rejects_wrong_embedding_count() -> None:
-    retriever = PostgreSQLRetriever(
+    retriever = _retriever(
         connection=FakeRetrievalConnection(vector_rows=(), keyword_rows=()),
         provider=FakeEmbeddingProvider(((1.0,), (2.0,))),
-        embedding_backend="ollama",
-        embedding_model="nomic-embed-text",
-        intent_catalog=tracked_intent_catalog(),
     )
 
     with pytest.raises(RetrievalStoreError):
@@ -387,12 +418,10 @@ def test_postgres_retriever_can_read_real_schema(db_connection: object) -> None:
         (chunk_id,),
     )
     db_connection.commit()
-    retriever = PostgreSQLRetriever(
+    provider = FakeEmbeddingProvider(((1.0, 0.0),))
+    retriever = _retriever(
         connection=db_connection,
-        provider=FakeEmbeddingProvider(((1.0, 0.0),)),
-        embedding_backend="ollama",
-        embedding_model="nomic-embed-text",
-        intent_catalog=tracked_intent_catalog(),
+        provider=provider,
     )
 
     response = asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=1)))
@@ -496,12 +525,10 @@ def test_postgres_retriever_retrieves_workplace_aggregate_for_natural_question(
         """
     )
     db_connection.commit()
-    retriever = PostgreSQLRetriever(
+    provider = FakeEmbeddingProvider(((1.0, 0.0),))
+    retriever = _retriever(
         connection=db_connection,
-        provider=FakeEmbeddingProvider(((1.0, 0.0),)),
-        embedding_backend="ollama",
-        embedding_model="nomic-embed-text",
-        intent_catalog=tracked_intent_catalog(),
+        provider=provider,
     )
 
     response = asyncio.run(
@@ -562,8 +589,14 @@ class FakeRetrievalConnection:
 
 
 class FakeEmbeddingProvider:
-    def __init__(self, embeddings: tuple[tuple[float, ...], ...]) -> None:
+    def __init__(
+        self,
+        embeddings: tuple[tuple[float, ...], ...],
+        *,
+        semantic_anchor_embedding: tuple[float, ...] | None = None,
+    ) -> None:
         self._embeddings = embeddings
+        self._semantic_anchor_embedding = semantic_anchor_embedding
         self.embedding_requests: tuple[EmbeddingRequest, ...] = ()
         self.chat_requests: tuple[ChatRequest, ...] = ()
 
@@ -573,4 +606,42 @@ class FakeEmbeddingProvider:
 
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse:
         self.embedding_requests = (*self.embedding_requests, request)
-        return EmbeddingResponse(model=request.model, embeddings=self._embeddings)
+        if len(self.embedding_requests) == 1:
+            embeddings = self._embeddings
+        else:
+            anchor_embedding = self._semantic_anchor_embedding
+            if anchor_embedding is None:
+                anchor_embedding = tuple(-value for value in self._embeddings[0])
+            embeddings = tuple(
+                anchor_embedding
+                for _input in request.inputs
+            )
+        return EmbeddingResponse(model=request.model, embeddings=embeddings)
+
+
+def _retriever(
+    *,
+    connection: Any,
+    provider: FakeEmbeddingProvider,
+    embedding_backend: str = "ollama",
+    embedding_model: str = "nomic-embed-text",
+) -> PostgreSQLRetriever:
+    return PostgreSQLRetriever(
+        connection=connection,
+        provider=provider,
+        embedding_backend=embedding_backend,
+        embedding_model=embedding_model,
+        intent_resolver=SemanticIntentResolver(
+            catalog=tracked_intent_catalog(),
+            provider=provider,
+            embedding_model=embedding_model,
+        ),
+    )
+
+
+def _semantic_anchor_questions() -> tuple[str, ...]:
+    return tuple(
+        question
+        for profile in tracked_intent_catalog().profiles
+        for question in profile.semantic_example_questions
+    )

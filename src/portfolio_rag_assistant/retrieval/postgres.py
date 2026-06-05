@@ -9,6 +9,7 @@ from typing import Any, Protocol, cast
 from portfolio_rag_assistant.intent import (
     IntentCatalog,
     QuestionIntent,
+    SemanticIntentResolver,
 )
 from portfolio_rag_assistant.knowledge import KnowledgeCategory
 from portfolio_rag_assistant.provider import EmbeddingProvider, EmbeddingRequest
@@ -91,13 +92,17 @@ class PostgreSQLRetriever:
         provider: EmbeddingProvider,
         embedding_backend: str,
         embedding_model: str,
-        intent_catalog: IntentCatalog,
+        intent_resolver: SemanticIntentResolver,
     ) -> None:
         self._connection = connection
         self._provider = provider
         self._embedding_backend = _require_text(embedding_backend, "embedding_backend")
         self._embedding_model = _require_text(embedding_model, "embedding_model")
-        self._intent_catalog = intent_catalog
+        if not isinstance(intent_resolver, SemanticIntentResolver):
+            raise RetrievalConfigurationError(
+                "intent_resolver must be SemanticIntentResolver"
+            )
+        self._intent_resolver = intent_resolver
 
     async def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
         """Return ranked public source-backed context for a question."""
@@ -108,17 +113,21 @@ class PostgreSQLRetriever:
         if len(embedding_response.embeddings) != 1:
             raise RetrievalStoreError("provider returned the wrong embedding count")
 
+        question_embedding = embedding_response.embeddings[0]
+        intent_resolution = await self._intent_resolver.resolve(
+            question=request.question,
+            question_embedding=question_embedding,
+        )
         vector_candidates = self._search_vectors(
-            query_embedding=embedding_response.embeddings[0],
+            query_embedding=question_embedding,
             limit=request.top_k,
         )
         keyword_candidates = self._search_keywords(
             question=request.question,
             limit=request.top_k,
         )
-        intents = self._intent_catalog.detect_question_intents(request.question)
         intent_candidates = self._search_intent_keywords(
-            intents=intents,
+            intents=intent_resolution.retrieval_intents,
             limit=request.top_k,
         )
         results = tuple(
@@ -130,7 +139,11 @@ class PostgreSQLRetriever:
                 top_k=request.top_k,
             )
         )
-        return RetrievalResponse(question=request.question, results=results)
+        return RetrievalResponse(
+            question=request.question,
+            results=results,
+            intent_resolution=intent_resolution,
+        )
 
     def _search_vectors(
         self,
@@ -244,9 +257,9 @@ class PostgreSQLRetriever:
             (
                 _intent_evidence_query_text(
                     intents=intents,
-                    intent_catalog=self._intent_catalog,
+                    intent_catalog=self._intent_resolver.catalog,
                 ),
-                list(self._intent_catalog.categories_for_intents(intents)),
+                list(self._intent_resolver.catalog.categories_for_intents(intents)),
                 limit,
             ),
         )

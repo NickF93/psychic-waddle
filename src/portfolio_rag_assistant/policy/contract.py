@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Literal, Protocol, runtime_checkable
 
 from portfolio_rag_assistant.intent import (
+    IntentResolution,
     IntentCatalog,
     QuestionIntent,
 )
@@ -52,6 +53,7 @@ class AnswerPolicyRequest:
 
     question: str
     retrieved_context: tuple[RetrievedContext, ...]
+    intent_resolution: IntentResolution
     min_score: float
 
     def __post_init__(self) -> None:
@@ -61,6 +63,10 @@ class AnswerPolicyRequest:
             RetrievedContext,
             "retrieved_context",
         )
+        if not isinstance(self.intent_resolution, IntentResolution):
+            raise AnswerPolicyRequestError(
+                "intent_resolution must be an IntentResolution"
+            )
         _require_score_threshold(self.min_score, "min_score")
 
 
@@ -116,9 +122,7 @@ class DeterministicAnswerPolicy:
         if not usable_context:
             return _not_answerable("low_confidence_context")
 
-        question_intents = self._intent_catalog.detect_question_intents(
-            request.question
-        )
+        question_intents = request.intent_resolution.required_intents
         if not question_intents:
             if _is_broad_question(request.question):
                 return AnswerPolicyDecision(

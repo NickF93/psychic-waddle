@@ -49,6 +49,8 @@ class QuestionIntentProfile:
     accepted_categories: tuple[KnowledgeCategory, ...]
     trigger_groups: tuple[frozenset[str], ...]
     semantic_example_questions: tuple[str, ...]
+    semantic_candidate_threshold: float
+    semantic_required_threshold: float | None
     lexical_expansion_terms: frozenset[str]
     required_evidence_groups: tuple[frozenset[str], ...]
 
@@ -60,6 +62,20 @@ class QuestionIntentProfile:
             self.semantic_example_questions,
             "semantic_example_questions",
         )
+        _require_probability(
+            self.semantic_candidate_threshold,
+            "semantic_candidate_threshold",
+        )
+        if self.semantic_required_threshold is not None:
+            _require_probability(
+                self.semantic_required_threshold,
+                "semantic_required_threshold",
+            )
+            if self.semantic_required_threshold < self.semantic_candidate_threshold:
+                raise QuestionIntentProfileError(
+                    "semantic_required_threshold must be at least "
+                    "semantic_candidate_threshold"
+                )
         _require_non_empty_terms(
             self.lexical_expansion_terms,
             "lexical_expansion_terms",
@@ -83,12 +99,73 @@ class QuestionIntentProfile:
 
 
 @dataclass(frozen=True, slots=True)
+class SemanticCalibration:
+    """Reviewed model-bound semantic intent calibration metadata."""
+
+    embedding_backend: str
+    embedding_model: str
+    precision_floor: float
+    minimum_required_support: int
+
+    def __post_init__(self) -> None:
+        _require_non_empty_text(self.embedding_backend, "embedding_backend")
+        _require_non_empty_text(self.embedding_model, "embedding_model")
+        _require_probability(self.precision_floor, "precision_floor")
+        if not isinstance(self.minimum_required_support, int) or isinstance(
+            self.minimum_required_support,
+            bool,
+        ):
+            raise QuestionIntentProfileError(
+                "minimum_required_support must be a positive integer"
+            )
+        if self.minimum_required_support <= 0:
+            raise QuestionIntentProfileError(
+                "minimum_required_support must be a positive integer"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class IntentResolution:
+    """Intent authority output for one visitor question."""
+
+    required_intents: tuple[QuestionIntent, ...] = ()
+    candidate_intents: tuple[QuestionIntent, ...] = ()
+
+    def __post_init__(self) -> None:
+        _require_question_intent_tuple(self.required_intents, "required_intents")
+        _require_question_intent_tuple(self.candidate_intents, "candidate_intents")
+        _require_unique_intents(self.required_intents, "required_intents")
+        _require_unique_intents(self.candidate_intents, "candidate_intents")
+        required_ids = {intent.identifier for intent in self.required_intents}
+        candidate_ids = {intent.identifier for intent in self.candidate_intents}
+        if required_ids & candidate_ids:
+            raise QuestionIntentProfileError(
+                "candidate_intents must not duplicate required_intents"
+            )
+
+    @property
+    def retrieval_intents(self) -> tuple[QuestionIntent, ...]:
+        """Return required plus candidate intents in stable catalog order."""
+
+        intents: list[QuestionIntent] = []
+        for intent in (*self.required_intents, *self.candidate_intents):
+            if intent not in intents:
+                intents.append(intent)
+        return tuple(intents)
+
+
+@dataclass(frozen=True, slots=True)
 class IntentCatalog:
     """Reviewed deterministic vocabulary for supported recruiter intents."""
 
+    semantic_calibration: SemanticCalibration
     profiles: tuple[QuestionIntentProfile, ...]
 
     def __post_init__(self) -> None:
+        if not isinstance(self.semantic_calibration, SemanticCalibration):
+            raise QuestionIntentProfileError(
+                "semantic_calibration must be SemanticCalibration"
+            )
         _require_non_empty_tuple(self.profiles, "profiles")
         for profile in self.profiles:
             if not isinstance(profile, QuestionIntentProfile):
@@ -97,11 +174,11 @@ class IntentCatalog:
                 )
         seen_intents: set[str] = set()
         for profile in self.profiles:
-            if profile.intent in seen_intents:
+            if profile.intent.identifier in seen_intents:
                 raise QuestionIntentProfileError(
                     f"duplicate question intent profile: {profile.intent}"
                 )
-            seen_intents.add(profile.intent)
+            seen_intents.add(profile.intent.identifier)
 
     def intent_for_identifier(self, identifier: str) -> QuestionIntent:
         """Return the catalog-owned intent identifier for a reviewed string ID."""
@@ -124,6 +201,11 @@ class IntentCatalog:
                 continue
             intents.append(profile.intent)
         return tuple(intents)
+
+    def resolve_lexical_intents(self, question: str) -> IntentResolution:
+        """Return a required-only resolution from deterministic lexical matching."""
+
+        return IntentResolution(required_intents=self.detect_question_intents(question))
 
     def profile_for_intent(self, intent: QuestionIntent) -> QuestionIntentProfile:
         """Return the immutable profile for one supported intent."""
@@ -216,6 +298,27 @@ def _require_question_intent(value: object, field_name: str) -> None:
         )
 
 
+def _require_question_intent_tuple(
+    value: tuple[object, ...],
+    field_name: str,
+) -> None:
+    if not isinstance(value, tuple):
+        raise QuestionIntentProfileError(f"{field_name} must be a tuple")
+    for item in value:
+        _require_question_intent(item, field_name)
+
+
+def _require_unique_intents(
+    intents: tuple[QuestionIntent, ...],
+    field_name: str,
+) -> None:
+    seen: set[str] = set()
+    for intent in intents:
+        if intent.identifier in seen:
+            raise QuestionIntentProfileError(f"{field_name} must not contain duplicates")
+        seen.add(intent.identifier)
+
+
 def _require_non_empty_tuple(value: tuple[object, ...], field_name: str) -> None:
     if not isinstance(value, tuple) or not value:
         raise QuestionIntentProfileError(f"{field_name} must be a non-empty tuple")
@@ -232,3 +335,10 @@ def _require_non_empty_terms(value: frozenset[str], field_name: str) -> None:
         raise QuestionIntentProfileError(f"{field_name} must be a non-empty frozenset")
     for term in value:
         _require_non_empty_text(term, field_name)
+
+
+def _require_probability(value: float, field_name: str) -> None:
+    if not isinstance(value, float) or isinstance(value, bool):
+        raise QuestionIntentProfileError(f"{field_name} must be a float")
+    if not 0.0 <= value <= 1.0:
+        raise QuestionIntentProfileError(f"{field_name} must be between 0 and 1")

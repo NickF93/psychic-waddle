@@ -82,6 +82,7 @@ class PublicChatService:
                 AnswerPolicyRequest(
                     question=request.question,
                     retrieved_context=retrieval_response.results,
+                    intent_resolution=retrieval_response.intent_resolution,
                     min_score=self._retrieval_settings.min_score,
                 )
             )
