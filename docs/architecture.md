@@ -128,7 +128,8 @@ Owns bounded recruiter-intent definitions only.
 
 - Defines deterministic trigger terms or exact normalized trigger phrases,
   accepted knowledge categories, lexical expansion terms, and required evidence
-  terms for supported recruiter intents.
+  terms for supported recruiter intents from the reviewed
+  `config/intent-profiles.json` runtime catalog.
 - Covered v1 intents are professional overview, workplaces and work history,
   current role, skills, education, publications, projects and repositories, and
   public contact links.
@@ -136,6 +137,8 @@ Owns bounded recruiter-intent definitions only.
 - May be read by policy for deterministic evidence-completeness checks.
 - Must not call providers, search PostgreSQL, rank chunks, generate answers,
   persist data, collect questions, or inspect request metadata.
+- The catalog is matcher configuration, not portfolio knowledge, and must not be
+  ingested into the knowledge store.
 
 ### `Retriever`
 

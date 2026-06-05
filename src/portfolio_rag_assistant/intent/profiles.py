@@ -64,6 +64,83 @@ class QuestionIntentProfile:
                 _require_non_empty_terms(group, field_name)
 
 
+@dataclass(frozen=True, slots=True)
+class IntentCatalog:
+    """Reviewed deterministic vocabulary for supported recruiter intents."""
+
+    profiles: tuple[QuestionIntentProfile, ...]
+    contact_project_context_words: frozenset[str]
+
+    def __post_init__(self) -> None:
+        _require_non_empty_tuple(self.profiles, "profiles")
+        for profile in self.profiles:
+            if not isinstance(profile, QuestionIntentProfile):
+                raise QuestionIntentProfileError(
+                    "profiles must contain only QuestionIntentProfile values"
+                )
+        seen_intents: set[str] = set()
+        for profile in self.profiles:
+            if profile.intent in seen_intents:
+                raise QuestionIntentProfileError(
+                    f"duplicate question intent profile: {profile.intent}"
+                )
+            seen_intents.add(profile.intent)
+        _require_non_empty_terms(
+            self.contact_project_context_words,
+            "contact_project_context_words",
+        )
+
+    def detect_question_intents(self, question: str) -> tuple[QuestionIntent, ...]:
+        """Return supported recruiter intents that match a question."""
+
+        _require_non_empty_text(question, "question")
+        words = _normalized_words(question)
+        intents: list[QuestionIntent] = []
+        for profile in self.profiles:
+            if not _term_groups_match(question, profile.trigger_groups):
+                continue
+            if (
+                profile.intent == "contact"
+                and "github" in words
+                and words & self.contact_project_context_words
+            ):
+                continue
+            intents.append(profile.intent)
+        return tuple(intents)
+
+    def profile_for_intent(self, intent: QuestionIntent) -> QuestionIntentProfile:
+        """Return the immutable profile for one supported intent."""
+
+        for profile in self.profiles:
+            if profile.intent == intent:
+                return profile
+        raise QuestionIntentProfileError(f"unsupported question intent: {intent}")
+
+    def categories_for_intents(
+        self,
+        intents: tuple[QuestionIntent, ...],
+    ) -> tuple[KnowledgeCategory, ...]:
+        """Return accepted knowledge categories for detected intents in stable order."""
+
+        categories: list[KnowledgeCategory] = []
+        for intent in intents:
+            for category in self.profile_for_intent(intent).accepted_categories:
+                if category not in categories:
+                    categories.append(category)
+        return tuple(categories)
+
+    def text_satisfies_intent_evidence(
+        self,
+        text: str,
+        intent: QuestionIntent,
+    ) -> bool:
+        """Return whether text contains the required evidence terms for an intent."""
+
+        _require_non_empty_text(text, "text")
+        profile = self.profile_for_intent(intent)
+        return _term_groups_match(text, profile.required_evidence_groups)
+
+
 def _term_groups_match(
     text: str,
     groups: tuple[frozenset[str], ...],
@@ -652,10 +729,6 @@ QUESTION_INTENT_PROFILES: tuple[QuestionIntentProfile, ...] = (
     ),
 )
 
-_PROFILES_BY_INTENT: dict[QuestionIntent, QuestionIntentProfile] = {
-    profile.intent: profile for profile in QUESTION_INTENT_PROFILES
-}
-
 _PROJECT_CONTEXT_WORDS = frozenset(
     (
         "project",
@@ -669,33 +742,22 @@ _PROJECT_CONTEXT_WORDS = frozenset(
     )
 )
 
+DEFAULT_INTENT_CATALOG = IntentCatalog(
+    profiles=QUESTION_INTENT_PROFILES,
+    contact_project_context_words=_PROJECT_CONTEXT_WORDS,
+)
+
 
 def detect_question_intents(question: str) -> tuple[QuestionIntent, ...]:
     """Return supported recruiter intents that match a question."""
 
-    _require_non_empty_text(question, "question")
-    words = _normalized_words(question)
-    intents: list[QuestionIntent] = []
-    for profile in QUESTION_INTENT_PROFILES:
-        if not _term_groups_match(question, profile.trigger_groups):
-            continue
-        if (
-            profile.intent == "contact"
-            and "github" in words
-            and words & _PROJECT_CONTEXT_WORDS
-        ):
-            continue
-        intents.append(profile.intent)
-    return tuple(intents)
+    return DEFAULT_INTENT_CATALOG.detect_question_intents(question)
 
 
 def profile_for_intent(intent: QuestionIntent) -> QuestionIntentProfile:
     """Return the immutable profile for one supported intent."""
 
-    try:
-        return _PROFILES_BY_INTENT[intent]
-    except KeyError as error:
-        raise QuestionIntentProfileError(f"unsupported question intent: {intent}") from error
+    return DEFAULT_INTENT_CATALOG.profile_for_intent(intent)
 
 
 def categories_for_intents(
@@ -703,17 +765,10 @@ def categories_for_intents(
 ) -> tuple[KnowledgeCategory, ...]:
     """Return accepted knowledge categories for detected intents in stable order."""
 
-    categories: list[KnowledgeCategory] = []
-    for intent in intents:
-        for category in profile_for_intent(intent).accepted_categories:
-            if category not in categories:
-                categories.append(category)
-    return tuple(categories)
+    return DEFAULT_INTENT_CATALOG.categories_for_intents(intents)
 
 
 def text_satisfies_intent_evidence(text: str, intent: QuestionIntent) -> bool:
     """Return whether text contains the required evidence terms for an intent."""
 
-    _require_non_empty_text(text, "text")
-    profile = profile_for_intent(intent)
-    return _term_groups_match(text, profile.required_evidence_groups)
+    return DEFAULT_INTENT_CATALOG.text_satisfies_intent_evidence(text, intent)

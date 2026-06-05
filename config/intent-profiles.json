@@ -1,0 +1,502 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "intent": "professional_overview",
+      "accepted_categories": [
+        "experience"
+      ],
+      "trigger_groups": [
+        [
+          "background",
+          "career",
+          "experience",
+          "good fit for",
+          "kind of work",
+          "right person for",
+          "suitable for",
+          "type of work"
+        ]
+      ],
+      "lexical_expansion_terms": [
+        "career",
+        "current role",
+        "industrial computer vision",
+        "professional background",
+        "professional experience",
+        "professional profile",
+        "responsibilities",
+        "role",
+        "roles",
+        "work experience",
+        "work history"
+      ],
+      "required_evidence_groups": [
+        [
+          "built",
+          "coordinates",
+          "current role",
+          "currently works",
+          "deployed",
+          "designed",
+          "engineer",
+          "internship",
+          "internships",
+          "leads",
+          "machine learning engineer",
+          "ph d research",
+          "professional experience",
+          "research background",
+          "researcher",
+          "senior machine learning engineer",
+          "technical lead",
+          "work history",
+          "worked at",
+          "works at"
+        ]
+      ]
+    },
+    {
+      "intent": "workplace",
+      "accepted_categories": [
+        "experience"
+      ],
+      "trigger_groups": [
+        [
+          "companies",
+          "company",
+          "dove",
+          "employer",
+          "employers",
+          "where",
+          "workplace",
+          "workplaces"
+        ],
+        [
+          "companies",
+          "company",
+          "employed",
+          "employer",
+          "employers",
+          "lavora",
+          "lavorato",
+          "work",
+          "worked",
+          "working",
+          "workplace",
+          "workplaces",
+          "works"
+        ]
+      ],
+      "lexical_expansion_terms": [
+        "companies",
+        "company",
+        "employer",
+        "employers",
+        "employment",
+        "professional workplaces",
+        "work history",
+        "workplace",
+        "workplaces"
+      ],
+      "required_evidence_groups": [
+        [
+          "companies",
+          "company",
+          "current employer",
+          "currently works",
+          "employed by",
+          "employer",
+          "employers",
+          "employment",
+          "internship",
+          "internships",
+          "previously worked at",
+          "professional workplaces",
+          "work history",
+          "worked at",
+          "workplace",
+          "workplaces",
+          "works at"
+        ]
+      ]
+    },
+    {
+      "intent": "current_role",
+      "accepted_categories": [
+        "experience"
+      ],
+      "trigger_groups": [
+        [
+          "adesso",
+          "attuale",
+          "current",
+          "currently",
+          "now",
+          "ora",
+          "present",
+          "ruolo attuale",
+          "today"
+        ],
+        [
+          "company",
+          "datore",
+          "datore di lavoro",
+          "employer",
+          "employs",
+          "position",
+          "role",
+          "ruolo",
+          "title",
+          "work",
+          "works"
+        ]
+      ],
+      "lexical_expansion_terms": [
+        "current",
+        "current employer",
+        "current role",
+        "currently",
+        "currently works",
+        "datore di lavoro",
+        "employer",
+        "position",
+        "role",
+        "ruolo attuale",
+        "senior machine learning engineer",
+        "technical lead",
+        "title"
+      ],
+      "required_evidence_groups": [
+        [
+          "current employer",
+          "current role",
+          "currently employed",
+          "currently works",
+          "now",
+          "present position",
+          "present role",
+          "serves as"
+        ],
+        [
+          "company",
+          "employer",
+          "engineer",
+          "lead",
+          "position",
+          "researcher",
+          "role",
+          "title",
+          "works at"
+        ]
+      ]
+    },
+    {
+      "intent": "skills",
+      "accepted_categories": [
+        "skills"
+      ],
+      "trigger_groups": [
+        [
+          "anomaly detection",
+          "competenze",
+          "framework",
+          "frameworks",
+          "good fit for",
+          "industrial computer vision",
+          "right person for",
+          "skill",
+          "skills",
+          "specialise",
+          "specialised",
+          "specialization",
+          "specializations",
+          "specialize",
+          "specialized",
+          "specialized in",
+          "stack",
+          "suitable for",
+          "technologies",
+          "technology",
+          "tool",
+          "tools"
+        ]
+      ],
+      "lexical_expansion_terms": [
+        "frameworks",
+        "industrial computer vision",
+        "languages",
+        "machine learning",
+        "ml",
+        "segmentation",
+        "skills",
+        "stack",
+        "technical skills",
+        "technologies",
+        "tools"
+      ],
+      "required_evidence_groups": [
+        [
+          "anomaly detection",
+          "autoencoders",
+          "bash",
+          "c",
+          "c++",
+          "cnn",
+          "cnns",
+          "computer vision",
+          "deep learning",
+          "docker",
+          "domain",
+          "domains",
+          "edge ai",
+          "embedded inference",
+          "framework",
+          "frameworks",
+          "ganomaly",
+          "halcon",
+          "industrial computer vision",
+          "java",
+          "knowledge distillation",
+          "language",
+          "languages",
+          "linux",
+          "machine learning",
+          "mlflow",
+          "numpy",
+          "onnx",
+          "opencv",
+          "openvino",
+          "pandas",
+          "patchcore",
+          "production machine learning",
+          "python",
+          "pytorch",
+          "real time computer vision",
+          "resnet",
+          "scikit learn",
+          "segmentation",
+          "specialization",
+          "specializations",
+          "sql",
+          "technical skills",
+          "technologies",
+          "technology",
+          "tensorboard",
+          "tensorflow",
+          "tensorrt",
+          "tool",
+          "tools",
+          "vae",
+          "visual inspection",
+          "vit",
+          "yolo"
+        ]
+      ]
+    },
+    {
+      "intent": "education",
+      "accepted_categories": [
+        "education"
+      ],
+      "trigger_groups": [
+        [
+          "bachelor",
+          "degree",
+          "degrees",
+          "education",
+          "formazione",
+          "master",
+          "phd",
+          "studied",
+          "study",
+          "university"
+        ]
+      ],
+      "lexical_expansion_terms": [
+        "bachelor",
+        "degree",
+        "degrees",
+        "education",
+        "master",
+        "phd",
+        "study",
+        "university"
+      ],
+      "required_evidence_groups": [
+        [
+          "bachelor",
+          "completed",
+          "degree",
+          "degrees",
+          "master",
+          "phd",
+          "studied",
+          "university"
+        ]
+      ]
+    },
+    {
+      "intent": "publications",
+      "accepted_categories": [
+        "research"
+      ],
+      "trigger_groups": [
+        [
+          "arxiv",
+          "authored",
+          "doi",
+          "paper",
+          "papers",
+          "pre-print",
+          "pre-prints",
+          "preprint",
+          "preprints",
+          "pubblicazioni",
+          "publication",
+          "publications",
+          "thesis"
+        ]
+      ],
+      "lexical_expansion_terms": [
+        "arxiv",
+        "doi",
+        "paper",
+        "papers",
+        "pre-print",
+        "pre-prints",
+        "preprint",
+        "preprints",
+        "publication",
+        "publications",
+        "research",
+        "submitted",
+        "thesis"
+      ],
+      "required_evidence_groups": [
+        [
+          "arxiv",
+          "doi",
+          "paper",
+          "papers",
+          "publication",
+          "publications",
+          "published",
+          "released",
+          "submitted",
+          "thesis"
+        ]
+      ]
+    },
+    {
+      "intent": "projects",
+      "accepted_categories": [
+        "projects"
+      ],
+      "trigger_groups": [
+        [
+          "code",
+          "codice",
+          "progetti",
+          "project",
+          "projects",
+          "pubblicato",
+          "repo",
+          "repos",
+          "repositories",
+          "repository",
+          "software",
+          "software di ricerca"
+        ]
+      ],
+      "lexical_expansion_terms": [
+        "code",
+        "github",
+        "project",
+        "projects",
+        "public research software",
+        "repositories",
+        "repository",
+        "research software",
+        "software",
+        "source",
+        "source code"
+      ],
+      "required_evidence_groups": [
+        [
+          "built",
+          "code",
+          "developed",
+          "github",
+          "implementation",
+          "portfolio",
+          "repo",
+          "repos",
+          "repositories",
+          "repository",
+          "software",
+          "source"
+        ]
+      ]
+    },
+    {
+      "intent": "contact",
+      "accepted_categories": [
+        "contact"
+      ],
+      "trigger_groups": [
+        [
+          "come posso contattare",
+          "contact",
+          "contattare",
+          "contattarlo",
+          "contatto",
+          "github",
+          "link",
+          "linkedin",
+          "links",
+          "orcid",
+          "portfolio",
+          "raggiungere",
+          "reach",
+          "website"
+        ]
+      ],
+      "lexical_expansion_terms": [
+        "github",
+        "linkedin",
+        "links",
+        "orcid",
+        "portfolio",
+        "profile",
+        "profiles",
+        "public",
+        "public professional profile links",
+        "website"
+      ],
+      "required_evidence_groups": [
+        [
+          "github",
+          "link",
+          "linkedin",
+          "links",
+          "orcid",
+          "portfolio",
+          "website"
+        ]
+      ]
+    }
+  ],
+  "frozen_disambiguation": {
+    "contact_project_context_words": [
+      "code",
+      "project",
+      "projects",
+      "repo",
+      "repos",
+      "repositories",
+      "repository",
+      "software"
+    ]
+  }
+}
