@@ -127,9 +127,9 @@ Owns verified facts, chunks, sources, and embeddings only.
 Owns bounded recruiter-intent definitions only.
 
 - Defines deterministic positive trigger terms or exact normalized trigger
-  phrases, accepted knowledge categories, lexical expansion terms, and required
-  evidence terms for supported recruiter intents from the reviewed
-  `config/intent-profiles.json` runtime catalog.
+  phrases, semantic example questions, accepted knowledge categories, lexical
+  expansion terms, and required evidence terms for supported recruiter intents
+  from the reviewed `config/intent-profiles.json` runtime catalog.
 - Owns catalog-produced intent identifiers; retrieval and policy must not
   fabricate intent IDs from raw strings.
 - Covered intents are professional overview, workplaces and work history,
@@ -137,6 +137,9 @@ Owns bounded recruiter-intent definitions only.
   public contact links.
 - May be read by retrieval for deterministic query expansion.
 - May be read by policy for deterministic evidence-completeness checks.
+- Semantic example questions are reviewed preparation data for a future
+  embedding matcher. They must not change retrieval, policy, or answerability
+  until an explicit semantic resolver is implemented and calibrated.
 - Must not call providers, search PostgreSQL, rank chunks, generate answers,
   persist data, collect questions, or inspect request metadata.
 - The catalog is matcher configuration, not portfolio knowledge, and must not be
@@ -145,6 +148,10 @@ Owns bounded recruiter-intent definitions only.
   missing fields, invalid schema versions, duplicate intents, invalid knowledge
   categories, and empty term groups. There is no default catalog or hidden
   fallback.
+- Future semantic intent resolution must use one generic resolver, with no
+  concrete-intent branches. Per-intent thresholds must be reviewed catalog data
+  when introduced, and semantic matches must remain candidate intents unless
+  calibrated to become required intents.
 
 ### `Retriever`
 

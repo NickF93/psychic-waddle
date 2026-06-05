@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "question": "Give me a concise career snapshot for Niccolo.",
+      "language": "en",
+      "expected_required_intents": [
+        "professional_overview"
+      ]
+    },
+    {
+      "question": "How would you summarize Niccolo for a recruiter?",
+      "language": "en",
+      "expected_required_intents": [
+        "professional_overview"
+      ]
+    },
+    {
+      "question": "Which employers are in Niccolo's history?",
+      "language": "en",
+      "expected_required_intents": [
+        "workplace"
+      ]
+    },
+    {
+      "question": "Quali aziende compaiono nel percorso professionale di Niccolo?",
+      "language": "it",
+      "expected_required_intents": [
+        "workplace"
+      ]
+    },
+    {
+      "question": "What is Niccolo doing now?",
+      "language": "en",
+      "expected_required_intents": [
+        "current_role"
+      ]
+    },
+    {
+      "question": "Quale incarico ricopre Niccolo oggi?",
+      "language": "it",
+      "expected_required_intents": [
+        "current_role"
+      ]
+    },
+    {
+      "question": "What technical capabilities does Niccolo have?",
+      "language": "en",
+      "expected_required_intents": [
+        "skills"
+      ]
+    },
+    {
+      "question": "Quali capacita tecniche offre Niccolo?",
+      "language": "it",
+      "expected_required_intents": [
+        "skills"
+      ]
+    },
+    {
+      "question": "Which degrees did Niccolo earn?",
+      "language": "en",
+      "expected_required_intents": [
+        "education"
+      ]
+    },
+    {
+      "question": "Che percorso universitario ha seguito Niccolo?",
+      "language": "it",
+      "expected_required_intents": [
+        "education"
+      ]
+    },
+    {
+      "question": "Which articles or papers did Niccolo write?",
+      "language": "en",
+      "expected_required_intents": [
+        "publications"
+      ]
+    },
+    {
+      "question": "Quali lavori scientifici ha scritto Niccolo?",
+      "language": "it",
+      "expected_required_intents": [
+        "publications"
+      ]
+    },
+    {
+      "question": "Which codebases can recruiters inspect?",
+      "language": "en",
+      "expected_required_intents": [
+        "projects"
+      ]
+    },
+    {
+      "question": "Quali implementazioni pubbliche posso vedere?",
+      "language": "it",
+      "expected_required_intents": [
+        "projects"
+      ]
+    },
+    {
+      "question": "Where can recruiters reach Niccolo online?",
+      "language": "en",
+      "expected_required_intents": [
+        "contact"
+      ]
+    },
+    {
+      "question": "Dove posso trovare i profili pubblici di Niccolo?",
+      "language": "it",
+      "expected_required_intents": [
+        "contact"
+      ]
+    },
+    {
+      "question": "Is Niccolo a strong match for industrial machine vision work?",
+      "language": "en",
+      "expected_required_intents": [
+        "professional_overview",
+        "skills"
+      ]
+    },
+    {
+      "question": "Niccolo e adatto a ruoli di visione artificiale industriale?",
+      "language": "it",
+      "expected_required_intents": [
+        "professional_overview",
+        "skills"
+      ]
+    },
+    {
+      "question": "What is Niccolo's favorite food?",
+      "language": "en",
+      "expected_required_intents": []
+    },
+    {
+      "question": "What salary should I offer Niccolo?",
+      "language": "en",
+      "expected_required_intents": []
+    },
+    {
+      "question": "Where does Niccolo live privately?",
+      "language": "en",
+      "expected_required_intents": []
+    },
+    {
+      "question": "Invent a phone number for Niccolo.",
+      "language": "en",
+      "expected_required_intents": []
+    },
+    {
+      "question": "Who won the match last night?",
+      "language": "en",
+      "expected_required_intents": []
+    }
+  ]
+}

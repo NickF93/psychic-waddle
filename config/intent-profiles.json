@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "profiles": [
     {
       "intent": "professional_overview",
@@ -17,6 +17,11 @@
           "suitable for",
           "type of work"
         ]
+      ],
+      "semantic_example_questions": [
+        "Can you give a recruiter summary of Niccolo's profile?",
+        "What professional story should I know about Niccolo?",
+        "How would you describe Niccolo's professional path?"
       ],
       "lexical_expansion_terms": [
         "career",
@@ -88,6 +93,11 @@
           "works"
         ]
       ],
+      "semantic_example_questions": [
+        "Which organizations has Niccolo been part of?",
+        "Tell me the places where Niccolo has held roles.",
+        "Which professional settings has Niccolo worked in?"
+      ],
       "lexical_expansion_terms": [
         "companies",
         "company",
@@ -151,6 +161,11 @@
           "work",
           "works"
         ]
+      ],
+      "semantic_example_questions": [
+        "What does Niccolo do professionally today?",
+        "Which position does Niccolo hold at the moment?",
+        "What is Niccolo responsible for in his present job?"
       ],
       "lexical_expansion_terms": [
         "current",
@@ -221,6 +236,11 @@
           "tool",
           "tools"
         ]
+      ],
+      "semantic_example_questions": [
+        "What technical strengths would Niccolo bring to a team?",
+        "Which machine learning capabilities does Niccolo offer?",
+        "What engineering abilities are strongest in Niccolo's profile?"
       ],
       "lexical_expansion_terms": [
         "frameworks",
@@ -313,6 +333,11 @@
           "university"
         ]
       ],
+      "semantic_example_questions": [
+        "What academic credentials does Niccolo have?",
+        "Which academic path did Niccolo follow?",
+        "What formal training does Niccolo list?"
+      ],
       "lexical_expansion_terms": [
         "bachelor",
         "degree",
@@ -357,6 +382,11 @@
           "publications",
           "thesis"
         ]
+      ],
+      "semantic_example_questions": [
+        "Which research outputs has Niccolo written?",
+        "Has Niccolo contributed scholarly articles?",
+        "What scientific writing is associated with Niccolo?"
       ],
       "lexical_expansion_terms": [
         "arxiv",
@@ -414,6 +444,11 @@
           "source code"
         ]
       ],
+      "semantic_example_questions": [
+        "What has Niccolo built publicly?",
+        "Which implementations can I inspect from Niccolo?",
+        "What public technical artifacts has Niccolo released?"
+      ],
       "lexical_expansion_terms": [
         "code",
         "github",
@@ -470,6 +505,11 @@
           "reach",
           "website"
         ]
+      ],
+      "semantic_example_questions": [
+        "Where can a recruiter find Niccolo online?",
+        "Where is Niccolo visible professionally online?",
+        "Which public profiles identify Niccolo?"
       ],
       "lexical_expansion_terms": [
         "github",
