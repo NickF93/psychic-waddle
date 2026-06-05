@@ -9,9 +9,9 @@ from typing import Any, cast
 
 from portfolio_rag_assistant.intent.profiles import (
     IntentCatalog,
-    QuestionIntent,
     QuestionIntentProfile,
     QuestionIntentProfileError,
+    _question_intent_from_catalog,
 )
 from portfolio_rag_assistant.knowledge import KnowledgeCategory
 
@@ -103,8 +103,7 @@ def _load_profile(value: object, index: int) -> QuestionIntentProfile:
     profile = _require_mapping(value, f"profiles[{index}]")
     _require_exact_keys(profile, _PROFILE_KEYS, f"profiles[{index}]")
     return QuestionIntentProfile(
-        intent=cast(
-            QuestionIntent,
+        intent=_question_intent_from_catalog(
             _require_text(profile["intent"], f"profiles[{index}].intent"),
         ),
         accepted_categories=tuple(

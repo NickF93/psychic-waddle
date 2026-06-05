@@ -5,23 +5,38 @@ from pathlib import Path
 
 import pytest
 
+from intent_catalog_helpers import TRACKED_INTENT_CATALOG
 from portfolio_rag_assistant.intent import (
-    DEFAULT_INTENT_CATALOG,
-    QUESTION_INTENT_PROFILES,
+    QuestionIntent,
     QuestionIntentProfileError,
     load_intent_catalog,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
-TRACKED_INTENT_CATALOG = ROOT / "config" / "intent-profiles.json"
 
-
-def test_tracked_intent_catalog_reproduces_current_literal_profiles() -> None:
+def test_tracked_intent_catalog_loads_reviewed_profiles() -> None:
     catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
 
-    assert catalog.profiles == QUESTION_INTENT_PROFILES
-    assert catalog.contact_project_context_words == (
-        DEFAULT_INTENT_CATALOG.contact_project_context_words
+    assert tuple(profile.intent.identifier for profile in catalog.profiles) == (
+        "professional_overview",
+        "workplace",
+        "current_role",
+        "skills",
+        "education",
+        "publications",
+        "projects",
+        "contact",
+    )
+    assert catalog.contact_project_context_words == frozenset(
+        (
+            "project",
+            "projects",
+            "repository",
+            "repositories",
+            "repo",
+            "repos",
+            "software",
+            "code",
+        )
     )
 
 
@@ -42,28 +57,43 @@ def test_tracked_intent_catalog_reproduces_current_literal_profiles() -> None:
 def test_tracked_intent_catalog_reproduces_current_detection(question: str) -> None:
     catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
 
-    assert catalog.detect_question_intents(question) == (
-        DEFAULT_INTENT_CATALOG.detect_question_intents(question)
+    assert _intent_identifiers(catalog.detect_question_intents(question)) == (
+        _expected_intents(question)
     )
 
 
 def test_tracked_intent_catalog_reproduces_current_evidence_matching() -> None:
     catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
 
-    for profile in DEFAULT_INTENT_CATALOG.profiles:
+    for profile in catalog.profiles:
         assert catalog.profile_for_intent(profile.intent) == profile
         assert catalog.categories_for_intents((profile.intent,)) == (
-            DEFAULT_INTENT_CATALOG.categories_for_intents((profile.intent,))
+            profile.accepted_categories
         )
-        for group in profile.required_evidence_groups:
-            for term in group:
-                text = f"evidence probe {term}"
-                assert catalog.text_satisfies_intent_evidence(text, profile.intent) == (
-                    DEFAULT_INTENT_CATALOG.text_satisfies_intent_evidence(
-                        text,
-                        profile.intent,
-                    )
-                )
+        evidence_terms = tuple(
+            sorted(group)[0] for group in profile.required_evidence_groups
+        )
+        text = f"evidence probe {' '.join(evidence_terms)}"
+        assert catalog.text_satisfies_intent_evidence(text, profile.intent)
+
+
+def test_tracked_intent_catalog_is_the_only_supported_intent_id_producer() -> None:
+    catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
+    workplace = catalog.intent_for_identifier("workplace")
+
+    assert isinstance(workplace, QuestionIntent)
+    assert workplace.identifier == "workplace"
+    assert catalog.profile_for_intent(workplace).intent == workplace
+    with pytest.raises(
+        QuestionIntentProfileError,
+        match="intent must be a catalog QuestionIntent",
+    ):
+        catalog.profile_for_intent("workplace")
+    with pytest.raises(
+        QuestionIntentProfileError,
+        match="question intents must be created by an intent catalog",
+    ):
+        QuestionIntent("fabricated", _creation_token=object())
 
 
 def test_load_intent_catalog_rejects_unknown_top_level_keys(tmp_path: Path) -> None:
@@ -106,3 +136,22 @@ def test_load_intent_catalog_rejects_missing_catalog_file(tmp_path: Path) -> Non
 
 def _tracked_payload() -> dict:
     return json.loads(TRACKED_INTENT_CATALOG.read_text(encoding="utf-8"))
+
+
+def _expected_intents(question: str) -> tuple[str, ...]:
+    expected_by_question = {
+        "What is Niccolo's experience?": ("professional_overview",),
+        "Where did Niccolo work?": ("workplace",),
+        "Who employs him now?": ("current_role",),
+        "What are his main ML skills?": ("skills",),
+        "Which GitHub repositories does he publish?": ("projects",),
+        "Where can I find his LinkedIn?": ("contact",),
+        "What is Niccolo favorite pizza topping?": (),
+        "What is Niccolo's GitHub?": ("contact",),
+        "What GitHub repositories does Niccolo publish?": ("projects",),
+    }
+    return expected_by_question[question]
+
+
+def _intent_identifiers(intents: tuple[QuestionIntent, ...]) -> tuple[str, ...]:
+    return tuple(intent.identifier for intent in intents)
