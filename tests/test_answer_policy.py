@@ -585,7 +585,11 @@ def test_policy_rejects_private_email_question_even_with_contact_context() -> No
     (
         "What is Niccolo favorite pizza topping?",
         "What is Niccolo private phone number?",
+        "What is Niccolo's salary?",
+        "What is Niccolo's political opinion?",
+        "Will Niccolo move to Berlin next year?",
         "Who won the football match yesterday?",
+        "Generate pizza poetry.",
     ),
 )
 def test_policy_rejects_uncategorized_unsupported_questions(

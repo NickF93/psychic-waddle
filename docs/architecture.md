@@ -141,6 +141,10 @@ Owns bounded recruiter-intent definitions only.
   persist data, collect questions, or inspect request metadata.
 - The catalog is matcher configuration, not portfolio knowledge, and must not be
   ingested into the knowledge store.
+- The catalog loader must fail fast for missing files, invalid JSON, unknown or
+  missing fields, invalid schema versions, duplicate intents, invalid knowledge
+  categories, and empty term groups. There is no default catalog or hidden
+  fallback.
 
 ### `Retriever`
 
@@ -232,7 +236,8 @@ names, or hidden fallbacks are allowed.
   connection fields.
 - `RETRIEVAL_TOP_K`: number of candidate chunks requested by retrieval.
 - `RETRIEVAL_MIN_SCORE`: minimum score required by answer policy.
-- `INTENT_PROFILES_PATH`: explicit path to the reviewed intent catalog.
+- `INTENT_PROFILES_PATH`: explicit path to the reviewed intent catalog. The
+  path is mandatory at runtime and must load before the public API is served.
 - `QUESTION_COLLECTION_ENABLED`: enables anonymous question signal storage.
 
 Milestone 0 defines names and ownership only. Runtime validation, defaults, and

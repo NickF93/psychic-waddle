@@ -370,6 +370,11 @@ The intent catalog is reviewed matcher configuration. It is loaded by runtime
 composition and injected into retrieval and answer policy. It is not knowledge
 and must not be ingested into PostgreSQL.
 
+Startup fails before provider or database authorities are built if
+`INTENT_PROFILES_PATH` is missing, points to a missing file, points outside the
+allowed public runtime `config/` directory, or loads invalid catalog JSON. There
+is no built-in intent catalog fallback.
+
 ## Optional Local Model Profiles
 
 The default Compose stack does not start local model services.

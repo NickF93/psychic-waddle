@@ -129,14 +129,16 @@ Question-intent expansion is bounded to supported recruiter intents:
 - projects and repositories;
 - public contact links.
 
-Each intent profile supplies trigger terms, accepted knowledge categories,
-lexical expansion terms, and required evidence terms. Retrieval may use trigger
-and expansion terms to improve recall. Detected intent expansion is bounded to
-matching profiles' controlled lexical expansion terms, joined as a PostgreSQL
-full-text OR query, and searches only those profiles' accepted knowledge
-categories. The raw visitor question is not appended to the intent-expanded
-query because vector and keyword retrieval already search the question. Policy
-uses the same profile definitions to verify evidence completeness.
+Each configured intent profile supplies positive trigger groups, accepted
+knowledge categories, lexical expansion terms, and required evidence groups.
+Retrieval may use catalog-owned detected intents to improve recall. Detected
+intent expansion is bounded to matching profiles' controlled lexical expansion
+terms, joined as a PostgreSQL full-text OR query, and searches only those
+profiles' accepted knowledge categories. The raw visitor question is not
+appended to the intent-expanded query because vector and keyword retrieval
+already search the question. Policy uses the same configured catalog to verify
+evidence completeness. If the catalog is missing or invalid, runtime startup
+fails instead of falling back to built-in vocabulary.
 
 ## Sprint 3.2 Scope
 
