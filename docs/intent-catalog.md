@@ -29,6 +29,11 @@ The loader fails fast when the file is missing, invalid JSON, has unknown fields
 has missing fields, defines duplicate intent IDs, uses invalid knowledge
 categories, or contains empty term groups.
 
+The application loads the catalog through the composition root and injects the
+same catalog authority into retrieval and answer policy. The intent package must
+not expose a default catalog, import-time catalog data, mutable registry, or
+legacy wrapper functions.
+
 ## JSON Shape
 
 The top-level object must contain exactly:

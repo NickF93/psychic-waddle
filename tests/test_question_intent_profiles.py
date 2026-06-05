@@ -2,17 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from portfolio_rag_assistant.intent import (
-    QUESTION_INTENT_PROFILES,
-    categories_for_intents,
-    detect_question_intents,
-    profile_for_intent,
-    text_satisfies_intent_evidence,
-)
+from intent_catalog_helpers import tracked_intent_catalog
 
 
 def test_profiles_define_unique_supported_recruiter_intents() -> None:
-    intents = tuple(profile.intent for profile in QUESTION_INTENT_PROFILES)
+    catalog = tracked_intent_catalog()
+    intents = tuple(profile.intent for profile in catalog.profiles)
 
     assert intents == (
         "professional_overview",
@@ -68,7 +63,7 @@ def test_detect_question_intents_for_natural_recruiter_phrasings(
     question: str,
     expected_intents: tuple[str, ...],
 ) -> None:
-    assert detect_question_intents(question) == expected_intents
+    assert tracked_intent_catalog().detect_question_intents(question) == expected_intents
 
 
 @pytest.mark.parametrize(
@@ -87,14 +82,16 @@ def test_detect_question_intents_for_natural_recruiter_phrasings(
 def test_detect_question_intents_rejects_unsupported_questions(
     question: str,
 ) -> None:
-    assert detect_question_intents(question) == ()
+    assert tracked_intent_catalog().detect_question_intents(question) == ()
 
 
 def test_categories_for_intents_returns_stable_unique_categories() -> None:
-    assert categories_for_intents(
+    catalog = tracked_intent_catalog()
+
+    assert catalog.categories_for_intents(
         ("professional_overview", "workplace", "current_role")
     ) == ("experience",)
-    assert categories_for_intents(("publications", "projects", "contact")) == (
+    assert catalog.categories_for_intents(("publications", "projects", "contact")) == (
         "research",
         "projects",
         "contact",
@@ -102,7 +99,7 @@ def test_categories_for_intents_returns_stable_unique_categories() -> None:
 
 
 def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
-    workplace = profile_for_intent("workplace")
+    workplace = tracked_intent_catalog().profile_for_intent("workplace")
 
     assert workplace.accepted_categories == ("experience",)
     assert "professional workplaces" in workplace.lexical_expansion_terms
@@ -169,7 +166,7 @@ def test_text_satisfies_intent_evidence_uses_required_terms(
     text: str,
     intent: str,
 ) -> None:
-    assert text_satisfies_intent_evidence(text, intent)
+    assert tracked_intent_catalog().text_satisfies_intent_evidence(text, intent)
 
 
 @pytest.mark.parametrize(
@@ -233,4 +230,4 @@ def test_text_satisfies_intent_evidence_rejects_incomplete_evidence(
     text: str,
     intent: str,
 ) -> None:
-    assert not text_satisfies_intent_evidence(text, intent)
+    assert not tracked_intent_catalog().text_satisfies_intent_evidence(text, intent)

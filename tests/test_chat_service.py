@@ -16,7 +16,7 @@ from portfolio_rag_assistant.api import (
     PublicChatService,
 )
 from portfolio_rag_assistant.config import RetrievalSettings
-from portfolio_rag_assistant.intent import DEFAULT_INTENT_CATALOG
+from intent_catalog_helpers import tracked_intent_catalog
 from portfolio_rag_assistant.policy import (
     ANSWERABLE,
     NEEDS_CLARIFICATION,
@@ -285,7 +285,7 @@ def test_chat_service_collects_real_policy_not_answerable_question() -> None:
             ),
             [],
         ),
-        policy=DeterministicAnswerPolicy(intent_catalog=DEFAULT_INTENT_CATALOG),
+        policy=DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()),
         generator=DecisionEchoGenerator(),
         question_collector=collector,
     )
@@ -318,7 +318,7 @@ def test_chat_service_does_not_collect_real_policy_answerable_question() -> None
             RetrievalResponse(question="Where did Niccolo work?", results=(_context(),)),
             [],
         ),
-        policy=DeterministicAnswerPolicy(intent_catalog=DEFAULT_INTENT_CATALOG),
+        policy=DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()),
         generator=DecisionEchoGenerator(),
         question_collector=collector,
     )
