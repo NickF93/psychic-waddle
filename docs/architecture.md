@@ -126,13 +126,13 @@ Owns verified facts, chunks, sources, and embeddings only.
 
 Owns bounded recruiter-intent definitions only.
 
-- Defines deterministic trigger terms or exact normalized trigger phrases,
-  accepted knowledge categories, lexical expansion terms, and required evidence
-  terms for supported recruiter intents from the reviewed
+- Defines deterministic positive trigger terms or exact normalized trigger
+  phrases, accepted knowledge categories, lexical expansion terms, and required
+  evidence terms for supported recruiter intents from the reviewed
   `config/intent-profiles.json` runtime catalog.
 - Owns catalog-produced intent identifiers; retrieval and policy must not
   fabricate intent IDs from raw strings.
-- Covered v1 intents are professional overview, workplaces and work history,
+- Covered intents are professional overview, workplaces and work history,
   current role, skills, education, publications, projects and repositories, and
   public contact links.
 - May be read by retrieval for deterministic query expansion.

@@ -530,6 +530,31 @@ def test_policy_treats_github_repository_question_as_project_intent() -> None:
     )
 
 
+def test_policy_rejects_bare_ambiguous_github_question() -> None:
+    decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
+        AnswerPolicyRequest(
+            question="What is Niccolo's GitHub?",
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="contact",
+                    chunk_text=(
+                        "contact: Niccolo Ferrari's public professional profile "
+                        "links include GitHub, LinkedIn, portfolio website, and "
+                        "ORCID."
+                    ),
+                    combined_score=0.96,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "unsupported_question_category"
+    assert decision.approved_context == ()
+
+
 def test_policy_rejects_private_email_question_even_with_contact_context() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
         AnswerPolicyRequest(

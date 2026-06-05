@@ -15,8 +15,8 @@ from portfolio_rag_assistant.intent.profiles import (
 )
 from portfolio_rag_assistant.knowledge import KnowledgeCategory
 
-_SCHEMA_VERSION = 1
-_TOP_LEVEL_KEYS = frozenset(("schema_version", "profiles", "frozen_disambiguation"))
+_SCHEMA_VERSION = 2
+_TOP_LEVEL_KEYS = frozenset(("schema_version", "profiles"))
 _PROFILE_KEYS = frozenset(
     (
         "intent",
@@ -26,7 +26,6 @@ _PROFILE_KEYS = frozenset(
         "required_evidence_groups",
     )
 )
-_FROZEN_DISAMBIGUATION_KEYS = frozenset(("contact_project_context_words",))
 
 
 def load_intent_catalog(path: str | Path) -> IntentCatalog:
@@ -52,26 +51,7 @@ def load_intent_catalog(path: str | Path) -> IntentCatalog:
             f"intent catalog schema_version must be {_SCHEMA_VERSION}"
         )
 
-    profiles = _load_profiles(catalog["profiles"])
-    frozen_disambiguation = _require_mapping(
-        catalog["frozen_disambiguation"],
-        "frozen_disambiguation",
-    )
-    _require_exact_keys(
-        frozen_disambiguation,
-        _FROZEN_DISAMBIGUATION_KEYS,
-        "frozen_disambiguation",
-    )
-    contact_project_context_words = frozenset(
-        _require_string_list(
-            frozen_disambiguation["contact_project_context_words"],
-            "contact_project_context_words",
-        )
-    )
-    return IntentCatalog(
-        profiles=profiles,
-        contact_project_context_words=contact_project_context_words,
-    )
+    return IntentCatalog(profiles=_load_profiles(catalog["profiles"]))
 
 
 def _require_catalog_path(path: str | Path) -> Path:

@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "profiles": [
     {
       "intent": "professional_overview",
@@ -397,6 +397,10 @@
         [
           "code",
           "codice",
+          "github repositories",
+          "github repository",
+          "github repo",
+          "github repos",
           "progetti",
           "project",
           "projects",
@@ -406,7 +410,9 @@
           "repositories",
           "repository",
           "software",
-          "software di ricerca"
+          "software di ricerca",
+          "source",
+          "source code"
         ]
       ],
       "lexical_expansion_terms": [
@@ -451,7 +457,11 @@
           "contattare",
           "contattarlo",
           "contatto",
-          "github",
+          "github account",
+          "github link",
+          "github links",
+          "github page",
+          "github profile",
           "link",
           "linkedin",
           "links",
@@ -486,17 +496,5 @@
         ]
       ]
     }
-  ],
-  "frozen_disambiguation": {
-    "contact_project_context_words": [
-      "code",
-      "project",
-      "projects",
-      "repo",
-      "repos",
-      "repositories",
-      "repository",
-      "software"
-    ]
-  }
+  ]
 }

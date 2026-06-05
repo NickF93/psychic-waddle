@@ -1362,17 +1362,17 @@ Items:
 
 Items:
 
-- Implementation: deliberately change trigger matching from simple word groups
+- Implementation: deliberately changed trigger matching from simple word groups
   to positive phrase/group semantics where needed.
-- Implementation: remove the GitHub/contact special-case branch.
-- Implementation: model ambiguity only through reviewed positive catalog
+- Implementation: removed the GitHub/contact special-case branch.
+- Implementation: modeled ambiguity only through reviewed positive catalog
   groups.
 - Test: GitHub profile questions resolve to the contact intent.
 - Test: GitHub repository and source-code questions resolve to the projects
   intent.
-- Test: bare ambiguous GitHub wording follows the approved product decision,
-  likely `not_answerable` unless explicitly defined in reviewed catalog data.
-- Documentation: update intent semantics to describe positive groups and the
+- Test: bare ambiguous GitHub wording is `not_answerable` unless explicitly
+  defined in reviewed catalog data.
+- Documentation: updated intent semantics to describe positive groups and the
   ambiguity decision.
 - Checkpoint: intent routing contains no hardcoded contact/project exception.
 

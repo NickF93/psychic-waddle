@@ -35,7 +35,10 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
         ("What are his main ML skills?", ("skills",)),
         ("What publications does he have?", ("publications",)),
         ("Which GitHub repositories does he publish?", ("projects",)),
+        ("Where is his source code?", ("projects",)),
         ("Where can I find his LinkedIn?", ("contact",)),
+        ("What is Niccolo's GitHub profile?", ("contact",)),
+        ("Where is his GitHub link?", ("contact",)),
         ("Qual e il ruolo attuale di Niccolo?", ("current_role",)),
         ("Chi e il datore di lavoro attuale di Niccolo?", ("current_role",)),
         ("Come posso contattare Niccolo?", ("contact",)),
@@ -79,6 +82,7 @@ def test_detect_question_intents_for_natural_recruiter_phrasings(
         "What is his private phone number?",
         "What is his home address?",
         "What is his private email?",
+        "What is Niccolo's GitHub?",
         "Who won the football match yesterday?",
     ),
 )
