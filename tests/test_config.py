@@ -6,6 +6,7 @@ from portfolio_rag_assistant.config import (
     ChatProviderSettings,
     DatabaseSettings,
     EmbeddingProviderSettings,
+    IntentCatalogSettings,
     QuestionCollectionSettings,
     RetrievalSettings,
     RuntimeConfigurationError,
@@ -14,6 +15,7 @@ from portfolio_rag_assistant.config import (
     load_chat_provider_settings,
     load_database_settings,
     load_embedding_provider_settings,
+    load_intent_catalog_settings,
     load_question_collection_settings,
     load_retrieval_settings,
 )
@@ -338,6 +340,22 @@ def test_load_question_collection_settings_rejects_invalid_text(text: str) -> No
 def test_question_collection_settings_requires_boolean() -> None:
     with pytest.raises(RuntimeConfigurationError):
         QuestionCollectionSettings(enabled="true")  # type: ignore[arg-type]
+
+
+def test_load_intent_catalog_settings_reads_exact_env_name() -> None:
+    settings = load_intent_catalog_settings(
+        {"INTENT_PROFILES_PATH": " config/intent-profiles.json "}
+    )
+
+    assert settings == IntentCatalogSettings(path="config/intent-profiles.json")
+
+
+def test_load_intent_catalog_settings_requires_named_value() -> None:
+    with pytest.raises(
+        RuntimeConfigurationError,
+        match="INTENT_PROFILES_PATH must be set",
+    ):
+        load_intent_catalog_settings({})
 
 
 @pytest.mark.parametrize(

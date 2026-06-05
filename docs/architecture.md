@@ -230,6 +230,7 @@ names, or hidden fallbacks are allowed.
   connection fields.
 - `RETRIEVAL_TOP_K`: number of candidate chunks requested by retrieval.
 - `RETRIEVAL_MIN_SCORE`: minimum score required by answer policy.
+- `INTENT_PROFILES_PATH`: explicit path to the reviewed intent catalog.
 - `QUESTION_COLLECTION_ENABLED`: enables anonymous question signal storage.
 
 Milestone 0 defines names and ownership only. Runtime validation, defaults, and

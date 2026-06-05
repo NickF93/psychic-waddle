@@ -22,9 +22,11 @@ from portfolio_rag_assistant.config import (
     load_chat_provider_settings,
     load_database_settings,
     load_embedding_provider_settings,
+    load_intent_catalog_settings,
     load_question_collection_settings,
     load_retrieval_settings,
 )
+from portfolio_rag_assistant.intent import load_intent_catalog
 from portfolio_rag_assistant.knowledge import connect_database
 from portfolio_rag_assistant.policy import DeterministicAnswerPolicy
 from portfolio_rag_assistant.provider import ChatProvider, EmbeddingProvider
@@ -117,6 +119,8 @@ def build_runtime_services(
     embedding_settings = load_embedding_provider_settings(environment)
     retrieval_settings = load_retrieval_settings(environment)
     question_collection_settings = load_question_collection_settings(environment)
+    intent_catalog_settings = load_intent_catalog_settings(environment)
+    intent_catalog = load_intent_catalog(intent_catalog_settings.path)
     chat_provider = chat_provider_factory(chat_settings)
     embedding_provider = embedding_provider_factory(embedding_settings)
     connection = connection_factory(database_settings)
@@ -130,11 +134,12 @@ def build_runtime_services(
         provider=embedding_provider,
         embedding_backend=embedding_settings.backend,
         embedding_model=embedding_settings.model,
+        intent_catalog=intent_catalog,
     )
     return RuntimeServices(
         chat_service=PublicChatService(
             retriever=retriever,
-            answer_policy=DeterministicAnswerPolicy(),
+            answer_policy=DeterministicAnswerPolicy(intent_catalog=intent_catalog),
             answer_generator=GroundedAnswerGenerator(
                 provider=chat_provider,
                 chat_model=chat_settings.model,
