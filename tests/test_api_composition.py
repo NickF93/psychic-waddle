@@ -18,6 +18,7 @@ from portfolio_rag_assistant.config import (
     EmbeddingProviderSettings,
     RuntimeConfigurationError,
 )
+from portfolio_rag_assistant.intent import QuestionIntentProfileError
 from portfolio_rag_assistant.provider import (
     ChatMessage,
     ChatRequest,
@@ -198,6 +199,57 @@ def test_runtime_api_composition_requires_intent_catalog_settings() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("catalog_path", "catalog_text", "error"),
+    (
+        (
+            "missing-intent-profiles.json",
+            None,
+            "intent catalog file not found",
+        ),
+        (
+            "invalid-intent-profiles.json",
+            "{",
+            "intent catalog must be valid JSON",
+        ),
+    ),
+)
+def test_runtime_api_composition_rejects_invalid_intent_catalog_path(
+    tmp_path: Path,
+    catalog_path: str,
+    catalog_text: str | None,
+    error: str,
+) -> None:
+    path = tmp_path / catalog_path
+    if catalog_text is not None:
+        path.write_text(catalog_text, encoding="utf-8")
+    env = _env()
+    env["INTENT_PROFILES_PATH"] = str(path)
+    provider_calls: list[str] = []
+    connection_calls: list[str] = []
+
+    with pytest.raises(QuestionIntentProfileError, match=error):
+        create_runtime_api_app(
+            env=env,
+            chat_provider_factory=lambda settings: _record_unexpected_chat_provider(
+                "chat",
+                provider_calls,
+            ),
+            embedding_provider_factory=lambda settings: (
+                _record_unexpected_embedding_provider(
+                    "embedding",
+                    provider_calls,
+                )
+            ),
+            connection_factory=lambda settings: _record_unexpected_connection(
+                connection_calls
+            ),
+        )
+
+    assert provider_calls == []
+    assert connection_calls == []
+
+
 def test_runtime_api_composition_wraps_database_connection_failure() -> None:
     def fail_connection(settings: DatabaseSettings) -> object:
         raise APICompositionError("database connection failed")
@@ -253,6 +305,27 @@ def _record_connection(
 ) -> "FakeRetrievalConnection":
     records.append(settings)
     return connection
+
+
+def _record_unexpected_chat_provider(
+    name: str,
+    records: list[str],
+) -> FakeChatProvider:
+    records.append(name)
+    return FakeChatProvider("unused")
+
+
+def _record_unexpected_embedding_provider(
+    name: str,
+    records: list[str],
+) -> FakeEmbeddingProvider:
+    records.append(name)
+    return FakeEmbeddingProvider(embeddings=((0.0,),))
+
+
+def _record_unexpected_connection(records: list[str]) -> FakeRetrievalConnection:
+    records.append("connection")
+    return FakeRetrievalConnection()
 
 
 def _env() -> dict[str, str]:
