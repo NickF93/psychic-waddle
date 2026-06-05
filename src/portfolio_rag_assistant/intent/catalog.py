@@ -15,13 +15,14 @@ from portfolio_rag_assistant.intent.profiles import (
 )
 from portfolio_rag_assistant.knowledge import KnowledgeCategory
 
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
 _TOP_LEVEL_KEYS = frozenset(("schema_version", "profiles"))
 _PROFILE_KEYS = frozenset(
     (
         "intent",
         "accepted_categories",
         "trigger_groups",
+        "semantic_example_questions",
         "lexical_expansion_terms",
         "required_evidence_groups",
     )
@@ -99,6 +100,10 @@ def _load_profile(value: object, index: int) -> QuestionIntentProfile:
         trigger_groups=_require_term_groups(
             profile["trigger_groups"],
             f"profiles[{index}].trigger_groups",
+        ),
+        semantic_example_questions=_require_string_list(
+            profile["semantic_example_questions"],
+            f"profiles[{index}].semantic_example_questions",
         ),
         lexical_expansion_terms=frozenset(
             _require_string_list(

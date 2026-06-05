@@ -48,6 +48,7 @@ class QuestionIntentProfile:
     intent: QuestionIntent
     accepted_categories: tuple[KnowledgeCategory, ...]
     trigger_groups: tuple[frozenset[str], ...]
+    semantic_example_questions: tuple[str, ...]
     lexical_expansion_terms: frozenset[str]
     required_evidence_groups: tuple[frozenset[str], ...]
 
@@ -55,6 +56,10 @@ class QuestionIntentProfile:
         _require_question_intent(self.intent, "intent")
         _require_non_empty_tuple(self.accepted_categories, "accepted_categories")
         _require_non_empty_tuple(self.trigger_groups, "trigger_groups")
+        _require_non_empty_text_tuple(
+            self.semantic_example_questions,
+            "semantic_example_questions",
+        )
         _require_non_empty_terms(
             self.lexical_expansion_terms,
             "lexical_expansion_terms",
@@ -214,6 +219,12 @@ def _require_question_intent(value: object, field_name: str) -> None:
 def _require_non_empty_tuple(value: tuple[object, ...], field_name: str) -> None:
     if not isinstance(value, tuple) or not value:
         raise QuestionIntentProfileError(f"{field_name} must be a non-empty tuple")
+
+
+def _require_non_empty_text_tuple(value: tuple[str, ...], field_name: str) -> None:
+    _require_non_empty_tuple(value, field_name)
+    for item in value:
+        _require_non_empty_text(item, field_name)
 
 
 def _require_non_empty_terms(value: frozenset[str], field_name: str) -> None:

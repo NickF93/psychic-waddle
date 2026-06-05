@@ -26,6 +26,7 @@ def test_tracked_intent_catalog_loads_reviewed_profiles() -> None:
         "projects",
         "contact",
     )
+    assert all(profile.semantic_example_questions for profile in catalog.profiles)
 
 
 @pytest.mark.parametrize(
@@ -70,6 +71,25 @@ def test_tracked_intent_catalog_reproduces_current_evidence_matching() -> None:
         )
         text = f"evidence probe {' '.join(evidence_terms)}"
         assert catalog.text_satisfies_intent_evidence(text, profile.intent)
+
+
+@pytest.mark.parametrize(
+    "question",
+    (
+        "What professional story should I know about Niccolo?",
+        "Which organizations has Niccolo been part of?",
+        "Which position does Niccolo hold at the moment?",
+        "What technical strengths would Niccolo bring to a team?",
+        "What academic credentials does Niccolo have?",
+        "Has Niccolo contributed scholarly articles?",
+        "Which implementations can I inspect from Niccolo?",
+        "Where can a recruiter find Niccolo online?",
+    ),
+)
+def test_semantic_examples_do_not_change_lexical_detection(question: str) -> None:
+    catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
+
+    assert catalog.detect_question_intents(question) == ()
 
 
 def test_tracked_intent_catalog_is_the_only_supported_intent_id_producer() -> None:
@@ -145,7 +165,7 @@ def test_load_intent_catalog_rejects_unknown_profile_keys(tmp_path: Path) -> Non
         ),
         (
             lambda payload: payload.__setitem__("schema_version", 1),
-            "schema_version must be 2",
+            "schema_version must be 3",
         ),
         (
             lambda payload: payload["profiles"][0].pop("trigger_groups"),
@@ -182,6 +202,27 @@ def test_load_intent_catalog_rejects_unknown_profile_keys(tmp_path: Path) -> Non
                 [""],
             ),
             "trigger_groups\\[0\\]\\[0\\] must be a non-empty string",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "semantic_example_questions",
+                "not an array",
+            ),
+            "semantic_example_questions must be an array",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "semantic_example_questions",
+                [],
+            ),
+            "semantic_example_questions must not be empty",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "semantic_example_questions",
+                [""],
+            ),
+            "semantic_example_questions\\[0\\] must be a non-empty string",
         ),
         (
             lambda payload: payload["profiles"][0].__setitem__(
