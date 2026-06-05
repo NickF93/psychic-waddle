@@ -95,7 +95,7 @@ def test_load_intent_catalog_rejects_unknown_top_level_keys(tmp_path: Path) -> N
     catalog_path = tmp_path / "intent-profiles.json"
     payload = _tracked_payload()
     payload["unexpected"] = True
-    catalog_path.write_text(json.dumps(payload), encoding="utf-8")
+    _write_payload(catalog_path, payload)
 
     with pytest.raises(QuestionIntentProfileError, match="unknown keys: unexpected"):
         load_intent_catalog(catalog_path)
@@ -109,7 +109,7 @@ def test_load_intent_catalog_rejects_retired_frozen_disambiguation(
     payload["frozen_disambiguation"] = {
         "contact_project_context_words": ["repository"]
     }
-    catalog_path.write_text(json.dumps(payload), encoding="utf-8")
+    _write_payload(catalog_path, payload)
 
     with pytest.raises(
         QuestionIntentProfileError,
@@ -122,9 +122,94 @@ def test_load_intent_catalog_rejects_unknown_profile_keys(tmp_path: Path) -> Non
     catalog_path = tmp_path / "intent-profiles.json"
     payload = _tracked_payload()
     payload["profiles"][0]["unexpected"] = True
-    catalog_path.write_text(json.dumps(payload), encoding="utf-8")
+    _write_payload(catalog_path, payload)
 
     with pytest.raises(QuestionIntentProfileError, match="unknown keys: unexpected"):
+        load_intent_catalog(catalog_path)
+
+
+@pytest.mark.parametrize(
+    ("mutate_payload", "error"),
+    (
+        (
+            lambda payload: payload.pop("profiles"),
+            "missing keys: profiles",
+        ),
+        (
+            lambda payload: payload.__setitem__("profiles", "not an array"),
+            "profiles must be an array",
+        ),
+        (
+            lambda payload: payload.__setitem__("profiles", []),
+            "profiles must not be empty",
+        ),
+        (
+            lambda payload: payload.__setitem__("schema_version", 1),
+            "schema_version must be 2",
+        ),
+        (
+            lambda payload: payload["profiles"][0].pop("trigger_groups"),
+            "missing keys: trigger_groups",
+        ),
+        (
+            lambda payload: payload["profiles"].__setitem__(0, "not an object"),
+            "profiles\\[0\\] must be an object",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "accepted_categories",
+                "experience",
+            ),
+            "accepted_categories must be an array",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "accepted_categories",
+                ["invalid-category"],
+            ),
+            "accepted_categories must contain only",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "trigger_groups",
+                [[]],
+            ),
+            "trigger_groups\\[0\\] must not be empty",
+        ),
+        (
+            lambda payload: payload["profiles"][0]["trigger_groups"].__setitem__(
+                0,
+                [""],
+            ),
+            "trigger_groups\\[0\\]\\[0\\] must be a non-empty string",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "lexical_expansion_terms",
+                [],
+            ),
+            "lexical_expansion_terms must not be empty",
+        ),
+        (
+            lambda payload: payload["profiles"][0].__setitem__(
+                "required_evidence_groups",
+                [],
+            ),
+            "required_evidence_groups must not be empty",
+        ),
+    ),
+)
+def test_load_intent_catalog_rejects_malformed_catalog_data(
+    tmp_path: Path,
+    mutate_payload,
+    error: str,
+) -> None:
+    catalog_path = tmp_path / "intent-profiles.json"
+    payload = _tracked_payload()
+    mutate_payload(payload)
+    _write_payload(catalog_path, payload)
+
+    with pytest.raises(QuestionIntentProfileError, match=error):
         load_intent_catalog(catalog_path)
 
 
@@ -132,7 +217,7 @@ def test_load_intent_catalog_rejects_duplicate_intents(tmp_path: Path) -> None:
     catalog_path = tmp_path / "intent-profiles.json"
     payload = _tracked_payload()
     payload["profiles"][1]["intent"] = payload["profiles"][0]["intent"]
-    catalog_path.write_text(json.dumps(payload), encoding="utf-8")
+    _write_payload(catalog_path, payload)
 
     with pytest.raises(
         QuestionIntentProfileError,
@@ -146,8 +231,28 @@ def test_load_intent_catalog_rejects_missing_catalog_file(tmp_path: Path) -> Non
         load_intent_catalog(tmp_path / "missing.json")
 
 
+def test_load_intent_catalog_rejects_invalid_json(tmp_path: Path) -> None:
+    catalog_path = tmp_path / "intent-profiles.json"
+    catalog_path.write_text("{", encoding="utf-8")
+
+    with pytest.raises(QuestionIntentProfileError, match="must be valid JSON"):
+        load_intent_catalog(catalog_path)
+
+
+def test_load_intent_catalog_rejects_non_object_catalog(tmp_path: Path) -> None:
+    catalog_path = tmp_path / "intent-profiles.json"
+    catalog_path.write_text("[]", encoding="utf-8")
+
+    with pytest.raises(QuestionIntentProfileError, match="must be an object"):
+        load_intent_catalog(catalog_path)
+
+
 def _tracked_payload() -> dict:
     return json.loads(TRACKED_INTENT_CATALOG.read_text(encoding="utf-8"))
+
+
+def _write_payload(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload), encoding="utf-8")
 
 
 def _expected_intents(question: str) -> tuple[str, ...]:
