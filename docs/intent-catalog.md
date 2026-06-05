@@ -9,11 +9,13 @@ The catalog owns domain vocabulary only:
 - supported recruiter intent identifiers;
 - accepted reviewed-knowledge categories for each intent;
 - trigger term groups used to recognize supported questions;
+- semantic example questions reserved for future embedding-based intent
+  calibration;
 - lexical expansion terms used by retrieval;
 - required evidence term groups used by answer policy.
 
-The matcher algorithm, normalization rules, rank fusion, policy thresholds, and
-knowledge category enum remain code authorities.
+The matcher algorithm, normalization rules, rank fusion, semantic resolver,
+policy thresholds, and knowledge category enum remain code authorities.
 
 ## Runtime Contract
 
@@ -42,7 +44,7 @@ by the configured catalog, not raw strings fabricated by consumers.
 
 The top-level object must contain exactly:
 
-- `schema_version`: currently `2`;
+- `schema_version`: currently `3`;
 - `profiles`: non-empty list of profile objects.
 
 Each profile object must contain exactly:
@@ -50,6 +52,7 @@ Each profile object must contain exactly:
 - `intent`;
 - `accepted_categories`;
 - `trigger_groups`;
+- `semantic_example_questions`;
 - `lexical_expansion_terms`;
 - `required_evidence_groups`.
 
@@ -58,6 +61,27 @@ required evidence groups use positive normalized lexical phrase/group semantics:
 every group must be satisfied by at least one term in that group. A single-word
 term matches a normalized word. A multi-word term matches the exact normalized
 phrase.
+
+`semantic_example_questions` is a non-empty list of reviewed example questions
+for a future semantic intent matcher. These examples are embedding anchors only.
+They are loaded and validated, but they do not affect lexical intent detection,
+retrieval, policy, or answerability in the current runtime.
+
+## Semantic Preparation
+
+Future semantic intent resolution must remain generic:
+
+- resolver code must not branch on concrete intent IDs;
+- per-intent semantic thresholds must live in reviewed catalog data when
+  thresholds are introduced;
+- semantic matches must start as candidate intents unless calibrated evidence
+  proves they are precise enough to become required intents.
+
+The labeled evaluation fixture under `tests/fixtures/` is calibration data, not
+runtime configuration. It must remain disjoint from catalog semantic anchors
+after intent-text normalization so future threshold calibration does not measure
+against the same questions used as embedding anchors. Near-duplicate review is a
+manual governance concern.
 
 ## GitHub Ambiguity
 

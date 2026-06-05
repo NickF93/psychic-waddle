@@ -130,7 +130,8 @@ Question-intent expansion is bounded to supported recruiter intents:
 - public contact links.
 
 Each configured intent profile supplies positive trigger groups, accepted
-knowledge categories, lexical expansion terms, and required evidence groups.
+knowledge categories, semantic example questions, lexical expansion terms, and
+required evidence groups.
 Retrieval may use catalog-owned detected intents to improve recall. Detected
 intent expansion is bounded to matching profiles' controlled lexical expansion
 terms, joined as a PostgreSQL full-text OR query, and searches only those
@@ -139,6 +140,9 @@ appended to the intent-expanded query because vector and keyword retrieval
 already search the question. Policy uses the same configured catalog to verify
 evidence completeness. If the catalog is missing or invalid, runtime startup
 fails instead of falling back to built-in vocabulary.
+
+Semantic example questions are not used by retrieval in the current runtime.
+They are reviewed preparation data for a future calibrated semantic resolver.
 
 ## Sprint 3.2 Scope
 

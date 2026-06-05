@@ -111,6 +111,12 @@ question patterns must be added deliberately with tests. Broad category labels,
 generic verbs such as `uses`, `include`, or `includes`, and unsupported private
 or off-topic phrasing must not make context answerable by themselves.
 
+Catalog semantic example questions are preparation data only. The current
+policy ignores semantic matches because no calibrated semantic resolver exists.
+Future semantic matches must remain candidate intents unless the resolver has
+calibrated thresholds proving that they are precise enough to become required
+policy intents.
+
 ## Refusal And Clarification Behavior
 
 The policy returns `not_answerable` when:
