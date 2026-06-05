@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from portfolio_rag_assistant.intent.profiles import (
     IntentCatalog,
@@ -88,11 +88,11 @@ def _load_profiles(value: object) -> tuple[QuestionIntentProfile, ...]:
     profiles = tuple(_load_profile(item, index) for index, item in enumerate(values))
     seen_intents: set[str] = set()
     for profile in profiles:
-        if profile.intent in seen_intents:
+        if profile.intent.identifier in seen_intents:
             raise QuestionIntentProfileError(
                 f"duplicate question intent profile: {profile.intent}"
             )
-        seen_intents.add(profile.intent)
+        seen_intents.add(profile.intent.identifier)
     return profiles
 
 

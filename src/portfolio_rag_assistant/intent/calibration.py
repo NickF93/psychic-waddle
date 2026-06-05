@@ -5,12 +5,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from portfolio_rag_assistant.intent.profiles import (
     IntentCatalog,
     QuestionIntent,
-    QuestionIntentProfileError,
     _normalized_text,
 )
 from portfolio_rag_assistant.intent.semantic import SemanticIntentResolver
