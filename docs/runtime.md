@@ -360,6 +360,16 @@ served by different systems.
 Changing `EMBEDDING_BACKEND` or `EMBEDDING_MODEL` requires re-indexing the
 knowledge base before `/ready` can pass for the new embedding pair.
 
+Intent catalog configuration:
+
+```env
+INTENT_PROFILES_PATH=config/intent-profiles.json
+```
+
+The intent catalog is reviewed matcher configuration. It is loaded by runtime
+composition and injected into retrieval and answer policy. It is not knowledge
+and must not be ingested into PostgreSQL.
+
 ## Optional Local Model Profiles
 
 The default Compose stack does not start local model services.

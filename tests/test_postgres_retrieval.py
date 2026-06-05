@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from portfolio_rag_assistant.intent import DEFAULT_INTENT_CATALOG
 from portfolio_rag_assistant.provider import (
     ChatRequest,
     ChatResponse,
@@ -56,6 +57,7 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
         provider=provider,
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        intent_catalog=DEFAULT_INTENT_CATALOG,
     )
 
     response = asyncio.run(
@@ -85,6 +87,7 @@ def test_postgres_retriever_queries_only_public_backend_model_chunks() -> None:
         provider=provider,
         embedding_backend="openai-compatible",
         embedding_model="text-embedding-3-small",
+        intent_catalog=DEFAULT_INTENT_CATALOG,
     )
 
     asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=4)))
@@ -134,6 +137,7 @@ def test_postgres_retriever_uses_bounded_intent_expansion() -> None:
         provider=FakeEmbeddingProvider(((0.1, 0.2),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        intent_catalog=DEFAULT_INTENT_CATALOG,
     )
 
     response = asyncio.run(
@@ -179,6 +183,7 @@ def test_postgres_retriever_fuses_candidate_ranks() -> None:
         provider=FakeEmbeddingProvider(((0.1, 0.2),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        intent_catalog=DEFAULT_INTENT_CATALOG,
     )
 
     response = asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=2)))
@@ -208,6 +213,7 @@ def test_postgres_retriever_threshold_score_ignores_missing_optional_channels() 
         provider=FakeEmbeddingProvider(((0.1, 0.2),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        intent_catalog=DEFAULT_INTENT_CATALOG,
     )
 
     response = asyncio.run(
@@ -230,6 +236,7 @@ def test_postgres_retriever_does_not_apply_policy_score_threshold() -> None:
         provider=FakeEmbeddingProvider(((0.1, 0.2),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        intent_catalog=DEFAULT_INTENT_CATALOG,
     )
 
     response = asyncio.run(
@@ -255,6 +262,7 @@ def test_postgres_retriever_does_not_expand_unsupported_questions() -> None:
         provider=FakeEmbeddingProvider(((0.1, 0.2),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        intent_catalog=DEFAULT_INTENT_CATALOG,
     )
 
     response = asyncio.run(
@@ -278,6 +286,7 @@ def test_postgres_retriever_rejects_invalid_configuration() -> None:
             provider=FakeEmbeddingProvider(((1.0,),)),
             embedding_backend=" ",
             embedding_model="model",
+            intent_catalog=DEFAULT_INTENT_CATALOG,
         )
 
 
@@ -287,6 +296,7 @@ def test_postgres_retriever_rejects_wrong_embedding_count() -> None:
         provider=FakeEmbeddingProvider(((1.0,), (2.0,))),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        intent_catalog=DEFAULT_INTENT_CATALOG,
     )
 
     with pytest.raises(RetrievalStoreError):
@@ -382,6 +392,7 @@ def test_postgres_retriever_can_read_real_schema(db_connection: object) -> None:
         provider=FakeEmbeddingProvider(((1.0, 0.0),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        intent_catalog=DEFAULT_INTENT_CATALOG,
     )
 
     response = asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=1)))
@@ -490,6 +501,7 @@ def test_postgres_retriever_retrieves_workplace_aggregate_for_natural_question(
         provider=FakeEmbeddingProvider(((1.0, 0.0),)),
         embedding_backend="ollama",
         embedding_model="nomic-embed-text",
+        intent_catalog=DEFAULT_INTENT_CATALOG,
     )
 
     response = asyncio.run(

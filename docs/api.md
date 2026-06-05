@@ -257,6 +257,7 @@ Runtime composition uses only explicit environment names:
 - `EMBEDDING_MODEL`
 - `RETRIEVAL_TOP_K`
 - `RETRIEVAL_MIN_SCORE`
+- `INTENT_PROFILES_PATH`
 - `QUESTION_COLLECTION_ENABLED`
 
 No aliases, deprecated names, hidden fallbacks, wildcard CORS defaults, or
@@ -266,12 +267,13 @@ At runtime, composition builds:
 
 1. the configured `ChatProvider`;
 2. the configured `EmbeddingProvider`;
-3. `PostgreSQLRetriever`;
-4. `DeterministicAnswerPolicy`;
-5. `GroundedAnswerGenerator`;
-6. `PublicChatService`;
-7. the database readiness service;
-8. the FastAPI application.
+3. the configured intent catalog;
+4. `PostgreSQLRetriever`;
+5. `DeterministicAnswerPolicy`;
+6. `GroundedAnswerGenerator`;
+7. `PublicChatService`;
+8. the database readiness service;
+9. the FastAPI application.
 
 The API layer only adapts HTTP input/output and orchestrates these authorities.
 It must not copy prompt text, fallback wording, ranking logic, answerability

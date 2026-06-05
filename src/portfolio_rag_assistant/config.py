@@ -135,6 +135,20 @@ class QuestionCollectionSettings:
             )
 
 
+@dataclass(frozen=True, slots=True)
+class IntentCatalogSettings:
+    """Validated intent catalog settings."""
+
+    path: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "path",
+            _require_runtime_text(self.path, "INTENT_PROFILES_PATH"),
+        )
+
+
 def load_chat_provider_settings(
     env: Mapping[str, str] | None = None,
 ) -> ChatProviderSettings:
@@ -206,6 +220,20 @@ def load_question_collection_settings(
         enabled=_require_runtime_bool(
             source.get("QUESTION_COLLECTION_ENABLED"),
             "QUESTION_COLLECTION_ENABLED",
+        )
+    )
+
+
+def load_intent_catalog_settings(
+    env: Mapping[str, str] | None = None,
+) -> IntentCatalogSettings:
+    """Load intent catalog settings from exact environment variable names."""
+
+    source = os.environ if env is None else env
+    return IntentCatalogSettings(
+        path=_require_runtime_text(
+            source.get("INTENT_PROFILES_PATH"),
+            "INTENT_PROFILES_PATH",
         )
     )
 

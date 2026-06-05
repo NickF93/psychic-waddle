@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Sequence
 from contextlib import AbstractContextManager
+from pathlib import Path
 from types import TracebackType
 from typing import Any
 
@@ -23,6 +25,8 @@ from portfolio_rag_assistant.provider import (
     EmbeddingRequest,
     EmbeddingResponse,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_runtime_api_composition_uses_separate_chat_and_embedding_authorities() -> None:
@@ -131,11 +135,59 @@ def test_runtime_api_composition_collects_unanswered_questions_when_enabled() ->
     )
 
 
+def test_runtime_api_composition_uses_configured_intent_catalog(
+    tmp_path: Path,
+) -> None:
+    catalog_path = tmp_path / "intent-profiles.json"
+    payload = json.loads(
+        (ROOT / "config" / "intent-profiles.json").read_text(encoding="utf-8")
+    )
+    for profile in payload["profiles"]:
+        if profile["intent"] == "workplace":
+            profile["trigger_groups"] = [["unmatched-workplace-trigger"]]
+    catalog_path.write_text(json.dumps(payload), encoding="utf-8")
+    connection = FakeRetrievalConnection()
+    env = _env()
+    env["INTENT_PROFILES_PATH"] = str(catalog_path)
+
+    app = create_runtime_api_app(
+        env=env,
+        chat_provider_factory=lambda settings: FakeChatProvider("unused"),
+        embedding_provider_factory=lambda settings: FakeEmbeddingProvider(
+            embeddings=((0.0, 0.0),)
+        ),
+        connection_factory=lambda settings: connection,
+    )
+
+    response = _post_chat(app)
+
+    assert response.status_code == 200
+    assert not any("WITH intent_query" in query for query, _params in connection.calls)
+
+
 def test_runtime_api_composition_requires_database_settings() -> None:
     env = _env()
     del env["DB_HOST"]
 
     with pytest.raises(RuntimeConfigurationError, match="DB_HOST must be set"):
+        create_runtime_api_app(
+            env=env,
+            chat_provider_factory=lambda settings: FakeChatProvider("unused"),
+            embedding_provider_factory=lambda settings: FakeEmbeddingProvider(
+                embeddings=((0.0,),)
+            ),
+            connection_factory=lambda settings: FakeRetrievalConnection(),
+        )
+
+
+def test_runtime_api_composition_requires_intent_catalog_settings() -> None:
+    env = _env()
+    del env["INTENT_PROFILES_PATH"]
+
+    with pytest.raises(
+        RuntimeConfigurationError,
+        match="INTENT_PROFILES_PATH must be set",
+    ):
         create_runtime_api_app(
             env=env,
             chat_provider_factory=lambda settings: FakeChatProvider("unused"),
@@ -219,6 +271,7 @@ def _env() -> dict[str, str]:
         "EMBEDDING_MODEL": "nomic-embed-text",
         "RETRIEVAL_TOP_K": "2",
         "RETRIEVAL_MIN_SCORE": "0.25",
+        "INTENT_PROFILES_PATH": str(ROOT / "config" / "intent-profiles.json"),
         "QUESTION_COLLECTION_ENABLED": "false",
     }
 

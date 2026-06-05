@@ -32,6 +32,16 @@ require_boolean() {
     esac
 }
 
+require_config_file() {
+    VALUE_KEY=$1
+    VALUE=$(configured_value "$VALUE_KEY")
+    case "$VALUE" in
+        config/*) ;;
+        *) fail "$VALUE_KEY must point inside config/" ;;
+    esac
+    [ -f "$ROOT_DIR/$VALUE" ] || fail "missing config file: $ROOT_DIR/$VALUE"
+}
+
 require_backend_value() {
     VALUE_KEY=$1
     VALUE=$(configured_value "$VALUE_KEY")
@@ -103,6 +113,7 @@ require_llama_cpp_when_selected
 
 require_integer RETRIEVAL_TOP_K
 require_score RETRIEVAL_MIN_SCORE
+require_config_file INTENT_PROFILES_PATH
 require_boolean QUESTION_COLLECTION_ENABLED
 
 compose config >/dev/null

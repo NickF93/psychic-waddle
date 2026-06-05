@@ -7,10 +7,8 @@ from dataclasses import dataclass, replace
 from typing import Any, Protocol, cast
 
 from portfolio_rag_assistant.intent import (
+    IntentCatalog,
     QuestionIntent,
-    categories_for_intents,
-    detect_question_intents,
-    profile_for_intent,
 )
 from portfolio_rag_assistant.knowledge import KnowledgeCategory
 from portfolio_rag_assistant.provider import EmbeddingProvider, EmbeddingRequest
@@ -93,11 +91,13 @@ class PostgreSQLRetriever:
         provider: EmbeddingProvider,
         embedding_backend: str,
         embedding_model: str,
+        intent_catalog: IntentCatalog,
     ) -> None:
         self._connection = connection
         self._provider = provider
         self._embedding_backend = _require_text(embedding_backend, "embedding_backend")
         self._embedding_model = _require_text(embedding_model, "embedding_model")
+        self._intent_catalog = intent_catalog
 
     async def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
         """Return ranked public source-backed context for a question."""
@@ -116,7 +116,7 @@ class PostgreSQLRetriever:
             question=request.question,
             limit=request.top_k,
         )
-        intents = detect_question_intents(request.question)
+        intents = self._intent_catalog.detect_question_intents(request.question)
         intent_candidates = self._search_intent_keywords(
             intents=intents,
             limit=request.top_k,
@@ -242,8 +242,11 @@ class PostgreSQLRetriever:
             LIMIT %s
             """,
             (
-                _intent_evidence_query_text(intents),
-                list(categories_for_intents(intents)),
+                _intent_evidence_query_text(
+                    intents=intents,
+                    intent_catalog=self._intent_catalog,
+                ),
+                list(self._intent_catalog.categories_for_intents(intents)),
                 limit,
             ),
         )
@@ -426,11 +429,13 @@ def _intent_candidate_from_row(row: tuple[Any, ...]) -> RetrievalCandidate:
 
 def _intent_evidence_query_text(
     intents: tuple[QuestionIntent, ...],
+    intent_catalog: IntentCatalog,
 ) -> str:
     terms: list[str] = []
     seen_terms: set[str] = set()
     for intent in intents:
-        for term in sorted(profile_for_intent(intent).lexical_expansion_terms):
+        profile = intent_catalog.profile_for_intent(intent)
+        for term in sorted(profile.lexical_expansion_terms):
             formatted_term = _format_websearch_intent_term(term)
             term_key = formatted_term.casefold()
             if term_key in seen_terms:

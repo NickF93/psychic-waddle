@@ -32,6 +32,7 @@ def test_dockerfile_uses_pinned_base_and_locked_dependencies() -> None:
     assert "FROM python:3.12-slim@sha256:" in dockerfile
     assert "requirements.lock" in dockerfile
     assert "pip install --constraint requirements.lock ." in dockerfile
+    assert "COPY config ./config" in dockerfile
     assert "pip install --upgrade pip" not in dockerfile
     assert "USER app" in dockerfile
     assert "EXPOSE 8000" in dockerfile
@@ -88,6 +89,7 @@ def test_compose_api_uses_capability_specific_config_without_database_url() -> N
     assert environment["CHAT_BASE_URL"] == "${CHAT_BASE_URL}"
     assert environment["EMBEDDING_BACKEND"] == "${EMBEDDING_BACKEND}"
     assert environment["EMBEDDING_BASE_URL"] == "${EMBEDDING_BASE_URL}"
+    assert environment["INTENT_PROFILES_PATH"] == "${INTENT_PROFILES_PATH}"
     assert environment["QUESTION_COLLECTION_ENABLED"] == (
         "${QUESTION_COLLECTION_ENABLED}"
     )
@@ -309,6 +311,7 @@ def test_env_example_contains_placeholders_not_real_secrets() -> None:
     assert values["EMBEDDING_API_KEY"] == "replace-with-embedding-provider-token"
     assert values["CHAT_BASE_URL"] == "https://example.invalid/v1"
     assert values["EMBEDDING_BASE_URL"] == "https://example.invalid/v1"
+    assert values["INTENT_PROFILES_PATH"] == "config/intent-profiles.json"
     assert values["QUESTION_COLLECTION_ENABLED"] == "false"
     assert not values["CHAT_API_KEY"].startswith("sk-")
     assert not values["EMBEDDING_API_KEY"].startswith("sk-")
@@ -340,6 +343,25 @@ def test_canonical_profile_knowledge_is_tracked() -> None:
     assert not_ignored.returncode == 1
     assert tracked.returncode == 0
     assert tracked.stdout.strip() == "knowledge/profile.json"
+
+
+def test_canonical_intent_catalog_is_tracked_configuration() -> None:
+    not_ignored = subprocess.run(
+        ("git", "check-ignore", "--quiet", "config/intent-profiles.json"),
+        cwd=ROOT,
+        check=False,
+    )
+    tracked = subprocess.run(
+        ("git", "ls-files", "--error-unmatch", "config/intent-profiles.json"),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert not_ignored.returncode == 1
+    assert tracked.returncode == 0
+    assert tracked.stdout.strip() == "config/intent-profiles.json"
 
 
 def test_public_edge_routes_are_mapped_to_internal_api() -> None:

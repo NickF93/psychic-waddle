@@ -24,8 +24,10 @@ from portfolio_rag_assistant.config import (
     load_chat_provider_settings,
     load_database_settings,
     load_embedding_provider_settings,
+    load_intent_catalog_settings,
     load_question_collection_settings,
 )
+from portfolio_rag_assistant.intent import load_intent_catalog
 from portfolio_rag_assistant.knowledge import (
     EmbeddingIndexingError,
     KnowledgeIngestionError,
@@ -244,6 +246,8 @@ def _run_runtime_smoke(env: Mapping[str, str], stdout: TextIO) -> int:
     chat_settings = load_chat_provider_settings(env)
     embedding_settings = load_embedding_provider_settings(env)
     question_collection_settings = load_question_collection_settings(env)
+    intent_catalog_settings = load_intent_catalog_settings(env)
+    load_intent_catalog(intent_catalog_settings.path)
     chat_provider = build_chat_provider(chat_settings)
     embedding_provider = build_embedding_provider(embedding_settings)
 
