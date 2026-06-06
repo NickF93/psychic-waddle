@@ -78,7 +78,8 @@ legacy names, or fallback defaults.
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `RETRIEVAL_TOP_K` | Yes | Positive maximum number of chunks requested by the application layer. |
+| `RETRIEVAL_TOP_K` | Yes | Positive maximum number of ranked chunks returned by retrieval. |
+| `RETRIEVAL_CANDIDATE_FAN_OUT` | Yes | Positive number of candidates requested from each retrieval channel before fusion. It must be at least `RETRIEVAL_TOP_K`; `.env.example` uses `50`. |
 | `RETRIEVAL_MIN_SCORE` | Yes | Minimum accepted combined score from `0` to `1`, applied by answer policy after retrieval. |
 
 The configured `EMBEDDING_MODEL` and `EMBEDDING_BACKEND` identify the
@@ -106,6 +107,9 @@ The retriever:
 - Merges vector, keyword, and intent-expanded candidates by chunk id.
 - Ranks deterministically with raw reciprocal-rank-fusion sums over candidate
   ordering, then stable raw-score and chunk-id tie-breakers.
+- Applies `RETRIEVAL_CANDIDATE_FAN_OUT` to vector, keyword, and
+  intent-expanded candidate searches before fusion, then returns only the final
+  `RETRIEVAL_TOP_K` ranked contexts.
 - Returns only source-backed `RetrievedContext` records.
 
 RRF uses a fixed internal rank constant of `60`. The raw RRF sum is normalized

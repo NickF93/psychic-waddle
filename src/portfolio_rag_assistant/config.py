@@ -107,6 +107,7 @@ class RetrievalSettings:
     """Validated retrieval settings."""
 
     top_k: int
+    candidate_fan_out: int
     min_score: float
 
     def __post_init__(self) -> None:
@@ -114,6 +115,21 @@ class RetrievalSettings:
             raise RetrievalConfigurationError("RETRIEVAL_TOP_K must be an integer")
         if self.top_k <= 0:
             raise RetrievalConfigurationError("RETRIEVAL_TOP_K must be positive")
+        if not isinstance(self.candidate_fan_out, int) or isinstance(
+            self.candidate_fan_out,
+            bool,
+        ):
+            raise RetrievalConfigurationError(
+                "RETRIEVAL_CANDIDATE_FAN_OUT must be an integer"
+            )
+        if self.candidate_fan_out <= 0:
+            raise RetrievalConfigurationError(
+                "RETRIEVAL_CANDIDATE_FAN_OUT must be positive"
+            )
+        if self.candidate_fan_out < self.top_k:
+            raise RetrievalConfigurationError(
+                "RETRIEVAL_CANDIDATE_FAN_OUT must be at least RETRIEVAL_TOP_K"
+            )
         if not isinstance(self.min_score, float):
             raise RetrievalConfigurationError("RETRIEVAL_MIN_SCORE must be a float")
         if not 0 <= self.min_score <= 1:
@@ -203,6 +219,10 @@ def load_retrieval_settings(env: Mapping[str, str] | None = None) -> RetrievalSe
     source = os.environ if env is None else env
     return RetrievalSettings(
         top_k=_require_retrieval_int(source.get("RETRIEVAL_TOP_K"), "RETRIEVAL_TOP_K"),
+        candidate_fan_out=_require_retrieval_int(
+            source.get("RETRIEVAL_CANDIDATE_FAN_OUT"),
+            "RETRIEVAL_CANDIDATE_FAN_OUT",
+        ),
         min_score=_require_retrieval_float(
             source.get("RETRIEVAL_MIN_SCORE"),
             "RETRIEVAL_MIN_SCORE",

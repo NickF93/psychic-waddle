@@ -408,7 +408,11 @@ def _service(
         answer_policy=policy,  # type: ignore[arg-type]
         answer_generator=generator,  # type: ignore[arg-type]
         question_collector=question_collector or FakeQuestionCollector(recorded=False),
-        retrieval_settings=RetrievalSettings(top_k=3, min_score=0.25),
+        retrieval_settings=RetrievalSettings(
+            top_k=3,
+            candidate_fan_out=6,
+            min_score=0.25,
+        ),
     )
 
 

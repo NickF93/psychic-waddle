@@ -249,7 +249,9 @@ names, or hidden fallbacks are allowed.
 - `EMBEDDING_MODEL`: embedding model name.
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: PostgreSQL
   connection fields.
-- `RETRIEVAL_TOP_K`: number of candidate chunks requested by retrieval.
+- `RETRIEVAL_TOP_K`: number of ranked chunks returned by retrieval.
+- `RETRIEVAL_CANDIDATE_FAN_OUT`: number of candidates requested from each
+  retrieval channel before fusion and final `RETRIEVAL_TOP_K` truncation.
 - `RETRIEVAL_MIN_SCORE`: minimum score required by answer policy.
 - `INTENT_PROFILES_PATH`: explicit path to the reviewed intent catalog. The
   path is mandatory at runtime and must load before the public API is served.

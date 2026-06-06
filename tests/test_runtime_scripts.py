@@ -402,6 +402,7 @@ def test_public_env_validator_checks_explicit_public_runtime_contract() -> None:
         "EMBEDDING_BASE_URL",
         "EMBEDDING_MODEL",
         "RETRIEVAL_TOP_K",
+        "RETRIEVAL_CANDIDATE_FAN_OUT",
         "RETRIEVAL_MIN_SCORE",
         "INTENT_PROFILES_PATH",
         "QUESTION_COLLECTION_ENABLED",

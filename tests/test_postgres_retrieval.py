@@ -81,6 +81,43 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
     assert response.results[1].score.keyword_score == 0.5
 
 
+def test_postgres_retriever_uses_candidate_fan_out_for_channel_limits() -> None:
+    connection = FakeRetrievalConnection(
+        vector_rows=(
+            _row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.9),
+            _row(2, "experience: Niccolo worked at Bonfiglioli.", 0.8),
+            _row(3, "experience: Niccolo worked at CIAS.", 0.7),
+        ),
+        keyword_rows=(
+            _row(2, "experience: Niccolo worked at Bonfiglioli.", 0.8),
+        ),
+        intent_rows=(
+            _row(3, "experience: Niccolo worked at CIAS.", 0.7),
+        ),
+    )
+    provider = FakeEmbeddingProvider(((1.0, 0.0),))
+    retriever = _retriever(
+        connection=connection,
+        provider=provider,
+        candidate_fan_out=7,
+    )
+
+    response = asyncio.run(
+        retriever.retrieve(RetrievalRequest(question="Where did Niccolo work?", top_k=2))
+    )
+
+    assert len(response.results) == 2
+    vector_query, vector_params = connection.calls[0]
+    keyword_query, keyword_params = connection.calls[1]
+    intent_query, intent_params = connection.calls[2]
+    assert "FROM chunk_embeddings" in vector_query
+    assert vector_params[-1] == 7
+    assert "WITH keyword_query" in keyword_query
+    assert keyword_params[-1] == 7
+    assert "WITH intent_query" in intent_query
+    assert intent_params[-1] == 7
+
+
 @pytest.mark.parametrize(
     "question",
     (
@@ -405,6 +442,7 @@ def test_postgres_retriever_rejects_invalid_configuration() -> None:
             provider=provider,
             embedding_backend=" ",
             embedding_model="model",
+            candidate_fan_out=4,
             intent_resolver=SemanticIntentResolver(
                 catalog=tracked_intent_catalog(),
                 provider=provider,
@@ -721,12 +759,14 @@ def _retriever(
     provider: FakeEmbeddingProvider,
     embedding_backend: str = "ollama",
     embedding_model: str = "nomic-embed-text",
+    candidate_fan_out: int = 4,
 ) -> PostgreSQLRetriever:
     return PostgreSQLRetriever(
         connection=connection,
         provider=provider,
         embedding_backend=embedding_backend,
         embedding_model=embedding_model,
+        candidate_fan_out=candidate_fan_out,
         intent_resolver=SemanticIntentResolver(
             catalog=tracked_intent_catalog(),
             provider=provider,
