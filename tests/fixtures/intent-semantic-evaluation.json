@@ -58,6 +58,20 @@
       ]
     },
     {
+      "question": "What type of driving permit appears in Niccolo's CV?",
+      "language": "en",
+      "expected_required_intents": [
+        "license"
+      ]
+    },
+    {
+      "question": "Quale patente pubblica e indicata per Niccolo?",
+      "language": "it",
+      "expected_required_intents": [
+        "license"
+      ]
+    },
+    {
       "question": "Which hobbies are listed in Niccolo's public CV?",
       "language": "en",
       "expected_required_intents": [

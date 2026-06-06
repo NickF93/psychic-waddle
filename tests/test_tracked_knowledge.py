@@ -39,7 +39,7 @@ AGGREGATE_EXPECTATIONS: tuple[AggregateExpectation, ...] = (
         fragments=("main technical skills", "computer vision", "pytorch"),
     ),
     AggregateExpectation(
-        intent="skills",
+        intent="license",
         source_locator="License",
         fragments=("driving license", "license b"),
     ),

@@ -234,10 +234,8 @@
       "trigger_groups": [
         [
           "anomaly detection",
-          "car license",
           "competenze",
           "computer vision engineer",
-          "driving license",
           "embedded programming",
           "framework",
           "frameworks",
@@ -246,8 +244,6 @@
           "industrial machine vision",
           "know machine learning",
           "knows machine learning",
-          "licence",
-          "license",
           "machine learning",
           "right person for",
           "skill",
@@ -278,12 +274,10 @@
       "semantic_required_threshold": null,
       "lexical_expansion_terms": [
         "frameworks",
-        "driving license",
         "embedded programming",
         "industrial computer vision",
         "industrial machine vision",
         "languages",
-        "license",
         "machine learning",
         "ml",
         "segmentation",
@@ -307,10 +301,7 @@
           "docker",
           "domain",
           "domains",
-          "driving license",
-          "driving license b",
           "edge ai",
-          "e u driving license b",
           "embedded inference",
           "embedded programming",
           "framework",
@@ -322,7 +313,6 @@
           "knowledge distillation",
           "language",
           "languages",
-          "license",
           "linux",
           "machine learning",
           "mlflow",
@@ -354,6 +344,46 @@
           "visual inspection",
           "vit",
           "yolo"
+        ]
+      ]
+    },
+    {
+      "intent": "license",
+      "accepted_categories": [
+        "skills"
+      ],
+      "trigger_groups": [
+        [
+          "car license",
+          "driving license",
+          "licence",
+          "license",
+          "patente",
+          "patente b"
+        ]
+      ],
+      "semantic_example_questions": [
+        "Does Niccolo list a public driving license?",
+        "Which driving license does Niccolo have?",
+        "Is a license included in Niccolo's public CV?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "driving license",
+        "driving license b",
+        "license",
+        "license b",
+        "patente",
+        "patente b"
+      ],
+      "required_evidence_groups": [
+        [
+          "driving license",
+          "driving license b",
+          "e u driving license b",
+          "license b",
+          "patente b"
         ]
       ]
     },

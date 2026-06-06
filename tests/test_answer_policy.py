@@ -416,6 +416,7 @@ def test_policy_rejects_common_recruiter_intents_with_category_only_context(
 @pytest.mark.parametrize(
     "chunk_text",
     (
+        "skills: Niccolo Ferrari has an E.U. Driving License B.",
         "skills: Niccolo Ferrari uses public profile information.",
         "skills: Niccolo Ferrari's skills include public profile information.",
         "skills: Niccolo Ferrari's skills includes public profile information.",

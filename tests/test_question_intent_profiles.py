@@ -15,6 +15,7 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
         "workplace",
         "current_role",
         "skills",
+        "license",
         "interests",
         "education",
         "publications",
@@ -85,7 +86,7 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
         ("What is Niccolò 's work?", ("professional_overview",)),
         ("Do Niccolò know Machine Learning?", ("skills",)),
         ("does Niccolò know embedded programming?", ("skills",)),
-        ("has niccolò car license", ("skills",)),
+        ("has niccolò car license", ("license",)),
         ("what are the interest of niccolò", ("interests",)),
         ("What prublications did Niccolò authored?", ("publications",)),
         (
@@ -135,7 +136,7 @@ def test_categories_for_intents_returns_stable_unique_categories() -> None:
         _intents(catalog, "professional_overview", "workplace", "current_role")
     ) == ("experience",)
     assert catalog.categories_for_intents(
-        _intents(catalog, "interests", "publications", "projects", "contact")
+        _intents(catalog, "license", "interests", "publications", "projects", "contact")
     ) == (
         "skills",
         "research",
@@ -209,7 +210,7 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
         ),
         (
             "Niccolo Ferrari has an E.U. Driving License B.",
-            "skills",
+            "license",
         ),
         (
             "Niccolo Ferrari's interests include artificial intelligence, "
@@ -272,6 +273,10 @@ def test_text_satisfies_intent_evidence_uses_required_terms(
         (
             "skills: Niccolo Ferrari has public profile information.",
             "interests",
+        ),
+        (
+            "skills: Niccolo Ferrari has an E.U. Driving License B.",
+            "skills",
         ),
         (
             "education: Niccolo Ferrari has public profile information.",

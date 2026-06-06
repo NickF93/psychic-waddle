@@ -92,8 +92,8 @@ The default policy uses only local, inspectable signals:
   skills profiles. It does not create a separate suitability intent. Because
   both profiles match, answerability requires both experience evidence and
   skills evidence.
-- Public license questions are treated as skills/profile questions only when
-  the reviewed skills context contains explicit license evidence.
+- Public license questions use a bounded license intent over the existing
+  skills knowledge category and require explicit license evidence.
 - Public interests questions use a bounded interests intent over the existing
   skills knowledge category and require explicit interests evidence.
 - If the question is broad and the usable context spans multiple domains, the
