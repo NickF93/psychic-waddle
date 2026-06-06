@@ -24,10 +24,12 @@ listed as a publication-question variant.
 
 Role-fit vocabulary must stay bounded to reviewed positive question wording.
 For ML, AI, deep-learning, LLM, and computer-vision role-fit coverage, the
-catalog lists complete suitability phrases such as `suitable for ml engineer
-roles` or `good fit as an ai specialist`. Bare role labels or availability words
-must not become triggers by themselves, because actual availability/open-to-work
-claims require a reviewed availability fact.
+catalog lists complete suitability phrases under the skills intent, such as
+`suitable for ml engineer roles` or `good fit as an ai specialist`. Bare role
+labels or availability words must not become triggers by themselves, because
+actual availability/open-to-work claims require a reviewed availability fact.
+Professional-overview vocabulary stays reserved for recruiter summaries,
+career snapshots, background, and broad public work/profile questions.
 
 ## Runtime Contract
 

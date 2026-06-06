@@ -92,7 +92,7 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
         "Is Niccolo suitable for LLM engineer roles?",
     ),
 )
-def test_postgres_retriever_returns_fit_experience_and_skills_context(
+def test_postgres_retriever_returns_fit_skills_context(
     question: str,
 ) -> None:
     experience = _row(
@@ -133,12 +133,8 @@ def test_postgres_retriever_returns_fit_experience_and_skills_context(
 
     assert tuple(
         intent.identifier for intent in response.intent_resolution.required_intents
-    ) == (
-        "professional_overview",
-        "skills",
-    )
+    ) == ("skills",)
     contexts_by_category = {context.category: context for context in response.results}
-    assert contexts_by_category["experience"].score.combined_score >= 0.7
     assert contexts_by_category["skills"].score.combined_score >= 0.7
 
 

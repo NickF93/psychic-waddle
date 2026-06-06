@@ -88,12 +88,12 @@ The default policy uses only local, inspectable signals:
   as employer, company, workplace, internship, `worked at`, or `work history`.
 - Current-role questions require current/present role or employer evidence,
   not merely a previous role in the experience category.
-- Fit or suitability phrasing maps to the existing professional-overview and
-  skills profiles. It does not create a separate suitability intent. Because
-  both profiles match, answerability requires both experience evidence and
-  skills evidence. Reviewed role-fit variants cover bounded ML, AI, deep
-  learning, LLM, and industrial-computer-vision role wording when the question
-  asks about fit, suitability, or match.
+- Fit or suitability phrasing maps to the existing skills profile. It does not
+  create a separate suitability intent. Answerability requires reviewed skills
+  evidence, while professional-overview context may still appear when retrieval
+  finds it but is not a hard policy requirement. Reviewed role-fit variants
+  cover bounded ML, AI, deep-learning, LLM, and industrial-computer-vision role
+  wording when the question asks about fit, suitability, or match.
 - Availability or open-to-work questions are not answerable from role-fit
   evidence alone. They require an explicit reviewed availability fact; otherwise
   they remain unsupported.

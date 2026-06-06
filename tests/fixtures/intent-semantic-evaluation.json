@@ -145,7 +145,6 @@
       "question": "Is Niccolo a strong match for industrial machine vision work?",
       "language": "en",
       "expected_required_intents": [
-        "professional_overview",
         "skills"
       ]
     },
@@ -153,7 +152,6 @@
       "question": "Niccolo e adatto a ruoli di visione artificiale industriale?",
       "language": "it",
       "expected_required_intents": [
-        "professional_overview",
         "skills"
       ]
     },
@@ -161,7 +159,6 @@
       "question": "Could Niccolo fit machine learning engineer positions?",
       "language": "en",
       "expected_required_intents": [
-        "professional_overview",
         "skills"
       ]
     },
@@ -169,7 +166,6 @@
       "question": "Is Niccolo suitable for AI specialist work?",
       "language": "en",
       "expected_required_intents": [
-        "professional_overview",
         "skills"
       ]
     },
@@ -177,7 +173,6 @@
       "question": "Could Niccolo support deep learning engineering roles?",
       "language": "en",
       "expected_required_intents": [
-        "professional_overview",
         "skills"
       ]
     },
@@ -185,7 +180,6 @@
       "question": "Is Niccolo a match for LLM engineer work?",
       "language": "en",
       "expected_required_intents": [
-        "professional_overview",
         "skills"
       ]
     },

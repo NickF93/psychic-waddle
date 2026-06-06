@@ -455,7 +455,7 @@ def test_policy_rejects_skills_context_with_generic_evidence_verbs_only(
         "Is Niccolo suitable for LLM engineer roles?",
     ),
 )
-def test_policy_allows_fit_question_with_experience_and_skills_evidence(
+def test_policy_allows_fit_question_with_skills_evidence(
     question: str,
 ) -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
@@ -464,16 +464,6 @@ def test_policy_allows_fit_question_with_experience_and_skills_evidence(
             retrieved_context=(
                 _context(
                     chunk_id=1,
-                    category="experience",
-                    chunk_text=(
-                        "experience: Niccolo Ferrari is a Senior Machine "
-                        "Learning Engineer and Researcher with professional "
-                        "experience in industrial computer vision."
-                    ),
-                    combined_score=0.99,
-                ),
-                _context(
-                    chunk_id=2,
                     category="skills",
                     chunk_text=(
                         "skills: Niccolo Ferrari's main technical skills combine "
@@ -490,10 +480,7 @@ def test_policy_allows_fit_question_with_experience_and_skills_evidence(
     )
 
     assert decision.status == ANSWERABLE
-    assert tuple(context.category for context in decision.approved_context) == (
-        "experience",
-        "skills",
-    )
+    assert tuple(context.category for context in decision.approved_context) == ("skills",)
 
 
 @pytest.mark.parametrize(
@@ -532,40 +519,19 @@ def test_policy_rejects_availability_questions_without_reviewed_availability_fac
     assert decision.approved_context == ()
 
 
-@pytest.mark.parametrize(
-    ("category", "chunk_text"),
-    (
-        (
-            "experience",
-            (
-                "experience: Niccolo Ferrari is a Senior Machine Learning "
-                "Engineer and Researcher with professional experience in "
-                "industrial computer vision."
-            ),
-        ),
-        (
-            "skills",
-            (
-                "skills: Niccolo Ferrari's main technical skills combine "
-                "industrial computer vision, anomaly detection, segmentation, "
-                "C++ inference, Python, PyTorch, TensorFlow, Halcon, OpenCV, "
-                "ONNX, OpenVINO, TensorRT, and Docker."
-            ),
-        ),
-    ),
-)
-def test_policy_rejects_fit_question_without_both_required_domains(
-    category: str,
-    chunk_text: str,
-) -> None:
+def test_policy_rejects_fit_question_with_overview_evidence_only() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
         _request(
             question="Is Niccolo a good fit for industrial computer vision roles?",
             retrieved_context=(
                 _context(
                     chunk_id=1,
-                    category=category,
-                    chunk_text=chunk_text,
+                    category="experience",
+                    chunk_text=(
+                        "experience: Niccolo Ferrari is a Senior Machine Learning "
+                        "Engineer and Researcher with professional experience in "
+                        "industrial computer vision."
+                    ),
                     combined_score=0.99,
                 ),
             ),
