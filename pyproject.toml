@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "portfolio-rag-assistant"
-version = "0.1.0"
+version = "0.2.0"
 description = "Recruiter-facing portfolio RAG assistant."
-readme = "PLAN.md"
+readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115,<1.0",
