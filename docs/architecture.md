@@ -136,8 +136,8 @@ Owns bounded recruiter-intent definitions only.
 - Owns `IntentResolution`, whose required intents feed answerability and whose
   candidate intents may help retrieval only.
 - Covered intents are professional overview, workplaces and work history,
-  current role, skills, education, publications, projects and repositories, and
-  public contact links.
+  current role, skills, public interests, education, publications, projects and
+  repositories, and public contact links.
 - May be read by retrieval for deterministic query expansion.
 - May be read by policy for deterministic evidence-completeness checks.
 - Semantic example questions are reviewed embedding anchors for the semantic

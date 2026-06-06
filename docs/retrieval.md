@@ -128,6 +128,7 @@ Question-intent expansion is bounded to supported recruiter intents:
 - workplaces and work history;
 - current role;
 - skills and technologies;
+- public interests;
 - education;
 - publications and research outputs;
 - projects and repositories;

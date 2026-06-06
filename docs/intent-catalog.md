@@ -18,6 +18,10 @@ The catalog owns domain vocabulary only:
 The matcher algorithm, normalization rules, rank fusion, semantic resolver,
 policy thresholds, and knowledge category enum remain code authorities.
 
+Observed typo variants may be listed as reviewed trigger terms when they are
+accepted product vocabulary. For example, `prublications` is intentionally
+listed as a publication-question variant.
+
 ## Runtime Contract
 
 `INTENT_PROFILES_PATH` is the exact runtime configuration name for the catalog

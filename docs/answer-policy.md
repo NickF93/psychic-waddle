@@ -92,6 +92,10 @@ The default policy uses only local, inspectable signals:
   skills profiles. It does not create a separate suitability intent. Because
   both profiles match, answerability requires both experience evidence and
   skills evidence.
+- Public license questions are treated as skills/profile questions only when
+  the reviewed skills context contains explicit license evidence.
+- Public interests questions use a bounded interests intent over the existing
+  skills knowledge category and require explicit interests evidence.
 - If the question is broad and the usable context spans multiple domains, the
   policy asks for clarification.
 - If no domain is inferred and the question is not a broad profile question,
@@ -116,6 +120,9 @@ It is not a general semantic synonym system. New aliases, language variants, or
 question patterns must be added deliberately with tests. Broad category labels,
 generic verbs such as `uses`, `include`, or `includes`, and unsupported private
 or off-topic phrasing must not make context answerable by themselves.
+
+Observed typo variants such as `prublications` are deliberately listed only as
+reviewed catalog vocabulary, not learned from visitor traffic at runtime.
 
 Catalog semantic example questions are embedding anchors for the semantic
 resolver. Semantic matches remain candidate intents unless the catalog contains
