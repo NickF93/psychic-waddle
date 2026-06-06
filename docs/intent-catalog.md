@@ -22,6 +22,13 @@ Observed typo variants may be listed as reviewed trigger terms when they are
 accepted product vocabulary. For example, `prublications` is intentionally
 listed as a publication-question variant.
 
+Role-fit vocabulary must stay bounded to reviewed positive question wording.
+For ML, AI, deep-learning, LLM, and computer-vision role-fit coverage, the
+catalog lists complete suitability phrases such as `suitable for ml engineer
+roles` or `good fit as an ai specialist`. Bare role labels or availability words
+must not become triggers by themselves, because actual availability/open-to-work
+claims require a reviewed availability fact.
+
 ## Runtime Contract
 
 `INTENT_PROFILES_PATH` is the exact runtime configuration name for the catalog

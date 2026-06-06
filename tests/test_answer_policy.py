@@ -445,10 +445,22 @@ def test_policy_rejects_skills_context_with_generic_evidence_verbs_only(
     assert decision.approved_context == ()
 
 
-def test_policy_allows_fit_question_with_experience_and_skills_evidence() -> None:
+@pytest.mark.parametrize(
+    "question",
+    (
+        "Is Niccolo a good fit for industrial computer vision roles?",
+        "Is Niccolo suitable for ML engineer roles?",
+        "Is Niccolo a good fit as an AI specialist?",
+        "Would Niccolo be a strong match for deep learning engineer roles?",
+        "Is Niccolo suitable for LLM engineer roles?",
+    ),
+)
+def test_policy_allows_fit_question_with_experience_and_skills_evidence(
+    question: str,
+) -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
         _request(
-            question="Is Niccolo a good fit for industrial computer vision roles?",
+            question=question,
             retrieved_context=(
                 _context(
                     chunk_id=1,
@@ -465,10 +477,10 @@ def test_policy_allows_fit_question_with_experience_and_skills_evidence() -> Non
                     category="skills",
                     chunk_text=(
                         "skills: Niccolo Ferrari's main technical skills combine "
-                        "industrial computer vision, anomaly detection, "
-                        "segmentation, C++ inference, Python, PyTorch, "
-                        "TensorFlow, Halcon, OpenCV, ONNX, OpenVINO, TensorRT, "
-                        "and Docker."
+                        "industrial computer vision, production machine learning, "
+                        "deep learning, transformer architectures, local LLM "
+                        "workflows, edge AI, Python, PyTorch, TensorFlow, ONNX, "
+                        "OpenVINO, TensorRT, and Docker."
                     ),
                     combined_score=0.98,
                 ),
@@ -482,6 +494,42 @@ def test_policy_allows_fit_question_with_experience_and_skills_evidence() -> Non
         "experience",
         "skills",
     )
+
+
+@pytest.mark.parametrize(
+    "question",
+    (
+        "Is Niccolo available for machine learning roles?",
+        "Is Niccolo available for ML engineer roles?",
+        "Is Niccolo open to LLM roles?",
+    ),
+)
+def test_policy_rejects_availability_questions_without_reviewed_availability_fact(
+    question: str,
+) -> None:
+    decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
+        _request(
+            question=question,
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="skills",
+                    chunk_text=(
+                        "skills: Niccolo Ferrari's main technical skills combine "
+                        "production machine learning, deep learning, transformer "
+                        "architectures, local LLM workflows, edge AI, Python, "
+                        "PyTorch, and TensorFlow."
+                    ),
+                    combined_score=0.99,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "unsupported_question_category"
+    assert decision.approved_context == ()
 
 
 @pytest.mark.parametrize(

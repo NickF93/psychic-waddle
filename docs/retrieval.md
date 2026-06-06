@@ -128,6 +128,8 @@ Question-intent expansion is bounded to supported recruiter intents:
 - workplaces and work history;
 - current role;
 - skills and technologies;
+- bounded ML, AI, deep-learning, LLM, and computer-vision role-fit wording
+  through the professional-overview and skills intents;
 - public license;
 - public interests;
 - education;

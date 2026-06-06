@@ -158,6 +158,38 @@
       ]
     },
     {
+      "question": "Could Niccolo fit machine learning engineer positions?",
+      "language": "en",
+      "expected_required_intents": [
+        "professional_overview",
+        "skills"
+      ]
+    },
+    {
+      "question": "Is Niccolo suitable for AI specialist work?",
+      "language": "en",
+      "expected_required_intents": [
+        "professional_overview",
+        "skills"
+      ]
+    },
+    {
+      "question": "Could Niccolo support deep learning engineering roles?",
+      "language": "en",
+      "expected_required_intents": [
+        "professional_overview",
+        "skills"
+      ]
+    },
+    {
+      "question": "Is Niccolo a match for LLM engineer work?",
+      "language": "en",
+      "expected_required_intents": [
+        "professional_overview",
+        "skills"
+      ]
+    },
+    {
       "question": "What is Niccolo's favorite food?",
       "language": "en",
       "expected_required_intents": []

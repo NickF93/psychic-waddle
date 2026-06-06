@@ -81,6 +81,22 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
             "Does Niccolò suits good as Computer Vision engineer?",
             ("professional_overview", "skills"),
         ),
+        (
+            "Is Niccolo suitable for ML engineer roles?",
+            ("professional_overview", "skills"),
+        ),
+        (
+            "Is Niccolo a good fit as an AI specialist?",
+            ("professional_overview", "skills"),
+        ),
+        (
+            "Would Niccolo be a strong match for deep learning engineer roles?",
+            ("professional_overview", "skills"),
+        ),
+        (
+            "Is Niccolo suitable for LLM engineer roles?",
+            ("professional_overview", "skills"),
+        ),
         ("How would you summarize Niccolo for a recruiter?", ("professional_overview",)),
         ("What is Niccolo work?", ("professional_overview",)),
         ("What is Niccolò 's work?", ("professional_overview",)),
@@ -119,6 +135,9 @@ def test_detect_question_intents_for_natural_recruiter_phrasings(
         "Where is Niccolo's source?",
         "Can I see Niccolo's source?",
         "Does Niccolo have a source?",
+        "Is Niccolo available for machine learning roles?",
+        "Is Niccolo available for ML engineer roles?",
+        "Is Niccolo open to LLM roles?",
         "Mahalanobis PatchCore",
         "Who won the football match yesterday?",
     ),

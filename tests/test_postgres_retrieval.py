@@ -86,6 +86,10 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
     (
         "Is Niccolo a good fit for industrial computer vision roles?",
         "Is Niccolo a strong match for industrial machine vision work?",
+        "Is Niccolo suitable for ML engineer roles?",
+        "Is Niccolo a good fit as an AI specialist?",
+        "Would Niccolo be a strong match for deep learning engineer roles?",
+        "Is Niccolo suitable for LLM engineer roles?",
     ),
 )
 def test_postgres_retriever_returns_fit_experience_and_skills_context(
@@ -106,9 +110,10 @@ def test_postgres_retriever_returns_fit_experience_and_skills_context(
         2,
         (
             "skills: Niccolo Ferrari's main technical skills combine "
-            "industrial computer vision, anomaly detection, segmentation, C++ "
-            "inference, Python, PyTorch, TensorFlow, Halcon, OpenCV, ONNX, "
-            "OpenVINO, TensorRT, and Docker."
+            "industrial computer vision, production machine learning, deep "
+            "learning, transformer architectures, local LLM workflows, edge AI, "
+            "Python, PyTorch, TensorFlow, Halcon, OpenCV, ONNX, OpenVINO, "
+            "TensorRT, and Docker."
         ),
         0.94,
         category="skills",

@@ -91,7 +91,12 @@ The default policy uses only local, inspectable signals:
 - Fit or suitability phrasing maps to the existing professional-overview and
   skills profiles. It does not create a separate suitability intent. Because
   both profiles match, answerability requires both experience evidence and
-  skills evidence.
+  skills evidence. Reviewed role-fit variants cover bounded ML, AI, deep
+  learning, LLM, and industrial-computer-vision role wording when the question
+  asks about fit, suitability, or match.
+- Availability or open-to-work questions are not answerable from role-fit
+  evidence alone. They require an explicit reviewed availability fact; otherwise
+  they remain unsupported.
 - Public license questions use a bounded license intent over the existing
   skills knowledge category and require explicit license evidence.
 - Public interests questions use a bounded interests intent over the existing

@@ -138,6 +138,9 @@ Owns bounded recruiter-intent definitions only.
 - Covered intents are professional overview, workplaces and work history,
   current role, skills, public license, public interests, education,
   publications, projects and repositories, and public contact links.
+- Bounded role-fit wording for ML, AI, deep-learning, LLM, and computer-vision
+  roles is modeled through the professional-overview and skills intents; it is
+  not a separate hiring recommendation or availability intent.
 - May be read by retrieval for deterministic query expansion.
 - May be read by policy for deterministic evidence-completeness checks.
 - Semantic example questions are reviewed embedding anchors for the semantic
