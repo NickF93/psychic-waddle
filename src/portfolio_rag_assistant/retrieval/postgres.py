@@ -93,11 +93,16 @@ class PostgreSQLRetriever:
         embedding_backend: str,
         embedding_model: str,
         intent_resolver: SemanticIntentResolver,
+        candidate_fan_out: int,
     ) -> None:
         self._connection = connection
         self._provider = provider
         self._embedding_backend = _require_text(embedding_backend, "embedding_backend")
         self._embedding_model = _require_text(embedding_model, "embedding_model")
+        self._candidate_fan_out = _require_positive_int(
+            candidate_fan_out,
+            "candidate_fan_out",
+        )
         if not isinstance(intent_resolver, SemanticIntentResolver):
             raise RetrievalConfigurationError(
                 "intent_resolver must be SemanticIntentResolver"
@@ -120,15 +125,15 @@ class PostgreSQLRetriever:
         )
         vector_candidates = self._search_vectors(
             query_embedding=question_embedding,
-            limit=request.top_k,
+            limit=self._candidate_fan_out,
         )
         keyword_candidates = self._search_keywords(
             question=request.question,
-            limit=request.top_k,
+            limit=self._candidate_fan_out,
         )
         intent_candidates = self._search_intent_keywords(
             intents=intent_resolution.retrieval_intents,
-            limit=request.top_k,
+            limit=self._candidate_fan_out,
         )
         results = tuple(
             candidate.to_context()
@@ -477,6 +482,14 @@ def _format_vector(embedding: tuple[float, ...]) -> str:
     if not embedding:
         raise RetrievalStoreError("query embedding must not be empty")
     return "[" + ",".join(str(value) for value in embedding) + "]"
+
+
+def _require_positive_int(value: int, field_name: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise RetrievalConfigurationError(f"{field_name} must be a positive integer")
+    if value <= 0:
+        raise RetrievalConfigurationError(f"{field_name} must be a positive integer")
+    return value
 
 
 def _optional_text(value: object) -> str | None:

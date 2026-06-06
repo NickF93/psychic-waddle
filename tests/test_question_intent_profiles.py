@@ -15,6 +15,8 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
         "workplace",
         "current_role",
         "skills",
+        "license",
+        "interests",
         "education",
         "publications",
         "projects",
@@ -57,19 +59,56 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
         ("Quali software di ricerca ha pubblicato Niccolo?", ("projects",)),
         ("What kind of work does Niccolo do?", ("professional_overview",)),
         ("What type of work does Niccolo do?", ("professional_overview",)),
+        ("Give me a career snapshot for Niccolo.", ("professional_overview",)),
         ("What is Niccolo specialized in?", ("skills",)),
         ("What does Niccolo do with anomaly detection?", ("skills",)),
         (
             "Is Niccolo a good fit for industrial computer vision roles?",
-            ("professional_overview", "skills"),
+            ("skills",),
         ),
         (
             "Would Niccolo be suitable for industrial computer vision roles?",
-            ("professional_overview", "skills"),
+            ("skills",),
+        ),
+        (
+            "Is Niccolo a strong match for industrial machine vision work?",
+            ("skills",),
         ),
         (
             "Is Niccolo the right person for industrial computer vision roles?",
-            ("professional_overview", "skills"),
+            ("skills",),
+        ),
+        (
+            "Does Niccolò suits good as Computer Vision engineer?",
+            ("skills",),
+        ),
+        (
+            "Is Niccolo suitable for ML engineer roles?",
+            ("skills",),
+        ),
+        (
+            "Is Niccolo a good fit as an AI specialist?",
+            ("skills",),
+        ),
+        (
+            "Would Niccolo be a strong match for deep learning engineer roles?",
+            ("skills",),
+        ),
+        (
+            "Is Niccolo suitable for LLM engineer roles?",
+            ("skills",),
+        ),
+        ("How would you summarize Niccolo for a recruiter?", ("professional_overview",)),
+        ("What is Niccolo work?", ("professional_overview",)),
+        ("What is Niccolò 's work?", ("professional_overview",)),
+        ("Do Niccolò know Machine Learning?", ("skills",)),
+        ("does Niccolò know embedded programming?", ("skills",)),
+        ("has niccolò car license", ("license",)),
+        ("what are the interest of niccolò", ("interests",)),
+        ("What prublications did Niccolò authored?", ("publications",)),
+        (
+            "What prublications and pre-prints did Niccolò authored?",
+            ("publications",),
         ),
     ),
 )
@@ -97,6 +136,12 @@ def test_detect_question_intents_for_natural_recruiter_phrasings(
         "Where is Niccolo's source?",
         "Can I see Niccolo's source?",
         "Does Niccolo have a source?",
+        "Is Niccolo available for machine learning roles?",
+        "Is Niccolo available for ML engineer roles?",
+        "Is Niccolo open to LLM roles?",
+        "AI",
+        "ai",
+        "Mahalanobis PatchCore",
         "Who won the football match yesterday?",
     ),
 )
@@ -113,8 +158,9 @@ def test_categories_for_intents_returns_stable_unique_categories() -> None:
         _intents(catalog, "professional_overview", "workplace", "current_role")
     ) == ("experience",)
     assert catalog.categories_for_intents(
-        _intents(catalog, "publications", "projects", "contact")
+        _intents(catalog, "license", "interests", "publications", "projects", "contact")
     ) == (
+        "skills",
         "research",
         "projects",
         "contact",
@@ -184,6 +230,15 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
             "computer vision and visual inspection.",
             "skills",
         ),
+        (
+            "Niccolo Ferrari has an E.U. Driving License B (car license).",
+            "license",
+        ),
+        (
+            "Niccolo Ferrari's interests include artificial intelligence, "
+            "deep learning research, and game development.",
+            "interests",
+        ),
     ),
 )
 def test_text_satisfies_intent_evidence_uses_required_terms(
@@ -235,6 +290,14 @@ def test_text_satisfies_intent_evidence_uses_required_terms(
         ),
         (
             "skills: Niccolo Ferrari's skills includes public profile information.",
+            "skills",
+        ),
+        (
+            "skills: Niccolo Ferrari has public profile information.",
+            "interests",
+        ),
+        (
+            "skills: Niccolo Ferrari has an E.U. Driving License B (car license).",
             "skills",
         ),
         (

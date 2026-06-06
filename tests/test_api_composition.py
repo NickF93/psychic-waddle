@@ -379,6 +379,7 @@ def _env() -> dict[str, str]:
         "EMBEDDING_BASE_URL": "http://localhost:11434/api",
         "EMBEDDING_MODEL": "nomic-embed-text",
         "RETRIEVAL_TOP_K": "2",
+        "RETRIEVAL_CANDIDATE_FAN_OUT": "6",
         "RETRIEVAL_MIN_SCORE": "0.25",
         "INTENT_PROFILES_PATH": str(ROOT / "config" / "intent-profiles.json"),
         "QUESTION_COLLECTION_ENABLED": "false",

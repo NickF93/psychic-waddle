@@ -112,6 +112,7 @@ require_provider_keys
 require_llama_cpp_when_selected
 
 require_integer RETRIEVAL_TOP_K
+require_integer RETRIEVAL_CANDIDATE_FAN_OUT
 require_score RETRIEVAL_MIN_SCORE
 require_config_file INTENT_PROFILES_PATH
 require_boolean QUESTION_COLLECTION_ENABLED

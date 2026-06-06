@@ -39,6 +39,16 @@ AGGREGATE_EXPECTATIONS: tuple[AggregateExpectation, ...] = (
         fragments=("main technical skills", "computer vision", "pytorch"),
     ),
     AggregateExpectation(
+        intent="license",
+        source_locator="License",
+        fragments=("driving license", "license b", "car license"),
+    ),
+    AggregateExpectation(
+        intent="interests",
+        source_locator="Interests",
+        fragments=("interests include", "artificial intelligence", "climbing"),
+    ),
+    AggregateExpectation(
         intent="education",
         source_locator="Degrees",
         fragments=("education includes", "ph.d.", "university of ferrara"),
@@ -107,6 +117,8 @@ def test_tracked_profile_knowledge_covers_common_recruiter_intents() -> None:
     _assert_fact_contains(facts, "main programming languages", "c++", "python")
     _assert_fact_contains(facts, "main frameworks", "pytorch", "tensorflow")
     _assert_fact_contains(facts, "machine learning skills", "anomaly detection")
+    _assert_fact_contains(facts, "driving license", "license b", "car license")
+    _assert_fact_contains(facts, "interests include", "artificial intelligence")
     _assert_fact_contains(facts, "publications", "grd-net", "mahalanobis patchcore")
     _assert_fact_contains(facts, "public research software", "grd-net", "mh-patchcore")
     _assert_fact_contains(facts, "public professional profile links", "github")

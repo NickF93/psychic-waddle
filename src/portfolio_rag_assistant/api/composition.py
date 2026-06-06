@@ -146,6 +146,7 @@ def build_runtime_services(
         embedding_backend=embedding_settings.backend,
         embedding_model=embedding_settings.model,
         intent_resolver=intent_resolver,
+        candidate_fan_out=retrieval_settings.candidate_fan_out,
     )
     return RuntimeServices(
         chat_service=PublicChatService(

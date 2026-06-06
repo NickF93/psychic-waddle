@@ -88,10 +88,19 @@ The default policy uses only local, inspectable signals:
   as employer, company, workplace, internship, `worked at`, or `work history`.
 - Current-role questions require current/present role or employer evidence,
   not merely a previous role in the experience category.
-- Fit or suitability phrasing maps to the existing professional-overview and
-  skills profiles. It does not create a separate suitability intent. Because
-  both profiles match, answerability requires both experience evidence and
-  skills evidence.
+- Fit or suitability phrasing maps to the existing skills profile. It does not
+  create a separate suitability intent. Answerability requires reviewed skills
+  evidence, while professional-overview context may still appear when retrieval
+  finds it but is not a hard policy requirement. Reviewed role-fit variants
+  cover bounded ML, AI, deep-learning, LLM, and industrial-computer-vision role
+  wording when the question asks about fit, suitability, or match.
+- Availability or open-to-work questions are not answerable from role-fit
+  evidence alone. They require an explicit reviewed availability fact; otherwise
+  they remain unsupported.
+- Public license questions use a bounded license intent over the existing
+  skills knowledge category and require explicit license evidence.
+- Public interests questions use a bounded interests intent over the existing
+  skills knowledge category and require explicit interests evidence.
 - If the question is broad and the usable context spans multiple domains, the
   policy asks for clarification.
 - If no domain is inferred and the question is not a broad profile question,
@@ -116,6 +125,9 @@ It is not a general semantic synonym system. New aliases, language variants, or
 question patterns must be added deliberately with tests. Broad category labels,
 generic verbs such as `uses`, `include`, or `includes`, and unsupported private
 or off-topic phrasing must not make context answerable by themselves.
+
+Observed typo variants such as `prublications` are deliberately listed only as
+reviewed catalog vocabulary, not learned from visitor traffic at runtime.
 
 Catalog semantic example questions are embedding anchors for the semantic
 resolver. Semantic matches remain candidate intents unless the catalog contains

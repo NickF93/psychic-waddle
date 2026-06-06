@@ -275,6 +275,19 @@ def test_policy_rejects_professional_overview_with_category_only_context() -> No
             ),
         ),
         (
+            "has niccolò car license",
+            "skills",
+            "skills: Niccolo Ferrari has an E.U. Driving License B (car license).",
+        ),
+        (
+            "what are the interest of niccolò",
+            "skills",
+            (
+                "skills: Niccolo Ferrari's interests include artificial "
+                "intelligence, deep learning research, and game development."
+            ),
+        ),
+        (
             "What is Niccolo's education?",
             "education",
             (
@@ -344,6 +357,16 @@ def test_policy_allows_common_recruiter_intents_with_matching_evidence(
             "skills: Niccolo Ferrari has public profile information.",
         ),
         (
+            "has niccolò car license",
+            "skills",
+            "skills: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "what are the interest of niccolò",
+            "skills",
+            "skills: Niccolo Ferrari has public profile information.",
+        ),
+        (
             "What is Niccolo's education?",
             "education",
             "education: Niccolo Ferrari has public profile information.",
@@ -393,6 +416,7 @@ def test_policy_rejects_common_recruiter_intents_with_category_only_context(
 @pytest.mark.parametrize(
     "chunk_text",
     (
+        "skills: Niccolo Ferrari has an E.U. Driving License B (car license).",
         "skills: Niccolo Ferrari uses public profile information.",
         "skills: Niccolo Ferrari's skills include public profile information.",
         "skills: Niccolo Ferrari's skills includes public profile information.",
@@ -421,30 +445,32 @@ def test_policy_rejects_skills_context_with_generic_evidence_verbs_only(
     assert decision.approved_context == ()
 
 
-def test_policy_allows_fit_question_with_experience_and_skills_evidence() -> None:
+@pytest.mark.parametrize(
+    "question",
+    (
+        "Is Niccolo a good fit for industrial computer vision roles?",
+        "Is Niccolo suitable for ML engineer roles?",
+        "Is Niccolo a good fit as an AI specialist?",
+        "Would Niccolo be a strong match for deep learning engineer roles?",
+        "Is Niccolo suitable for LLM engineer roles?",
+    ),
+)
+def test_policy_allows_fit_question_with_skills_evidence(
+    question: str,
+) -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
         _request(
-            question="Is Niccolo a good fit for industrial computer vision roles?",
+            question=question,
             retrieved_context=(
                 _context(
                     chunk_id=1,
-                    category="experience",
-                    chunk_text=(
-                        "experience: Niccolo Ferrari is a Senior Machine "
-                        "Learning Engineer and Researcher with professional "
-                        "experience in industrial computer vision."
-                    ),
-                    combined_score=0.99,
-                ),
-                _context(
-                    chunk_id=2,
                     category="skills",
                     chunk_text=(
                         "skills: Niccolo Ferrari's main technical skills combine "
-                        "industrial computer vision, anomaly detection, "
-                        "segmentation, C++ inference, Python, PyTorch, "
-                        "TensorFlow, Halcon, OpenCV, ONNX, OpenVINO, TensorRT, "
-                        "and Docker."
+                        "industrial computer vision, production machine learning, "
+                        "deep learning, transformer architectures, local LLM "
+                        "workflows, edge AI, Python, PyTorch, TensorFlow, ONNX, "
+                        "OpenVINO, TensorRT, and Docker."
                     ),
                     combined_score=0.98,
                 ),
@@ -454,46 +480,58 @@ def test_policy_allows_fit_question_with_experience_and_skills_evidence() -> Non
     )
 
     assert decision.status == ANSWERABLE
-    assert tuple(context.category for context in decision.approved_context) == (
-        "experience",
-        "skills",
-    )
+    assert tuple(context.category for context in decision.approved_context) == ("skills",)
 
 
 @pytest.mark.parametrize(
-    ("category", "chunk_text"),
+    "question",
     (
-        (
-            "experience",
-            (
-                "experience: Niccolo Ferrari is a Senior Machine Learning "
-                "Engineer and Researcher with professional experience in "
-                "industrial computer vision."
-            ),
-        ),
-        (
-            "skills",
-            (
-                "skills: Niccolo Ferrari's main technical skills combine "
-                "industrial computer vision, anomaly detection, segmentation, "
-                "C++ inference, Python, PyTorch, TensorFlow, Halcon, OpenCV, "
-                "ONNX, OpenVINO, TensorRT, and Docker."
-            ),
-        ),
+        "Is Niccolo available for machine learning roles?",
+        "Is Niccolo available for ML engineer roles?",
+        "Is Niccolo open to LLM roles?",
     ),
 )
-def test_policy_rejects_fit_question_without_both_required_domains(
-    category: str,
-    chunk_text: str,
+def test_policy_rejects_availability_questions_without_reviewed_availability_fact(
+    question: str,
 ) -> None:
+    decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
+        _request(
+            question=question,
+            retrieved_context=(
+                _context(
+                    chunk_id=1,
+                    category="skills",
+                    chunk_text=(
+                        "skills: Niccolo Ferrari's main technical skills combine "
+                        "production machine learning, deep learning, transformer "
+                        "architectures, local LLM workflows, edge AI, Python, "
+                        "PyTorch, and TensorFlow."
+                    ),
+                    combined_score=0.99,
+                ),
+            ),
+            min_score=0.7,
+        )
+    )
+
+    assert decision.status == NOT_ANSWERABLE
+    assert decision.reason == "unsupported_question_category"
+    assert decision.approved_context == ()
+
+
+def test_policy_rejects_fit_question_with_overview_evidence_only() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
         _request(
             question="Is Niccolo a good fit for industrial computer vision roles?",
             retrieved_context=(
                 _context(
                     chunk_id=1,
-                    category=category,
-                    chunk_text=chunk_text,
+                    category="experience",
+                    chunk_text=(
+                        "experience: Niccolo Ferrari is a Senior Machine Learning "
+                        "Engineer and Researcher with professional experience in "
+                        "industrial computer vision."
+                    ),
                     combined_score=0.99,
                 ),
             ),
