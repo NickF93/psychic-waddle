@@ -16,12 +16,20 @@
         [
           "background",
           "career",
+          "career snapshot",
           "experience",
           "good fit for",
           "kind of work",
+          "profile summary",
+          "recruiter summary",
           "right person for",
+          "strong match for",
+          "summarize niccolo for a recruiter",
+          "suits good as",
           "suitable for",
-          "type of work"
+          "type of work",
+          "what is niccolo s work",
+          "what is niccolo work"
         ]
       ],
       "semantic_example_questions": [
@@ -226,11 +234,21 @@
       "trigger_groups": [
         [
           "anomaly detection",
+          "car license",
           "competenze",
+          "computer vision engineer",
+          "driving license",
+          "embedded programming",
           "framework",
           "frameworks",
           "good fit for",
           "industrial computer vision",
+          "industrial machine vision",
+          "know machine learning",
+          "knows machine learning",
+          "licence",
+          "license",
+          "machine learning",
           "right person for",
           "skill",
           "skills",
@@ -242,6 +260,8 @@
           "specialized",
           "specialized in",
           "stack",
+          "strong match for",
+          "suits good as",
           "suitable for",
           "technologies",
           "technology",
@@ -258,8 +278,12 @@
       "semantic_required_threshold": null,
       "lexical_expansion_terms": [
         "frameworks",
+        "driving license",
+        "embedded programming",
         "industrial computer vision",
+        "industrial machine vision",
         "languages",
+        "license",
         "machine learning",
         "ml",
         "segmentation",
@@ -283,8 +307,12 @@
           "docker",
           "domain",
           "domains",
+          "driving license",
+          "driving license b",
           "edge ai",
+          "e u driving license b",
           "embedded inference",
+          "embedded programming",
           "framework",
           "frameworks",
           "ganomaly",
@@ -294,6 +322,7 @@
           "knowledge distillation",
           "language",
           "languages",
+          "license",
           "linux",
           "machine learning",
           "mlflow",
@@ -325,6 +354,45 @@
           "visual inspection",
           "vit",
           "yolo"
+        ]
+      ]
+    },
+    {
+      "intent": "interests",
+      "accepted_categories": [
+        "skills"
+      ],
+      "trigger_groups": [
+        [
+          "hobbies",
+          "hobby",
+          "interest",
+          "interests",
+          "interessi",
+          "what are the interest"
+        ]
+      ],
+      "semantic_example_questions": [
+        "Which interests does Niccolo list publicly?",
+        "What hobbies appear in Niccolo's public profile?",
+        "What personal interests are part of Niccolo's CV?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "artificial intelligence",
+        "bouldering",
+        "climbing",
+        "deep learning research",
+        "game development",
+        "hobbies",
+        "interests",
+        "trekking"
+      ],
+      "required_evidence_groups": [
+        [
+          "hobbies",
+          "interests"
         ]
       ]
     },
@@ -396,6 +464,8 @@
           "pubblicazioni",
           "publication",
           "publications",
+          "prublication",
+          "prublications",
           "thesis"
         ]
       ],
@@ -417,6 +487,8 @@
         "preprints",
         "publication",
         "publications",
+        "prublication",
+        "prublications",
         "research",
         "submitted",
         "thesis"

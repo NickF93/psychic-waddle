@@ -15,6 +15,7 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
         "workplace",
         "current_role",
         "skills",
+        "interests",
         "education",
         "publications",
         "projects",
@@ -68,8 +69,28 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
             ("professional_overview", "skills"),
         ),
         (
+            "Is Niccolo a strong match for industrial machine vision work?",
+            ("professional_overview", "skills"),
+        ),
+        (
             "Is Niccolo the right person for industrial computer vision roles?",
             ("professional_overview", "skills"),
+        ),
+        (
+            "Does Niccolò suits good as Computer Vision engineer?",
+            ("professional_overview", "skills"),
+        ),
+        ("How would you summarize Niccolo for a recruiter?", ("professional_overview",)),
+        ("What is Niccolo work?", ("professional_overview",)),
+        ("What is Niccolò 's work?", ("professional_overview",)),
+        ("Do Niccolò know Machine Learning?", ("skills",)),
+        ("does Niccolò know embedded programming?", ("skills",)),
+        ("has niccolò car license", ("skills",)),
+        ("what are the interest of niccolò", ("interests",)),
+        ("What prublications did Niccolò authored?", ("publications",)),
+        (
+            "What prublications and pre-prints did Niccolò authored?",
+            ("publications",),
         ),
     ),
 )
@@ -97,6 +118,7 @@ def test_detect_question_intents_for_natural_recruiter_phrasings(
         "Where is Niccolo's source?",
         "Can I see Niccolo's source?",
         "Does Niccolo have a source?",
+        "Mahalanobis PatchCore",
         "Who won the football match yesterday?",
     ),
 )
@@ -113,8 +135,9 @@ def test_categories_for_intents_returns_stable_unique_categories() -> None:
         _intents(catalog, "professional_overview", "workplace", "current_role")
     ) == ("experience",)
     assert catalog.categories_for_intents(
-        _intents(catalog, "publications", "projects", "contact")
+        _intents(catalog, "interests", "publications", "projects", "contact")
     ) == (
+        "skills",
         "research",
         "projects",
         "contact",
@@ -184,6 +207,15 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
             "computer vision and visual inspection.",
             "skills",
         ),
+        (
+            "Niccolo Ferrari has an E.U. Driving License B.",
+            "skills",
+        ),
+        (
+            "Niccolo Ferrari's interests include artificial intelligence, "
+            "deep learning research, and game development.",
+            "interests",
+        ),
     ),
 )
 def test_text_satisfies_intent_evidence_uses_required_terms(
@@ -236,6 +268,10 @@ def test_text_satisfies_intent_evidence_uses_required_terms(
         (
             "skills: Niccolo Ferrari's skills includes public profile information.",
             "skills",
+        ),
+        (
+            "skills: Niccolo Ferrari has public profile information.",
+            "interests",
         ),
         (
             "education: Niccolo Ferrari has public profile information.",

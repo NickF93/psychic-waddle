@@ -58,6 +58,20 @@
       ]
     },
     {
+      "question": "Which hobbies are listed in Niccolo's public CV?",
+      "language": "en",
+      "expected_required_intents": [
+        "interests"
+      ]
+    },
+    {
+      "question": "Quali interessi pubblici risultano nel CV di Niccolo?",
+      "language": "it",
+      "expected_required_intents": [
+        "interests"
+      ]
+    },
+    {
       "question": "Which degrees did Niccolo earn?",
       "language": "en",
       "expected_required_intents": [

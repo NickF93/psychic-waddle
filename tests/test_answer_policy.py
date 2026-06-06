@@ -275,6 +275,19 @@ def test_policy_rejects_professional_overview_with_category_only_context() -> No
             ),
         ),
         (
+            "has niccolò car license",
+            "skills",
+            "skills: Niccolo Ferrari has an E.U. Driving License B.",
+        ),
+        (
+            "what are the interest of niccolò",
+            "skills",
+            (
+                "skills: Niccolo Ferrari's interests include artificial "
+                "intelligence, deep learning research, and game development."
+            ),
+        ),
+        (
             "What is Niccolo's education?",
             "education",
             (
@@ -340,6 +353,16 @@ def test_policy_allows_common_recruiter_intents_with_matching_evidence(
     (
         (
             "What are Niccolo's main machine learning skills?",
+            "skills",
+            "skills: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "has niccolò car license",
+            "skills",
+            "skills: Niccolo Ferrari has public profile information.",
+        ),
+        (
+            "what are the interest of niccolò",
             "skills",
             "skills: Niccolo Ferrari has public profile information.",
         ),

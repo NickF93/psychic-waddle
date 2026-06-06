@@ -30,7 +30,7 @@ def test_semantic_resolver_embeds_catalog_anchors_not_trigger_words() -> None:
 
     resolution = asyncio.run(
         resolver.resolve(
-            question="How would you summarize Niccolo for a recruiter?",
+            question="Give me an executive profile for Niccolo.",
             question_embedding=(1.0, 0.0),
         )
     )
@@ -41,9 +41,7 @@ def test_semantic_resolver_embeds_catalog_anchors_not_trigger_words() -> None:
             inputs=_semantic_anchor_questions(),
         ),
     )
-    assert "How would you summarize Niccolo for a recruiter?" not in str(
-        provider.requests
-    )
+    assert "Give me an executive profile for Niccolo." not in str(provider.requests)
     assert resolution.required_intents == ()
     assert tuple(
         intent.identifier for intent in resolution.candidate_intents

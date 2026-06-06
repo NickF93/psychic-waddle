@@ -81,6 +81,62 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
     assert response.results[1].score.keyword_score == 0.5
 
 
+@pytest.mark.parametrize(
+    "question",
+    (
+        "Is Niccolo a good fit for industrial computer vision roles?",
+        "Is Niccolo a strong match for industrial machine vision work?",
+    ),
+)
+def test_postgres_retriever_returns_fit_experience_and_skills_context(
+    question: str,
+) -> None:
+    experience = _row(
+        1,
+        (
+            "experience: Niccolo Ferrari's professional experience as a Senior "
+            "Machine Learning Engineer and Researcher focuses on industrial "
+            "computer vision."
+        ),
+        0.95,
+        category="experience",
+        source_locator="About me",
+    )
+    skills = _row(
+        2,
+        (
+            "skills: Niccolo Ferrari's main technical skills combine "
+            "industrial computer vision, anomaly detection, segmentation, C++ "
+            "inference, Python, PyTorch, TensorFlow, Halcon, OpenCV, ONNX, "
+            "OpenVINO, TensorRT, and Docker."
+        ),
+        0.94,
+        category="skills",
+        source_locator="Professional Skills",
+    )
+    connection = FakeRetrievalConnection(
+        vector_rows=(experience, skills),
+        keyword_rows=(),
+        intent_rows=(experience, skills),
+    )
+    provider = FakeEmbeddingProvider(((1.0, 0.0),))
+    retriever = _retriever(connection=connection, provider=provider)
+
+    response = asyncio.run(
+        retriever.retrieve(RetrievalRequest(question=question, top_k=4))
+    )
+
+    assert tuple(
+        intent.identifier for intent in response.intent_resolution.required_intents
+    ) == (
+        "professional_overview",
+        "skills",
+    )
+    contexts_by_category = {context.category: context for context in response.results}
+    assert contexts_by_category["experience"].score.combined_score >= 0.7
+    assert contexts_by_category["skills"].score.combined_score >= 0.7
+
+
 def test_postgres_retriever_queries_only_public_backend_model_chunks() -> None:
     connection = FakeRetrievalConnection(vector_rows=(), keyword_rows=())
     provider = FakeEmbeddingProvider(((0.1, 0.2),))
@@ -540,14 +596,21 @@ def test_postgres_retriever_retrieves_workplace_aggregate_for_natural_question(
     assert "Bonfiglioli Engineering" in retrieved_text
 
 
-def _row(chunk_id: int, chunk_text: str, score: float) -> tuple[object, ...]:
+def _row(
+    chunk_id: int,
+    chunk_text: str,
+    score: float,
+    *,
+    category: str = "experience",
+    source_locator: str = "Experience section",
+) -> tuple[object, ...]:
     return (
         chunk_id,
         chunk_text,
-        "experience",
+        category,
         "cv://niccolo/main",
         "Niccolo Ferrari CV",
-        "Experience section",
+        source_locator,
         score,
     )
 
