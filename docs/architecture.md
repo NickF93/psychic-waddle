@@ -1,5 +1,9 @@
 # Architecture Contract
 
+This file is the authoritative architecture contract. For a shorter narrative
+about why the system is shaped this way, see
+[Design Decisions](design-decisions.md).
+
 ## Product Goal
 
 Build a small recruiter-facing Portfolio RAG Assistant for questions about
