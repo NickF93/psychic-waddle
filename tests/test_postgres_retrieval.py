@@ -223,6 +223,38 @@ def test_postgres_retriever_uses_bounded_intent_expansion() -> None:
     )
 
 
+def test_postgres_retriever_expands_collected_license_alias() -> None:
+    license_row = _row(
+        11,
+        "skills: Niccolo Ferrari has an E.U. Driving License B (car license).",
+        0.92,
+        category="skills",
+        source_locator="License",
+    )
+    connection = FakeRetrievalConnection(
+        vector_rows=(),
+        keyword_rows=(),
+        intent_rows=(license_row,),
+    )
+    provider = FakeEmbeddingProvider(((0.1, 0.2),))
+    retriever = _retriever(connection=connection, provider=provider)
+
+    response = asyncio.run(
+        retriever.retrieve(
+            RetrievalRequest(question="has Niccolo car license", top_k=4)
+        )
+    )
+
+    assert tuple(
+        intent.identifier for intent in response.intent_resolution.required_intents
+    ) == ("license",)
+    assert tuple(result.source_locator for result in response.results) == ("License",)
+    intent_query, intent_params = connection.calls[2]
+    assert "WITH intent_query" in intent_query
+    assert '"car license"' in str(intent_params[0])
+    assert intent_params[1] == ["skills"]
+
+
 def test_postgres_retriever_fuses_candidate_ranks() -> None:
     connection = FakeRetrievalConnection(
         vector_rows=(

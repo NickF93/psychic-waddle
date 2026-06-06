@@ -385,6 +385,7 @@ def _expected_intents(question: str) -> tuple[str, ...]:
         "Who employs him now?": ("current_role",),
         "What are his main ML skills?": ("skills",),
         "Does Niccolo have a driving license?": ("license",),
+        "Does Niccolo have a car license?": ("license",),
         "What are Niccolo's public interests?": ("interests",),
         "Which GitHub repositories does he publish?": ("projects",),
         "Where can I find his LinkedIn?": ("contact",),

@@ -209,7 +209,7 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
             "skills",
         ),
         (
-            "Niccolo Ferrari has an E.U. Driving License B.",
+            "Niccolo Ferrari has an E.U. Driving License B (car license).",
             "license",
         ),
         (
@@ -275,7 +275,7 @@ def test_text_satisfies_intent_evidence_uses_required_terms(
             "interests",
         ),
         (
-            "skills: Niccolo Ferrari has an E.U. Driving License B.",
+            "skills: Niccolo Ferrari has an E.U. Driving License B (car license).",
             "skills",
         ),
         (

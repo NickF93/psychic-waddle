@@ -370,6 +370,7 @@
       "semantic_candidate_threshold": 0.75,
       "semantic_required_threshold": null,
       "lexical_expansion_terms": [
+        "car license",
         "driving license",
         "driving license b",
         "license",
@@ -379,6 +380,7 @@
       ],
       "required_evidence_groups": [
         [
+          "car license",
           "driving license",
           "driving license b",
           "e u driving license b",

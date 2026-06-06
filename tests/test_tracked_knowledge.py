@@ -41,7 +41,7 @@ AGGREGATE_EXPECTATIONS: tuple[AggregateExpectation, ...] = (
     AggregateExpectation(
         intent="license",
         source_locator="License",
-        fragments=("driving license", "license b"),
+        fragments=("driving license", "license b", "car license"),
     ),
     AggregateExpectation(
         intent="interests",
@@ -117,7 +117,7 @@ def test_tracked_profile_knowledge_covers_common_recruiter_intents() -> None:
     _assert_fact_contains(facts, "main programming languages", "c++", "python")
     _assert_fact_contains(facts, "main frameworks", "pytorch", "tensorflow")
     _assert_fact_contains(facts, "machine learning skills", "anomaly detection")
-    _assert_fact_contains(facts, "driving license", "license b")
+    _assert_fact_contains(facts, "driving license", "license b", "car license")
     _assert_fact_contains(facts, "interests include", "artificial intelligence")
     _assert_fact_contains(facts, "publications", "grd-net", "mahalanobis patchcore")
     _assert_fact_contains(facts, "public research software", "grd-net", "mh-patchcore")
