@@ -1,0 +1,748 @@
+{
+  "schema_version": 4,
+  "semantic_calibration": {
+    "embedding_backend": "ollama",
+    "embedding_model": "nomic-embed-text",
+    "precision_floor": 1.0,
+    "minimum_required_support": 2
+  },
+  "profiles": [
+    {
+      "intent": "professional_overview",
+      "accepted_categories": [
+        "experience"
+      ],
+      "trigger_groups": [
+        [
+          "background",
+          "career",
+          "career snapshot",
+          "experience",
+          "kind of work",
+          "profile summary",
+          "recruiter summary",
+          "summarize niccolo for a recruiter",
+          "type of work",
+          "what is niccolo s work",
+          "what is niccolo work"
+        ]
+      ],
+      "semantic_example_questions": [
+        "Can you give a recruiter summary of Niccolo's profile?",
+        "What professional story should I know about Niccolo?",
+        "How would you describe Niccolo's professional path?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "career",
+        "current role",
+        "ai engineer",
+        "ai specialist",
+        "ai team",
+        "artificial intelligence engineer",
+        "artificial intelligence roles",
+        "artificial intelligence specialist",
+        "deep learning engineer",
+        "deep learning roles",
+        "industrial computer vision",
+        "llm engineer",
+        "llm roles",
+        "machine learning engineer",
+        "machine learning roles",
+        "machine learning specialist",
+        "ml engineer",
+        "ml roles",
+        "professional background",
+        "professional experience",
+        "professional profile",
+        "responsibilities",
+        "role",
+        "roles",
+        "work experience",
+        "work history"
+      ],
+      "required_evidence_groups": [
+        [
+          "built",
+          "ai team",
+          "coordinates",
+          "current role",
+          "currently works",
+          "deep learning models",
+          "deployed",
+          "designed",
+          "engineer",
+          "internship",
+          "internships",
+          "leads",
+          "machine learning engineer",
+          "model deployment",
+          "ph d research",
+          "professional experience",
+          "production machine learning",
+          "research background",
+          "researcher",
+          "senior machine learning engineer",
+          "technical lead",
+          "technical lead of the ai team",
+          "work history",
+          "worked at",
+          "works at"
+        ]
+      ]
+    },
+    {
+      "intent": "workplace",
+      "accepted_categories": [
+        "experience"
+      ],
+      "trigger_groups": [
+        [
+          "companies",
+          "company",
+          "dove",
+          "employer",
+          "employers",
+          "where",
+          "workplace",
+          "workplaces"
+        ],
+        [
+          "companies",
+          "company",
+          "employed",
+          "employer",
+          "employers",
+          "lavora",
+          "lavorato",
+          "work",
+          "worked",
+          "working",
+          "workplace",
+          "workplaces",
+          "works"
+        ]
+      ],
+      "semantic_example_questions": [
+        "Which organizations has Niccolo been part of?",
+        "Tell me the places where Niccolo has held roles.",
+        "Which professional settings has Niccolo worked in?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "companies",
+        "company",
+        "employer",
+        "employers",
+        "employment",
+        "professional workplaces",
+        "work history",
+        "workplace",
+        "workplaces"
+      ],
+      "required_evidence_groups": [
+        [
+          "companies",
+          "company",
+          "current employer",
+          "currently works",
+          "employed by",
+          "employer",
+          "employers",
+          "employment",
+          "internship",
+          "internships",
+          "previously worked at",
+          "professional workplaces",
+          "work history",
+          "worked at",
+          "workplace",
+          "workplaces",
+          "works at"
+        ]
+      ]
+    },
+    {
+      "intent": "current_role",
+      "accepted_categories": [
+        "experience"
+      ],
+      "trigger_groups": [
+        [
+          "adesso",
+          "attuale",
+          "current",
+          "currently",
+          "now",
+          "ora",
+          "present",
+          "ruolo attuale",
+          "today"
+        ],
+        [
+          "company",
+          "datore",
+          "datore di lavoro",
+          "employer",
+          "employs",
+          "position",
+          "role",
+          "ruolo",
+          "title",
+          "work",
+          "works"
+        ]
+      ],
+      "semantic_example_questions": [
+        "What does Niccolo do professionally today?",
+        "Which position does Niccolo hold at the moment?",
+        "What is Niccolo responsible for in his present job?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "current",
+        "current employer",
+        "current role",
+        "currently",
+        "currently works",
+        "datore di lavoro",
+        "employer",
+        "position",
+        "role",
+        "ruolo attuale",
+        "senior machine learning engineer",
+        "technical lead",
+        "title"
+      ],
+      "required_evidence_groups": [
+        [
+          "current employer",
+          "current role",
+          "currently employed",
+          "currently works",
+          "now",
+          "present position",
+          "present role",
+          "serves as"
+        ],
+        [
+          "company",
+          "employer",
+          "engineer",
+          "lead",
+          "position",
+          "researcher",
+          "role",
+          "title",
+          "works at"
+        ]
+      ]
+    },
+    {
+      "intent": "skills",
+      "accepted_categories": [
+        "skills"
+      ],
+      "trigger_groups": [
+        [
+          "anomaly detection",
+          "competenze",
+          "computer vision engineer",
+          "embedded programming",
+          "framework",
+          "frameworks",
+          "good fit as ai engineer",
+          "good fit as ai specialist",
+          "good fit as an ai engineer",
+          "good fit as an ai specialist",
+          "good fit as artificial intelligence engineer",
+          "good fit as artificial intelligence specialist",
+          "good fit as deep learning engineer",
+          "good fit as llm engineer",
+          "good fit as machine learning engineer",
+          "good fit as machine learning specialist",
+          "good fit as ml engineer",
+          "good fit for",
+          "good fit for ai roles",
+          "good fit for artificial intelligence roles",
+          "good fit for deep learning roles",
+          "good fit for llm roles",
+          "good fit for machine learning roles",
+          "good fit for ml engineer roles",
+          "good fit for ml roles",
+          "industrial computer vision",
+          "industrial machine vision",
+          "know machine learning",
+          "knows machine learning",
+          "right person for",
+          "skill",
+          "skills",
+          "specialise",
+          "specialised",
+          "specialization",
+          "specializations",
+          "specialize",
+          "specialized",
+          "specialized in",
+          "stack",
+          "strong match for",
+          "strong match for ai engineer",
+          "strong match for ai specialist",
+          "strong match for artificial intelligence engineer",
+          "strong match for deep learning engineer",
+          "strong match for llm engineer",
+          "strong match for machine learning engineer",
+          "strong match for ml engineer",
+          "suits good as",
+          "suitable for",
+          "suitable for ai engineer roles",
+          "suitable for ai roles",
+          "suitable for ai specialist",
+          "suitable for artificial intelligence engineer",
+          "suitable for artificial intelligence roles",
+          "suitable for deep learning engineer roles",
+          "suitable for deep learning roles",
+          "suitable for llm engineer roles",
+          "suitable for llm roles",
+          "suitable for machine learning engineer",
+          "suitable for machine learning engineer roles",
+          "suitable for machine learning roles",
+          "suitable for machine learning specialist",
+          "suitable for ml engineer roles",
+          "suitable for ml roles",
+          "technologies",
+          "technology",
+          "tool",
+          "tools"
+        ]
+      ],
+      "semantic_example_questions": [
+        "What technical strengths would Niccolo bring to a team?",
+        "Which machine learning capabilities does Niccolo offer?",
+        "What engineering abilities are strongest in Niccolo's profile?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "ai engineer",
+        "ai specialist",
+        "ai team",
+        "artificial intelligence engineer",
+        "artificial intelligence roles",
+        "artificial intelligence specialist",
+        "deep learning",
+        "deep learning engineer",
+        "deep learning roles",
+        "edge ai",
+        "frameworks",
+        "embedded programming",
+        "industrial computer vision",
+        "industrial machine vision",
+        "languages",
+        "llm",
+        "llm engineer",
+        "llm roles",
+        "local llm workflows",
+        "machine learning",
+        "machine learning engineer",
+        "machine learning roles",
+        "machine learning specialist",
+        "ml",
+        "ml engineer",
+        "ml roles",
+        "model deployment",
+        "production machine learning",
+        "segmentation",
+        "skills",
+        "stack",
+        "technical skills",
+        "technologies",
+        "transformer architectures",
+        "tools"
+      ],
+      "required_evidence_groups": [
+        [
+          "anomaly detection",
+          "ai team",
+          "autoencoders",
+          "bash",
+          "c",
+          "c++",
+          "cnn",
+          "cnns",
+          "computer vision",
+          "deep learning",
+          "docker",
+          "domain",
+          "domains",
+          "diffusion models",
+          "edge ai",
+          "embedded inference",
+          "embedded programming",
+          "framework",
+          "frameworks",
+          "ganomaly",
+          "halcon",
+          "industrial computer vision",
+          "java",
+          "knowledge distillation",
+          "language",
+          "languages",
+          "linux",
+          "llm workflows",
+          "local llm workflows",
+          "machine learning",
+          "mlflow",
+          "model deployment",
+          "nflows",
+          "numpy",
+          "onnx",
+          "opencv",
+          "openvino",
+          "pandas",
+          "patchcore",
+          "production machine learning",
+          "python",
+          "pytorch",
+          "real time computer vision",
+          "resnet",
+          "scikit learn",
+          "segmentation",
+          "specialization",
+          "specializations",
+          "sql",
+          "technical skills",
+          "technologies",
+          "technology",
+          "tensorboard",
+          "tensorflow",
+          "tensorrt",
+          "tool",
+          "tools",
+          "transformer architectures",
+          "vae",
+          "visual inspection",
+          "vit",
+          "yolo"
+        ]
+      ]
+    },
+    {
+      "intent": "license",
+      "accepted_categories": [
+        "skills"
+      ],
+      "trigger_groups": [
+        [
+          "car license",
+          "driving license",
+          "licence",
+          "license",
+          "patente",
+          "patente b"
+        ]
+      ],
+      "semantic_example_questions": [
+        "Does Niccolo list a public driving license?",
+        "Which driving license does Niccolo have?",
+        "Is a license included in Niccolo's public CV?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "car license",
+        "driving license",
+        "driving license b",
+        "license",
+        "license b",
+        "patente",
+        "patente b"
+      ],
+      "required_evidence_groups": [
+        [
+          "car license",
+          "driving license",
+          "driving license b",
+          "e u driving license b",
+          "license b",
+          "patente b"
+        ]
+      ]
+    },
+    {
+      "intent": "interests",
+      "accepted_categories": [
+        "skills"
+      ],
+      "trigger_groups": [
+        [
+          "hobbies",
+          "hobby",
+          "interest",
+          "interests",
+          "interessi",
+          "what are the interest"
+        ]
+      ],
+      "semantic_example_questions": [
+        "Which interests does Niccolo list publicly?",
+        "What hobbies appear in Niccolo's public profile?",
+        "What personal interests are part of Niccolo's CV?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "artificial intelligence",
+        "bouldering",
+        "climbing",
+        "deep learning research",
+        "game development",
+        "hobbies",
+        "interests",
+        "trekking"
+      ],
+      "required_evidence_groups": [
+        [
+          "hobbies",
+          "interests"
+        ]
+      ]
+    },
+    {
+      "intent": "education",
+      "accepted_categories": [
+        "education"
+      ],
+      "trigger_groups": [
+        [
+          "bachelor",
+          "degree",
+          "degrees",
+          "education",
+          "formazione",
+          "master",
+          "phd",
+          "studied",
+          "study",
+          "university"
+        ]
+      ],
+      "semantic_example_questions": [
+        "What academic credentials does Niccolo have?",
+        "Which academic path did Niccolo follow?",
+        "What formal training does Niccolo list?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "bachelor",
+        "degree",
+        "degrees",
+        "education",
+        "master",
+        "phd",
+        "study",
+        "university"
+      ],
+      "required_evidence_groups": [
+        [
+          "bachelor",
+          "completed",
+          "degree",
+          "degrees",
+          "master",
+          "phd",
+          "studied",
+          "university"
+        ]
+      ]
+    },
+    {
+      "intent": "publications",
+      "accepted_categories": [
+        "research"
+      ],
+      "trigger_groups": [
+        [
+          "arxiv",
+          "authored",
+          "doi",
+          "paper",
+          "papers",
+          "pre-print",
+          "pre-prints",
+          "preprint",
+          "preprints",
+          "pubblicazioni",
+          "publication",
+          "publications",
+          "prublication",
+          "prublications",
+          "thesis"
+        ]
+      ],
+      "semantic_example_questions": [
+        "Which research outputs has Niccolo written?",
+        "Has Niccolo contributed scholarly articles?",
+        "What scientific writing is associated with Niccolo?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "arxiv",
+        "doi",
+        "paper",
+        "papers",
+        "pre-print",
+        "pre-prints",
+        "preprint",
+        "preprints",
+        "publication",
+        "publications",
+        "prublication",
+        "prublications",
+        "research",
+        "submitted",
+        "thesis"
+      ],
+      "required_evidence_groups": [
+        [
+          "arxiv",
+          "doi",
+          "paper",
+          "papers",
+          "publication",
+          "publications",
+          "published",
+          "released",
+          "submitted",
+          "thesis"
+        ]
+      ]
+    },
+    {
+      "intent": "projects",
+      "accepted_categories": [
+        "projects"
+      ],
+      "trigger_groups": [
+        [
+          "code",
+          "codice",
+          "github repositories",
+          "github repository",
+          "github repo",
+          "github repos",
+          "progetti",
+          "project",
+          "projects",
+          "pubblicato",
+          "repo",
+          "repos",
+          "repositories",
+          "repository",
+          "software",
+          "software di ricerca",
+          "source code"
+        ]
+      ],
+      "semantic_example_questions": [
+        "What has Niccolo built publicly?",
+        "Which implementations can I inspect from Niccolo?",
+        "What public technical artifacts has Niccolo released?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "code",
+        "github",
+        "project",
+        "projects",
+        "public research software",
+        "repositories",
+        "repository",
+        "research software",
+        "software",
+        "source",
+        "source code"
+      ],
+      "required_evidence_groups": [
+        [
+          "built",
+          "code",
+          "developed",
+          "github",
+          "implementation",
+          "portfolio",
+          "repo",
+          "repos",
+          "repositories",
+          "repository",
+          "software",
+          "source"
+        ]
+      ]
+    },
+    {
+      "intent": "contact",
+      "accepted_categories": [
+        "contact"
+      ],
+      "trigger_groups": [
+        [
+          "come posso contattare",
+          "contact",
+          "contattare",
+          "contattarlo",
+          "contatto",
+          "github account",
+          "github link",
+          "github links",
+          "github page",
+          "github profile",
+          "link",
+          "linkedin",
+          "links",
+          "orcid",
+          "portfolio",
+          "raggiungere",
+          "reach",
+          "website"
+        ]
+      ],
+      "semantic_example_questions": [
+        "Where can a recruiter find Niccolo online?",
+        "Where is Niccolo visible professionally online?",
+        "Which public profiles identify Niccolo?"
+      ],
+      "semantic_candidate_threshold": 0.75,
+      "semantic_required_threshold": null,
+      "lexical_expansion_terms": [
+        "github",
+        "linkedin",
+        "links",
+        "orcid",
+        "portfolio",
+        "profile",
+        "profiles",
+        "public",
+        "public professional profile links",
+        "website"
+      ],
+      "required_evidence_groups": [
+        [
+          "github",
+          "link",
+          "linkedin",
+          "links",
+          "orcid",
+          "portfolio",
+          "website"
+        ]
+      ]
+    }
+  ]
+}

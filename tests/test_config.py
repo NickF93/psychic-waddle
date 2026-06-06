@@ -6,6 +6,7 @@ from portfolio_rag_assistant.config import (
     ChatProviderSettings,
     DatabaseSettings,
     EmbeddingProviderSettings,
+    IntentCatalogSettings,
     QuestionCollectionSettings,
     RetrievalSettings,
     RuntimeConfigurationError,
@@ -14,6 +15,7 @@ from portfolio_rag_assistant.config import (
     load_chat_provider_settings,
     load_database_settings,
     load_embedding_provider_settings,
+    load_intent_catalog_settings,
     load_question_collection_settings,
     load_retrieval_settings,
 )
@@ -282,17 +284,30 @@ def test_load_retrieval_settings_reads_exact_env_names() -> None:
     settings = load_retrieval_settings(
         {
             "RETRIEVAL_TOP_K": " 6 ",
+            "RETRIEVAL_CANDIDATE_FAN_OUT": " 12 ",
             "RETRIEVAL_MIN_SCORE": " 0.25 ",
         }
     )
 
-    assert settings == RetrievalSettings(top_k=6, min_score=0.25)
+    assert settings == RetrievalSettings(
+        top_k=6,
+        candidate_fan_out=12,
+        min_score=0.25,
+    )
 
 
-@pytest.mark.parametrize("missing_name", ("RETRIEVAL_TOP_K", "RETRIEVAL_MIN_SCORE"))
+@pytest.mark.parametrize(
+    "missing_name",
+    (
+        "RETRIEVAL_TOP_K",
+        "RETRIEVAL_CANDIDATE_FAN_OUT",
+        "RETRIEVAL_MIN_SCORE",
+    ),
+)
 def test_load_retrieval_settings_requires_named_values(missing_name: str) -> None:
     env = {
         "RETRIEVAL_TOP_K": "6",
+        "RETRIEVAL_CANDIDATE_FAN_OUT": "12",
         "RETRIEVAL_MIN_SCORE": "0.25",
     }
     del env[missing_name]
@@ -340,14 +355,34 @@ def test_question_collection_settings_requires_boolean() -> None:
         QuestionCollectionSettings(enabled="true")  # type: ignore[arg-type]
 
 
+def test_load_intent_catalog_settings_reads_exact_env_name() -> None:
+    settings = load_intent_catalog_settings(
+        {"INTENT_PROFILES_PATH": " config/intent-profiles.json "}
+    )
+
+    assert settings == IntentCatalogSettings(path="config/intent-profiles.json")
+
+
+def test_load_intent_catalog_settings_requires_named_value() -> None:
+    with pytest.raises(
+        RuntimeConfigurationError,
+        match="INTENT_PROFILES_PATH must be set",
+    ):
+        load_intent_catalog_settings({})
+
+
 @pytest.mark.parametrize(
     "settings",
     (
-        {"top_k": 0, "min_score": 0.25},
-        {"top_k": -1, "min_score": 0.25},
-        {"top_k": True, "min_score": 0.25},
-        {"top_k": 6, "min_score": -0.1},
-        {"top_k": 6, "min_score": 1.1},
+        {"top_k": 0, "candidate_fan_out": 12, "min_score": 0.25},
+        {"top_k": -1, "candidate_fan_out": 12, "min_score": 0.25},
+        {"top_k": True, "candidate_fan_out": 12, "min_score": 0.25},
+        {"top_k": 6, "candidate_fan_out": 0, "min_score": 0.25},
+        {"top_k": 6, "candidate_fan_out": -1, "min_score": 0.25},
+        {"top_k": 6, "candidate_fan_out": True, "min_score": 0.25},
+        {"top_k": 6, "candidate_fan_out": 5, "min_score": 0.25},
+        {"top_k": 6, "candidate_fan_out": 12, "min_score": -0.1},
+        {"top_k": 6, "candidate_fan_out": 12, "min_score": 1.1},
     ),
 )
 def test_retrieval_settings_rejects_invalid_values(
@@ -360,8 +395,21 @@ def test_retrieval_settings_rejects_invalid_values(
 @pytest.mark.parametrize(
     "env",
     (
-        {"RETRIEVAL_TOP_K": "many", "RETRIEVAL_MIN_SCORE": "0.25"},
-        {"RETRIEVAL_TOP_K": "6", "RETRIEVAL_MIN_SCORE": "high"},
+        {
+            "RETRIEVAL_TOP_K": "many",
+            "RETRIEVAL_CANDIDATE_FAN_OUT": "12",
+            "RETRIEVAL_MIN_SCORE": "0.25",
+        },
+        {
+            "RETRIEVAL_TOP_K": "6",
+            "RETRIEVAL_CANDIDATE_FAN_OUT": "many",
+            "RETRIEVAL_MIN_SCORE": "0.25",
+        },
+        {
+            "RETRIEVAL_TOP_K": "6",
+            "RETRIEVAL_CANDIDATE_FAN_OUT": "12",
+            "RETRIEVAL_MIN_SCORE": "high",
+        },
     ),
 )
 def test_load_retrieval_settings_rejects_invalid_text(

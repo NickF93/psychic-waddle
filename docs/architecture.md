@@ -1,5 +1,9 @@
 # Architecture Contract
 
+This file is the authoritative architecture contract. For a shorter narrative
+about why the system is shaped this way, see
+[Design Decisions](design-decisions.md).
+
 ## Product Goal
 
 Build a small recruiter-facing Portfolio RAG Assistant for questions about
@@ -126,15 +130,39 @@ Owns verified facts, chunks, sources, and embeddings only.
 
 Owns bounded recruiter-intent definitions only.
 
-- Defines deterministic trigger terms, accepted knowledge categories, lexical
-  expansion terms, and required evidence terms for supported recruiter intents.
-- Covered v1 intents are professional overview, workplaces and work history,
-  current role, skills, education, publications, projects and repositories, and
-  public contact links.
+- Defines deterministic positive trigger terms or exact normalized trigger
+  phrases, semantic example questions, semantic thresholds, accepted knowledge
+  categories, lexical expansion terms, and required evidence terms for supported
+  recruiter intents from the reviewed `config/intent-profiles.json` runtime
+  catalog.
+- Owns catalog-produced intent identifiers; retrieval and policy must not
+  fabricate intent IDs from raw strings.
+- Owns `IntentResolution`, whose required intents feed answerability and whose
+  candidate intents may help retrieval only.
+- Covered intents are professional overview, workplaces and work history,
+  current role, skills, public license, public interests, education,
+  publications, projects and repositories, and public contact links.
+- Bounded role-fit wording for ML, AI, deep-learning, LLM, and computer-vision
+  roles is modeled through the skills intent; it is not a separate hiring
+  recommendation or availability intent. Professional-overview wording remains
+  reserved for career summaries and broad public-profile questions.
 - May be read by retrieval for deterministic query expansion.
 - May be read by policy for deterministic evidence-completeness checks.
+- Semantic example questions are reviewed embedding anchors for the semantic
+  resolver. Anchor vectors are in-memory runtime artifacts, not PostgreSQL
+  knowledge.
 - Must not call providers, search PostgreSQL, rank chunks, generate answers,
   persist data, collect questions, or inspect request metadata.
+- The catalog is matcher configuration, not portfolio knowledge, and must not be
+  ingested into the knowledge store.
+- The catalog loader must fail fast for missing files, invalid JSON, unknown or
+  missing fields, invalid schema versions, duplicate intents, invalid knowledge
+  categories, and empty term groups. There is no default catalog or hidden
+  fallback.
+- Semantic intent resolution must use one generic resolver, with no
+  concrete-intent branches. Per-intent thresholds must be reviewed catalog data,
+  and semantic matches must remain candidate intents unless calibrated to become
+  required intents.
 
 ### `Retriever`
 
@@ -142,8 +170,9 @@ Owns search, ranking, and retrieval diagnostics only.
 
 - Performs vector search, keyword search, and hybrid ranking over reviewed
   knowledge.
-- May use `QuestionIntentProfile` definitions to add deterministic lexical
-  expansion for supported recruiter intents.
+- May use required and candidate intents from `IntentResolution` to add bounded
+  lexical expansion for supported recruiter intents.
+- Transports `IntentResolution` to policy but must not decide answerability.
 - Must treat vector scores and text-rank scores as different diagnostic scales
   unless a rank-fusion algorithm combines their result ordering.
 - Returns ranked context with scores and minimal diagnostics needed by policy.
@@ -172,6 +201,8 @@ Owns final wording only.
 - Converts an approved policy decision and approved retrieved context into a
   concise recruiter-facing answer.
 - Preserves the visitor's language when supported by the prompt contract.
+- For fit or suitability questions, summarizes approved evidence only and must
+  not provide a yes/no hiring verdict, hiring recommendation, or prediction.
 - Must return a consistent not-answerable response if the provider indicates
   that approved context is insufficient.
 - Must not add facts absent from approved context, override policy, retrieve
@@ -222,8 +253,14 @@ names, or hidden fallbacks are allowed.
 - `EMBEDDING_MODEL`: embedding model name.
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: PostgreSQL
   connection fields.
-- `RETRIEVAL_TOP_K`: number of candidate chunks requested by retrieval.
+- `RETRIEVAL_TOP_K`: number of ranked chunks returned by retrieval.
+- `RETRIEVAL_CANDIDATE_FAN_OUT`: number of candidates requested from each
+  retrieval channel before fusion and final `RETRIEVAL_TOP_K` truncation.
 - `RETRIEVAL_MIN_SCORE`: minimum score required by answer policy.
+- `INTENT_PROFILES_PATH`: explicit path to the reviewed intent catalog. The
+  path is mandatory at runtime and must load before the public API is served.
+  Catalog semantic calibration metadata must match the configured embedding
+  backend and model.
 - `QUESTION_COLLECTION_ENABLED`: enables anonymous question signal storage.
 
 Milestone 0 defines names and ownership only. Runtime validation, defaults, and

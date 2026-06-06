@@ -6,12 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from portfolio_rag_assistant.intent import (
-    QuestionIntent,
-    profile_for_intent,
-    text_satisfies_intent_evidence,
-)
 from portfolio_rag_assistant.knowledge.validation import validate_knowledge_files
+from intent_catalog_helpers import tracked_intent_catalog
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,7 +17,7 @@ EXPECTED_SOURCE_URI = "cv://niccolo/main"
 
 @dataclass(frozen=True, slots=True)
 class AggregateExpectation:
-    intent: QuestionIntent
+    intent: str
     source_locator: str
     fragments: tuple[str, ...]
 
@@ -41,6 +37,16 @@ AGGREGATE_EXPECTATIONS: tuple[AggregateExpectation, ...] = (
         intent="skills",
         source_locator="Professional Skills",
         fragments=("main technical skills", "computer vision", "pytorch"),
+    ),
+    AggregateExpectation(
+        intent="license",
+        source_locator="License",
+        fragments=("driving license", "license b", "car license"),
+    ),
+    AggregateExpectation(
+        intent="interests",
+        source_locator="Interests",
+        fragments=("interests include", "artificial intelligence", "climbing"),
     ),
     AggregateExpectation(
         intent="education",
@@ -111,6 +117,8 @@ def test_tracked_profile_knowledge_covers_common_recruiter_intents() -> None:
     _assert_fact_contains(facts, "main programming languages", "c++", "python")
     _assert_fact_contains(facts, "main frameworks", "pytorch", "tensorflow")
     _assert_fact_contains(facts, "machine learning skills", "anomaly detection")
+    _assert_fact_contains(facts, "driving license", "license b", "car license")
+    _assert_fact_contains(facts, "interests include", "artificial intelligence")
     _assert_fact_contains(facts, "publications", "grd-net", "mahalanobis patchcore")
     _assert_fact_contains(facts, "public research software", "grd-net", "mh-patchcore")
     _assert_fact_contains(facts, "public professional profile links", "github")
@@ -119,16 +127,18 @@ def test_tracked_profile_knowledge_covers_common_recruiter_intents() -> None:
 
 def test_tracked_profile_aggregates_satisfy_intent_profiles() -> None:
     facts = _facts()
+    catalog = tracked_intent_catalog()
 
     for expectation in AGGREGATE_EXPECTATIONS:
         fact = _find_fact(facts, *expectation.fragments)
-        profile = profile_for_intent(expectation.intent)
+        intent = catalog.intent_for_identifier(expectation.intent)
+        profile = catalog.profile_for_intent(intent)
         text = _fact_text(fact)
 
         assert fact["source_uri"] == EXPECTED_SOURCE_URI
         assert fact["source_locator"] == expectation.source_locator
         assert fact["category"] in profile.accepted_categories
-        assert text_satisfies_intent_evidence(text, expectation.intent)
+        assert catalog.text_satisfies_intent_evidence(text, intent)
 
 
 def test_tracked_profile_aggregates_are_not_question_specific_hacks() -> None:

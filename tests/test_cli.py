@@ -15,6 +15,8 @@ from portfolio_rag_assistant.provider import (
 )
 from portfolio_rag_assistant.questions import QuestionEvent
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def test_ingest_command_validates_input_before_database_connection(
     tmp_path: Path,
@@ -106,6 +108,7 @@ def test_runtime_smoke_checks_database_and_providers(monkeypatch) -> None:
             "EMBEDDING_BACKEND": "ollama",
             "EMBEDDING_BASE_URL": "http://localhost:11434/api",
             "EMBEDDING_MODEL": "nomic-embed-text",
+            "INTENT_PROFILES_PATH": str(ROOT / "config" / "intent-profiles.json"),
             "QUESTION_COLLECTION_ENABLED": "false",
         },
         stdout=stdout,
@@ -125,6 +128,68 @@ def test_runtime_smoke_checks_database_and_providers(monkeypatch) -> None:
     assert embedding_provider.requests == (
         EmbeddingRequest(model="nomic-embed-text", inputs=("runtime smoke",)),
     )
+
+
+def test_runtime_smoke_requires_intent_catalog_settings() -> None:
+    stdout = StringIO()
+    stderr = StringIO()
+
+    exit_code = cli.run(
+        ("runtime", "smoke"),
+        env={
+            **_db_env(),
+            "CHAT_BACKEND": "openai-compatible",
+            "CHAT_BASE_URL": "https://api.example.test/v1",
+            "CHAT_MODEL": "chat-model",
+            "EMBEDDING_BACKEND": "ollama",
+            "EMBEDDING_BASE_URL": "http://localhost:11434/api",
+            "EMBEDDING_MODEL": "nomic-embed-text",
+            "QUESTION_COLLECTION_ENABLED": "false",
+        },
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    assert exit_code == 2
+    assert "INTENT_PROFILES_PATH must be set" in stderr.getvalue()
+
+
+def test_runtime_smoke_rejects_stale_semantic_calibration(monkeypatch) -> None:
+    provider_calls: list[str] = []
+    stdout = StringIO()
+    stderr = StringIO()
+
+    monkeypatch.setattr(
+        cli,
+        "build_chat_provider",
+        lambda settings: provider_calls.append("chat"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "build_embedding_provider",
+        lambda settings: provider_calls.append("embedding"),
+    )
+
+    exit_code = cli.run(
+        ("runtime", "smoke"),
+        env={
+            **_db_env(),
+            "CHAT_BACKEND": "openai-compatible",
+            "CHAT_BASE_URL": "https://api.example.test/v1",
+            "CHAT_MODEL": "chat-model",
+            "EMBEDDING_BACKEND": "ollama",
+            "EMBEDDING_BASE_URL": "http://localhost:11434/api",
+            "EMBEDDING_MODEL": "different-embedding-model",
+            "INTENT_PROFILES_PATH": str(ROOT / "config" / "intent-profiles.json"),
+            "QUESTION_COLLECTION_ENABLED": "false",
+        },
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    assert exit_code == 2
+    assert "intent semantic calibration must match" in stderr.getvalue()
+    assert provider_calls == []
 
 
 def test_questions_list_uses_review_store(monkeypatch) -> None:

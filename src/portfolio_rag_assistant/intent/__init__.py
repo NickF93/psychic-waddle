@@ -1,23 +1,39 @@
-"""Shared deterministic recruiter-question intent profiles."""
+"""Shared deterministic recruiter-question intent catalog contracts."""
 
+from portfolio_rag_assistant.intent.calibration import (
+    SemanticIntentCalibrationError,
+    build_near_duplicate_review_report,
+    load_semantic_evaluation_cases,
+    propose_semantic_thresholds,
+    write_tmp_json_report,
+)
+from portfolio_rag_assistant.intent.catalog import load_intent_catalog
 from portfolio_rag_assistant.intent.profiles import (
-    QUESTION_INTENT_PROFILES,
+    IntentCatalog,
+    IntentResolution,
     QuestionIntent,
     QuestionIntentProfile,
     QuestionIntentProfileError,
-    categories_for_intents,
-    detect_question_intents,
-    profile_for_intent,
-    text_satisfies_intent_evidence,
+    SemanticCalibration,
+)
+from portfolio_rag_assistant.intent.semantic import (
+    SemanticIntentResolver,
+    SemanticIntentScore,
 )
 
 __all__ = [
-    "QUESTION_INTENT_PROFILES",
+    "IntentCatalog",
+    "IntentResolution",
     "QuestionIntent",
     "QuestionIntentProfile",
     "QuestionIntentProfileError",
-    "categories_for_intents",
-    "detect_question_intents",
-    "profile_for_intent",
-    "text_satisfies_intent_evidence",
+    "SemanticCalibration",
+    "SemanticIntentResolver",
+    "SemanticIntentScore",
+    "SemanticIntentCalibrationError",
+    "build_near_duplicate_review_report",
+    "load_semantic_evaluation_cases",
+    "load_intent_catalog",
+    "propose_semantic_thresholds",
+    "write_tmp_json_report",
 ]

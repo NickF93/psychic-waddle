@@ -52,7 +52,7 @@ Implement Milestones 0 through 4 first. These define the reliable core:
 architecture, provider abstraction, verified knowledge, retrieval, answer policy,
 and grounded answer generation.
 
-Milestones 5 through 10 are intentionally deferred until the core proves it can
+Milestones 5 and later are intentionally deferred until the core proves it can
 answer correctly and refuse safely.
 
 ---
@@ -1293,3 +1293,148 @@ Items:
   into recruiter-facing responses.
 - Checkpoint: release candidate is reproducible from a clean state.
 - Final track/doc: `docs/deployment.md`.
+
+---
+
+## Milestone 11: Intent Authority Data-Driven Remediation
+
+**Feature:** move reviewed recruiter intent vocabulary out of hardcoded Python
+lists and prepare the intent authority for later semantic routing without
+weakening deterministic answerability.
+
+Milestone 11 is post-v0.1.0 remediation work. Milestone 10 remains the closed
+release-validation milestone for the MVP release. M11 must preserve current
+answerability behavior during the initial catalog migration, then deliberately
+remove remaining intent-specific branches through reviewed positive catalog
+semantics.
+
+The target is not to make every Python literal configurable. Reviewed recruiter
+domain vocabulary belongs in data; matching algorithms, rank-fusion behavior,
+schema-bound category enums, and architectural invariants remain code
+authorities.
+
+### Preflight 11.0: Temporary Migration Oracle
+
+Items:
+
+- Validation: generate current intent behavior into `/tmp`.
+- Validation: derive probes from current vocabulary where possible.
+- Validation: do not commit the oracle or generated fixtures.
+- Validation: use the oracle only to verify the first migration.
+- Checkpoint: the catalog migration has a one-time behavior witness without
+  fossilizing disliked implementation behavior in the public repository.
+
+### Sprint 11.1: Data-Driven Lexical Catalog
+
+Items:
+
+- Implementation: add `load_intent_catalog(path) -> IntentCatalog`.
+- Implementation: keep the loader as an explicit factory with no import-time
+  file I/O.
+- Implementation: do not introduce a JSON-loaded module global.
+- Implementation: move current recruiter vocabulary to reviewed JSON while
+  preserving behavior.
+- Config: add explicit runtime config wiring for the catalog path.
+- Documentation: define the exact lexical catalog contract.
+- Documentation: explicitly state that the current GitHub/contact
+  disambiguation branch is intentionally retained as frozen behavior and will
+  be removed in Sprint 11.3.
+- Test: cover the catalog loader, configured runtime wiring, and preserved
+  lexical behavior.
+- Checkpoint: domain vocabulary is reviewed data, while the frozen matcher
+  behavior is still verifiably unchanged.
+
+### Sprint 11.2: Intent Authority Refactor
+
+Items:
+
+- Implementation: move catalog loading into the composition root.
+- Implementation: inject the intent authority into retrieval and policy.
+- Implementation: remove module-level hardcoded profile constants.
+- Implementation: avoid mutable global registries.
+- Implementation: avoid compatibility shims, legacy exports, hidden fallbacks,
+  or deprecated interfaces.
+- Test: prove retrieval and policy use the injected intent authority.
+- Checkpoint: intent detection is a single bounded authority threaded through
+  the application instead of import-time global state.
+
+### Sprint 11.3: Positive Phrase Trigger Semantics
+
+Items:
+
+- Implementation: deliberately changed trigger matching from simple word groups
+  to positive phrase/group semantics where needed.
+- Implementation: removed the GitHub/contact special-case branch.
+- Implementation: modeled ambiguity only through reviewed positive catalog
+  groups.
+- Test: GitHub profile questions resolve to the contact intent.
+- Test: GitHub repository and source-code questions resolve to the projects
+  intent.
+- Test: bare ambiguous GitHub wording is `not_answerable` unless explicitly
+  defined in reviewed catalog data.
+- Documentation: updated intent semantics to describe positive groups and the
+  ambiguity decision.
+- Checkpoint: intent routing contains no hardcoded contact/project exception.
+
+### Sprint 11.4: Catalog Contract And Coverage
+
+Items:
+
+- Implementation: reject unknown catalog fields.
+- Implementation: fail fast for missing or invalid catalog paths.
+- Test: strict schema validation rejects malformed catalog data.
+- Test: representative English and Italian recruiter phrases map to the
+  expected supported intents.
+- Test: unsupported, private, speculative, and off-topic questions remain
+  `not_answerable`.
+- Documentation: update architecture, retrieval, answer-policy, runtime, and
+  API docs with the final lexical catalog contract.
+- Checkpoint: the lexical catalog is explicit, validated, and covered without
+  hidden fallback behavior.
+
+### Sprint 11.5: Semantic Intent Preparation
+
+Items:
+
+- Data: add reviewed example questions per intent.
+- Test data: add a labeled intent-evaluation fixture.
+- Documentation: define the future semantic resolver invariant:
+  - zero `if intent == ...` code branches;
+  - per-intent thresholds live in reviewed data;
+  - semantic matches start as candidate intents unless calibrated.
+- Validation: do not add a runtime semantic matcher in this sprint.
+- Checkpoint: semantic intent work has reviewed data and calibration fixtures
+  before it can affect answerability.
+
+### Sprint 11.6: Semantic Intent Matcher And Resolver
+
+Items:
+
+- Implementation: embed reviewed example questions, not bare trigger words.
+- Implementation: reuse the already-computed question embedding where
+  available.
+- Implementation: resolve required and candidate intents without intent-specific
+  code branches.
+- Implementation: allow semantic intents into the hard policy evidence gate
+  only after threshold calibration against the Sprint 11.5 eval set and a
+  defined precision bar.
+- Implementation: otherwise keep semantic intents candidate-only so they may
+  help retrieval without forcing `not_answerable`.
+- Test: calibrated semantic matches improve supported recruiter paraphrase
+  coverage without reducing unsupported/private refusal behavior.
+- Documentation: update the intent authority and policy docs with required vs
+  candidate semantics.
+- Checkpoint: semantic routing improves recall while preserving deterministic
+  policy ownership of answerability.
+
+Acceptance:
+
+- Reviewed recruiter vocabulary is data/config-driven.
+- Intent matching has no import-time catalog I/O, mutable global registry,
+  compatibility shim, hidden fallback, or intent-specific exception branch.
+- Retrieval and policy consume one injected intent authority.
+- Positive lexical semantics cover the contact/project ambiguity without
+  hardcoded suppression logic.
+- Semantic intent matching, when implemented, cannot blindly turn fuzzy matches
+  into hard policy requirements.
+- Unsupported, private, speculative, and off-topic questions remain refused.

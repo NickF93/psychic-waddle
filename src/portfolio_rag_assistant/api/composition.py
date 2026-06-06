@@ -22,9 +22,11 @@ from portfolio_rag_assistant.config import (
     load_chat_provider_settings,
     load_database_settings,
     load_embedding_provider_settings,
+    load_intent_catalog_settings,
     load_question_collection_settings,
     load_retrieval_settings,
 )
+from portfolio_rag_assistant.intent import SemanticIntentResolver, load_intent_catalog
 from portfolio_rag_assistant.knowledge import connect_database
 from portfolio_rag_assistant.policy import DeterministicAnswerPolicy
 from portfolio_rag_assistant.provider import ChatProvider, EmbeddingProvider
@@ -117,8 +119,21 @@ def build_runtime_services(
     embedding_settings = load_embedding_provider_settings(environment)
     retrieval_settings = load_retrieval_settings(environment)
     question_collection_settings = load_question_collection_settings(environment)
+    intent_catalog_settings = load_intent_catalog_settings(environment)
+    intent_catalog = load_intent_catalog(intent_catalog_settings.path)
+    _require_matching_semantic_calibration(
+        configured_backend=embedding_settings.backend,
+        configured_model=embedding_settings.model,
+        calibrated_backend=intent_catalog.semantic_calibration.embedding_backend,
+        calibrated_model=intent_catalog.semantic_calibration.embedding_model,
+    )
     chat_provider = chat_provider_factory(chat_settings)
     embedding_provider = embedding_provider_factory(embedding_settings)
+    intent_resolver = SemanticIntentResolver(
+        catalog=intent_catalog,
+        provider=embedding_provider,
+        embedding_model=embedding_settings.model,
+    )
     connection = connection_factory(database_settings)
     question_collector = (
         PostgreSQLQuestionCollector(connection)
@@ -130,11 +145,13 @@ def build_runtime_services(
         provider=embedding_provider,
         embedding_backend=embedding_settings.backend,
         embedding_model=embedding_settings.model,
+        intent_resolver=intent_resolver,
+        candidate_fan_out=retrieval_settings.candidate_fan_out,
     )
     return RuntimeServices(
         chat_service=PublicChatService(
             retriever=retriever,
-            answer_policy=DeterministicAnswerPolicy(),
+            answer_policy=DeterministicAnswerPolicy(intent_catalog=intent_catalog),
             answer_generator=GroundedAnswerGenerator(
                 provider=chat_provider,
                 chat_model=chat_settings.model,
@@ -149,3 +166,20 @@ def build_runtime_services(
             question_collection_enabled=question_collection_settings.enabled,
         ),
     )
+
+
+def _require_matching_semantic_calibration(
+    *,
+    configured_backend: str,
+    configured_model: str,
+    calibrated_backend: str,
+    calibrated_model: str,
+) -> None:
+    if (
+        configured_backend != calibrated_backend
+        or configured_model != calibrated_model
+    ):
+        raise APICompositionError(
+            "intent semantic calibration must match configured embedding backend "
+            "and model"
+        )

@@ -7,10 +7,9 @@ from dataclasses import dataclass, replace
 from typing import Any, Protocol, cast
 
 from portfolio_rag_assistant.intent import (
+    IntentCatalog,
     QuestionIntent,
-    categories_for_intents,
-    detect_question_intents,
-    profile_for_intent,
+    SemanticIntentResolver,
 )
 from portfolio_rag_assistant.knowledge import KnowledgeCategory
 from portfolio_rag_assistant.provider import EmbeddingProvider, EmbeddingRequest
@@ -42,11 +41,12 @@ class RetrievalCandidate:
     vector_rank: int | None = None
     keyword_rank: int | None = None
     intent_rank: int | None = None
-    rrf_score: float = 0.0
+    rrf_order_score: float = 0.0
+    rank_quality_score: float = 0.0
 
     @property
     def combined_score(self) -> float:
-        return self.rrf_score
+        return self.rank_quality_score
 
     def to_context(self) -> RetrievedContext:
         """Convert the internal candidate into the public retrieval contract."""
@@ -92,11 +92,22 @@ class PostgreSQLRetriever:
         provider: EmbeddingProvider,
         embedding_backend: str,
         embedding_model: str,
+        intent_resolver: SemanticIntentResolver,
+        candidate_fan_out: int,
     ) -> None:
         self._connection = connection
         self._provider = provider
         self._embedding_backend = _require_text(embedding_backend, "embedding_backend")
         self._embedding_model = _require_text(embedding_model, "embedding_model")
+        self._candidate_fan_out = _require_positive_int(
+            candidate_fan_out,
+            "candidate_fan_out",
+        )
+        if not isinstance(intent_resolver, SemanticIntentResolver):
+            raise RetrievalConfigurationError(
+                "intent_resolver must be SemanticIntentResolver"
+            )
+        self._intent_resolver = intent_resolver
 
     async def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
         """Return ranked public source-backed context for a question."""
@@ -107,18 +118,22 @@ class PostgreSQLRetriever:
         if len(embedding_response.embeddings) != 1:
             raise RetrievalStoreError("provider returned the wrong embedding count")
 
+        question_embedding = embedding_response.embeddings[0]
+        intent_resolution = await self._intent_resolver.resolve(
+            question=request.question,
+            question_embedding=question_embedding,
+        )
         vector_candidates = self._search_vectors(
-            query_embedding=embedding_response.embeddings[0],
-            limit=request.top_k,
+            query_embedding=question_embedding,
+            limit=self._candidate_fan_out,
         )
         keyword_candidates = self._search_keywords(
             question=request.question,
-            limit=request.top_k,
+            limit=self._candidate_fan_out,
         )
-        intents = detect_question_intents(request.question)
         intent_candidates = self._search_intent_keywords(
-            intents=intents,
-            limit=request.top_k,
+            intents=intent_resolution.retrieval_intents,
+            limit=self._candidate_fan_out,
         )
         results = tuple(
             candidate.to_context()
@@ -126,11 +141,14 @@ class PostgreSQLRetriever:
                 vector_candidates=vector_candidates,
                 keyword_candidates=keyword_candidates,
                 intent_candidates=intent_candidates,
-                attempted_channel_count=2 + int(bool(intents)),
                 top_k=request.top_k,
             )
         )
-        return RetrievalResponse(question=request.question, results=results)
+        return RetrievalResponse(
+            question=request.question,
+            results=results,
+            intent_resolution=intent_resolution,
+        )
 
     def _search_vectors(
         self,
@@ -242,8 +260,11 @@ class PostgreSQLRetriever:
             LIMIT %s
             """,
             (
-                _intent_evidence_query_text(intents),
-                list(categories_for_intents(intents)),
+                _intent_evidence_query_text(
+                    intents=intents,
+                    intent_catalog=self._intent_resolver.catalog,
+                ),
+                list(self._intent_resolver.catalog.categories_for_intents(intents)),
                 limit,
             ),
         )
@@ -255,11 +276,10 @@ def _rank_candidates(
     vector_candidates: tuple[RetrievalCandidate, ...],
     keyword_candidates: tuple[RetrievalCandidate, ...],
     intent_candidates: tuple[RetrievalCandidate, ...],
-    attempted_channel_count: int,
     top_k: int,
 ) -> tuple[RetrievalCandidate, ...]:
     candidates = tuple(
-        _with_rrf_score(candidate, attempted_channel_count)
+        _with_rrf_score(candidate)
         for candidate in _merge_candidates(
             _ranked_vector_candidates(vector_candidates),
             _ranked_keyword_candidates(keyword_candidates),
@@ -271,7 +291,7 @@ def _rank_candidates(
         for candidate in sorted(
             candidates,
             key=lambda item: (
-                -item.combined_score,
+                -item.rrf_order_score,
                 -(item.vector_score or 0.0),
                 -(item.keyword_score or 0.0),
                 -(item.intent_score or 0.0),
@@ -312,7 +332,8 @@ def _merge_candidate(
         vector_rank=_min_optional(left.vector_rank, right.vector_rank),
         keyword_rank=_min_optional(left.keyword_rank, right.keyword_rank),
         intent_rank=_min_optional(left.intent_rank, right.intent_rank),
-        rrf_score=max(left.rrf_score, right.rrf_score),
+        rrf_order_score=max(left.rrf_order_score, right.rrf_order_score),
+        rank_quality_score=max(left.rank_quality_score, right.rank_quality_score),
     )
 
 
@@ -359,15 +380,22 @@ def _ranked_intent_candidates(
     )
 
 
-def _with_rrf_score(
-    candidate: RetrievalCandidate,
-    attempted_channel_count: int,
-) -> RetrievalCandidate:
-    if attempted_channel_count < 1:
+def _with_rrf_score(candidate: RetrievalCandidate) -> RetrievalCandidate:
+    matched_ranks = _matched_channel_ranks(candidate)
+    if not matched_ranks:
         return candidate
-    max_score = attempted_channel_count * _rrf_contribution(rank=1)
-    score = sum(
-        _rrf_contribution(rank=rank)
+    order_score = sum(_rrf_contribution(rank=rank) for rank in matched_ranks)
+    max_rank_quality_score = len(matched_ranks) * _rrf_contribution(rank=1)
+    return replace(
+        candidate,
+        rrf_order_score=order_score,
+        rank_quality_score=min(1.0, order_score / max_rank_quality_score),
+    )
+
+
+def _matched_channel_ranks(candidate: RetrievalCandidate) -> tuple[int, ...]:
+    return tuple(
+        rank
         for rank in (
             candidate.vector_rank,
             candidate.keyword_rank,
@@ -375,7 +403,6 @@ def _with_rrf_score(
         )
         if rank is not None
     )
-    return replace(candidate, rrf_score=min(1.0, score / max_score))
 
 
 def _rrf_contribution(*, rank: int) -> float:
@@ -420,11 +447,13 @@ def _intent_candidate_from_row(row: tuple[Any, ...]) -> RetrievalCandidate:
 
 def _intent_evidence_query_text(
     intents: tuple[QuestionIntent, ...],
+    intent_catalog: IntentCatalog,
 ) -> str:
     terms: list[str] = []
     seen_terms: set[str] = set()
     for intent in intents:
-        for term in sorted(profile_for_intent(intent).lexical_expansion_terms):
+        profile = intent_catalog.profile_for_intent(intent)
+        for term in sorted(profile.lexical_expansion_terms):
             formatted_term = _format_websearch_intent_term(term)
             term_key = formatted_term.casefold()
             if term_key in seen_terms:
@@ -453,6 +482,14 @@ def _format_vector(embedding: tuple[float, ...]) -> str:
     if not embedding:
         raise RetrievalStoreError("query embedding must not be empty")
     return "[" + ",".join(str(value) for value in embedding) + "]"
+
+
+def _require_positive_int(value: int, field_name: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise RetrievalConfigurationError(f"{field_name} must be a positive integer")
+    if value <= 0:
+        raise RetrievalConfigurationError(f"{field_name} must be a positive integer")
+    return value
 
 
 def _optional_text(value: object) -> str | None:

@@ -360,6 +360,38 @@ served by different systems.
 Changing `EMBEDDING_BACKEND` or `EMBEDDING_MODEL` requires re-indexing the
 knowledge base before `/ready` can pass for the new embedding pair.
 
+Intent catalog configuration:
+
+```env
+INTENT_PROFILES_PATH=config/intent-profiles.json
+```
+
+The intent catalog is reviewed matcher configuration. It is loaded by runtime
+composition and used to build the semantic intent resolver shared by retrieval
+and policy flow. It is not knowledge and must not be ingested into PostgreSQL.
+
+Startup fails before provider or database authorities are built if
+`INTENT_PROFILES_PATH` is missing, points to a missing file, points outside the
+allowed public runtime `config/` directory, or loads invalid catalog JSON. There
+is no built-in intent catalog fallback.
+
+The catalog's semantic calibration backend/model must match
+`EMBEDDING_BACKEND` and `EMBEDDING_MODEL`. Changing the embedding model requires
+reviewed semantic threshold recalibration as well as normal knowledge
+re-indexing.
+
+Semantic threshold proposals are generated offline and reviewed manually:
+
+```bash
+portfolio-rag-assistant intent calibrate-semantic \
+  --evaluation tests/fixtures/intent-semantic-evaluation.json \
+  --near-duplicate-report /tmp/intent-near-duplicates.json
+```
+
+The command prints proposed thresholds to stdout and writes only the
+near-duplicate review report under `/tmp`. It must not write the committed
+catalog automatically.
+
 ## Optional Local Model Profiles
 
 The default Compose stack does not start local model services.

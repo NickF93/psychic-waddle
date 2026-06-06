@@ -402,7 +402,9 @@ def test_public_env_validator_checks_explicit_public_runtime_contract() -> None:
         "EMBEDDING_BASE_URL",
         "EMBEDDING_MODEL",
         "RETRIEVAL_TOP_K",
+        "RETRIEVAL_CANDIDATE_FAN_OUT",
         "RETRIEVAL_MIN_SCORE",
+        "INTENT_PROFILES_PATH",
         "QUESTION_COLLECTION_ENABLED",
     ):
         assert key in validate
@@ -414,6 +416,8 @@ def test_public_env_validator_checks_explicit_public_runtime_contract() -> None:
     assert "configured_value EMBEDDING_API_KEY" in validate
     assert "require_llama_model_file LLAMA_CPP_CHAT_MODEL_PATH" in validate
     assert "require_llama_model_file LLAMA_CPP_EMBEDDING_MODEL_PATH" in validate
+    assert "require_config_file INTENT_PROFILES_PATH" in validate
+    assert "must point inside config/" in validate
     assert "require_boolean QUESTION_COLLECTION_ENABLED" in validate
     assert "compose config >/dev/null" in validate
     assert "compose_profile public config >/dev/null" in validate

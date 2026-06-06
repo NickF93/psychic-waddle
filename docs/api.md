@@ -256,7 +256,9 @@ Runtime composition uses only explicit environment names:
 - `EMBEDDING_API_KEY`
 - `EMBEDDING_MODEL`
 - `RETRIEVAL_TOP_K`
+- `RETRIEVAL_CANDIDATE_FAN_OUT`
 - `RETRIEVAL_MIN_SCORE`
+- `INTENT_PROFILES_PATH`
 - `QUESTION_COLLECTION_ENABLED`
 
 No aliases, deprecated names, hidden fallbacks, wildcard CORS defaults, or
@@ -264,18 +266,27 @@ legacy compatibility paths are allowed.
 
 At runtime, composition builds:
 
-1. the configured `ChatProvider`;
-2. the configured `EmbeddingProvider`;
-3. `PostgreSQLRetriever`;
-4. `DeterministicAnswerPolicy`;
-5. `GroundedAnswerGenerator`;
-6. `PublicChatService`;
-7. the database readiness service;
-8. the FastAPI application.
+1. the configured intent catalog;
+2. the configured `ChatProvider`;
+3. the configured `EmbeddingProvider`;
+4. the semantic intent resolver;
+5. `PostgreSQLRetriever`;
+6. `DeterministicAnswerPolicy`;
+7. `GroundedAnswerGenerator`;
+8. `PublicChatService`;
+9. the database readiness service;
+10. the FastAPI application.
 
 The API layer only adapts HTTP input/output and orchestrates these authorities.
 It must not copy prompt text, fallback wording, ranking logic, answerability
 logic, provider payload logic, or database query logic.
+
+The configured intent catalog is required before the API can be served. Missing
+`INTENT_PROFILES_PATH`, a missing catalog file, invalid JSON, or malformed
+catalog data fails startup instead of falling back to built-in vocabulary. The
+catalog semantic calibration backend/model must match the configured embedding
+backend/model, or startup fails before provider or database authorities are
+built.
 
 ## Milestone 5 Acceptance
 

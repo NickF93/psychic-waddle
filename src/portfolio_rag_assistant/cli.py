@@ -24,7 +24,17 @@ from portfolio_rag_assistant.config import (
     load_chat_provider_settings,
     load_database_settings,
     load_embedding_provider_settings,
+    load_intent_catalog_settings,
     load_question_collection_settings,
+)
+from portfolio_rag_assistant.intent import (
+    QuestionIntentProfileError,
+    SemanticIntentCalibrationError,
+    build_near_duplicate_review_report,
+    load_semantic_evaluation_cases,
+    load_intent_catalog,
+    propose_semantic_thresholds,
+    write_tmp_json_report,
 )
 from portfolio_rag_assistant.knowledge import (
     EmbeddingIndexingError,
@@ -90,6 +100,9 @@ def run(
         if args.command == "runtime":
             if args.runtime_command == "smoke":
                 return _run_runtime_smoke(environment, output)
+        if args.command == "intent":
+            if args.intent_command == "calibrate-semantic":
+                return _run_intent_calibrate_semantic(args, environment, output)
         if args.command == "questions":
             if args.questions_command == "list":
                 return _run_questions_list(args, environment, output)
@@ -115,6 +128,8 @@ def run(
         ReadinessCheckError,
         RuntimeConfigurationError,
         LLMProviderError,
+        QuestionIntentProfileError,
+        SemanticIntentCalibrationError,
     ) as error:
         print(f"error: {error}", file=errors)
         return 2
@@ -244,6 +259,14 @@ def _run_runtime_smoke(env: Mapping[str, str], stdout: TextIO) -> int:
     chat_settings = load_chat_provider_settings(env)
     embedding_settings = load_embedding_provider_settings(env)
     question_collection_settings = load_question_collection_settings(env)
+    intent_catalog_settings = load_intent_catalog_settings(env)
+    intent_catalog = load_intent_catalog(intent_catalog_settings.path)
+    _require_matching_semantic_calibration(
+        configured_backend=embedding_settings.backend,
+        configured_model=embedding_settings.model,
+        calibrated_backend=intent_catalog.semantic_calibration.embedding_backend,
+        calibrated_model=intent_catalog.semantic_calibration.embedding_model,
+    )
     chat_provider = build_chat_provider(chat_settings)
     embedding_provider = build_embedding_provider(embedding_settings)
 
@@ -270,6 +293,57 @@ def _run_runtime_smoke(env: Mapping[str, str], stdout: TextIO) -> int:
         file=stdout,
     )
     return 0
+
+
+def _run_intent_calibrate_semantic(
+    args: argparse.Namespace,
+    env: Mapping[str, str],
+    stdout: TextIO,
+) -> int:
+    embedding_settings = load_embedding_provider_settings(env)
+    intent_catalog_settings = load_intent_catalog_settings(env)
+    intent_catalog = load_intent_catalog(intent_catalog_settings.path)
+    _require_matching_semantic_calibration(
+        configured_backend=embedding_settings.backend,
+        configured_model=embedding_settings.model,
+        calibrated_backend=intent_catalog.semantic_calibration.embedding_backend,
+        calibrated_model=intent_catalog.semantic_calibration.embedding_model,
+    )
+    cases = load_semantic_evaluation_cases(
+        path=args.evaluation,
+        catalog=intent_catalog,
+    )
+    write_tmp_json_report(
+        args.near_duplicate_report,
+        build_near_duplicate_review_report(catalog=intent_catalog, cases=cases),
+    )
+    report = asyncio.run(
+        propose_semantic_thresholds(
+            catalog=intent_catalog,
+            provider=build_embedding_provider(embedding_settings),
+            embedding_model=embedding_settings.model,
+            evaluation_path=args.evaluation,
+        )
+    )
+    print(json.dumps(report.to_json(), indent=2, sort_keys=True), file=stdout)
+    return 0
+
+
+def _require_matching_semantic_calibration(
+    *,
+    configured_backend: str,
+    configured_model: str,
+    calibrated_backend: str,
+    calibrated_model: str,
+) -> None:
+    if (
+        configured_backend != calibrated_backend
+        or configured_model != calibrated_model
+    ):
+        raise CommandError(
+            "intent semantic calibration must match configured embedding backend "
+            "and model"
+        )
 
 
 async def _check_provider_reachability(
@@ -321,6 +395,22 @@ def _build_parser() -> argparse.ArgumentParser:
     runtime = subcommands.add_parser("runtime")
     runtime_subcommands = runtime.add_subparsers(dest="runtime_command")
     runtime_subcommands.add_parser("smoke")
+
+    intent = subcommands.add_parser("intent")
+    intent_subcommands = intent.add_subparsers(dest="intent_command")
+    calibrate_semantic = intent_subcommands.add_parser("calibrate-semantic")
+    calibrate_semantic.add_argument(
+        "--evaluation",
+        required=True,
+        type=Path,
+        help="labeled semantic intent calibration fixture",
+    )
+    calibrate_semantic.add_argument(
+        "--near-duplicate-report",
+        required=True,
+        type=Path,
+        help="manual near-duplicate review report path under /tmp",
+    )
 
     questions = subcommands.add_parser("questions")
     question_subcommands = questions.add_subparsers(dest="questions_command")

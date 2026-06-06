@@ -13,6 +13,7 @@ RUN addgroup --system app && adduser --system --ingroup app app
 COPY pyproject.toml requirements.lock PLAN.md LICENSE ./
 COPY src ./src
 COPY migrations ./migrations
+COPY config ./config
 
 RUN python -m pip install --constraint requirements.lock .
 

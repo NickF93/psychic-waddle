@@ -8,11 +8,9 @@ from dataclasses import dataclass
 from typing import Literal, Protocol, runtime_checkable
 
 from portfolio_rag_assistant.intent import (
+    IntentResolution,
+    IntentCatalog,
     QuestionIntent,
-    categories_for_intents,
-    detect_question_intents,
-    profile_for_intent,
-    text_satisfies_intent_evidence,
 )
 from portfolio_rag_assistant.retrieval import RetrievedContext
 
@@ -55,6 +53,7 @@ class AnswerPolicyRequest:
 
     question: str
     retrieved_context: tuple[RetrievedContext, ...]
+    intent_resolution: IntentResolution
     min_score: float
 
     def __post_init__(self) -> None:
@@ -64,6 +63,10 @@ class AnswerPolicyRequest:
             RetrievedContext,
             "retrieved_context",
         )
+        if not isinstance(self.intent_resolution, IntentResolution):
+            raise AnswerPolicyRequestError(
+                "intent_resolution must be an IntentResolution"
+            )
         _require_score_threshold(self.min_score, "min_score")
 
 
@@ -106,6 +109,9 @@ class AnswerPolicy(Protocol):
 class DeterministicAnswerPolicy:
     """Simple source-backed answerability policy."""
 
+    def __init__(self, *, intent_catalog: IntentCatalog) -> None:
+        self._intent_catalog = intent_catalog
+
     def decide(self, request: AnswerPolicyRequest) -> AnswerPolicyDecision:
         usable_context = _contexts_at_or_above_score(
             request.retrieved_context,
@@ -116,7 +122,7 @@ class DeterministicAnswerPolicy:
         if not usable_context:
             return _not_answerable("low_confidence_context")
 
-        question_intents = detect_question_intents(request.question)
+        question_intents = request.intent_resolution.required_intents
         if not question_intents:
             if _is_broad_question(request.question):
                 return AnswerPolicyDecision(
@@ -125,7 +131,9 @@ class DeterministicAnswerPolicy:
                 )
             return _not_answerable("unsupported_question_category")
 
-        question_categories = categories_for_intents(question_intents)
+        question_categories = self._intent_catalog.categories_for_intents(
+            question_intents
+        )
         context_categories = {context.category for context in usable_context}
         if not set(question_categories).issubset(context_categories):
             return _not_answerable("unsupported_question_category")
@@ -137,6 +145,7 @@ class DeterministicAnswerPolicy:
         approved_context = _contexts_with_intent_support(
             approved_context,
             question_intents,
+            self._intent_catalog,
         )
         if not approved_context:
             return _not_answerable("insufficient_intent_support")
@@ -163,16 +172,20 @@ def _contexts_at_or_above_score(
 def _contexts_with_intent_support(
     contexts: tuple[RetrievedContext, ...],
     intents: tuple[QuestionIntent, ...],
+    intent_catalog: IntentCatalog,
 ) -> tuple[RetrievedContext, ...]:
     selected: list[RetrievedContext] = []
     selected_chunk_ids: set[int] = set()
     for intent in intents:
-        profile = profile_for_intent(intent)
+        profile = intent_catalog.profile_for_intent(intent)
         matching_contexts = tuple(
             context
             for context in contexts
             if context.category in profile.accepted_categories
-            and text_satisfies_intent_evidence(context.chunk_text, intent)
+            and intent_catalog.text_satisfies_intent_evidence(
+                context.chunk_text,
+                intent,
+            )
         )
         if not matching_contexts:
             return ()
