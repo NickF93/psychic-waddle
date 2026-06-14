@@ -94,6 +94,8 @@ RETRIEVAL_MIN_SCORE=0.3
 INTENT_PROFILES_PATH=config/intent-profiles.json
 QUESTION_COLLECTION_ENABLED=false
 
+OLLAMA_KEEP_ALIVE=-1
+
 LLAMA_CPP_MODEL_DIR=./models
 LLAMA_CPP_CHAT_MODEL_PATH=/models/replace-with-chat-model.gguf
 LLAMA_CPP_EMBEDDING_MODEL_PATH=/models/replace-with-embedding-model.gguf
@@ -189,9 +191,13 @@ Check Ollama and the installed models:
 ```sh
 docker compose --env-file .env --profile ollama ps
 docker compose --env-file .env --profile ollama exec ollama ollama list
+docker compose --env-file .env --profile ollama exec ollama ollama ps
 ```
 
-Expected result: `llama3.2` and `nomic-embed-text` are listed.
+Expected result: `llama3.2` and `nomic-embed-text` are listed, and the chat
+model appears in `ollama ps`. `OLLAMA_KEEP_ALIVE=-1` keeps loaded Ollama models
+resident, so the host must have enough memory for the configured local model or
+models.
 
 ## 6. Use The Reviewed Knowledge File
 
@@ -499,6 +505,12 @@ For later code/config updates after the certificate exists, use:
 
 ```sh
 PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-upgrade.sh --tls-runtime
+```
+
+After an Ollama-backed upgrade, verify that the model remains loaded:
+
+```sh
+docker compose --env-file .env --profile ollama exec ollama ollama ps
 ```
 
 The public smoke script checks both portfolio CORS origins, rejection of an

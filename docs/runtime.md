@@ -416,6 +416,7 @@ Use Ollama for embeddings:
 EMBEDDING_BACKEND=ollama
 EMBEDDING_BASE_URL=http://ollama:11434/api
 EMBEDDING_MODEL=nomic-embed-text
+OLLAMA_KEEP_ALIVE=-1
 ```
 
 Use Ollama for chat:
@@ -424,7 +425,12 @@ Use Ollama for chat:
 CHAT_BACKEND=ollama
 CHAT_BASE_URL=http://ollama:11434/api
 CHAT_MODEL=llama3.2
+OLLAMA_KEEP_ALIVE=-1
 ```
+
+`OLLAMA_KEEP_ALIVE=-1` keeps loaded Ollama models resident. This avoids the
+cold first request after an idle period, but it requires enough system memory
+for the selected local model or models.
 
 Model download is explicit. Use the matching setup script for the configured
 capability:
@@ -439,6 +445,13 @@ Equivalent manual commands are:
 ```sh
 docker compose --env-file .env --profile ollama exec ollama ollama pull llama3.2
 docker compose --env-file .env --profile ollama exec ollama ollama pull nomic-embed-text
+```
+
+The chat setup and start scripts also preload the configured chat model. Check
+the resident model list with:
+
+```sh
+docker compose --env-file .env --profile ollama exec ollama ollama ps
 ```
 
 Ollama model data is stored in the `ollama-models` named volume.

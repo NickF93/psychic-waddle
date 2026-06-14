@@ -6,6 +6,8 @@ SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 
 require_backend CHAT_BACKEND ollama
 CHAT_MODEL_NAME=$(configured_value CHAT_MODEL)
+require_ollama_keep_alive
 compose_profile ollama config >/dev/null
 compose_profile_up_wait ollama ollama
 compose_profile ollama exec -T ollama ollama pull "$CHAT_MODEL_NAME"
+warm_ollama_chat_model
