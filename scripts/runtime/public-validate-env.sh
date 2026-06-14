@@ -89,6 +89,15 @@ require_llama_cpp_when_selected() {
     fi
 }
 
+require_ollama_when_selected() {
+    CHAT_BACKEND_VALUE=$(configured_value CHAT_BACKEND)
+    EMBEDDING_BACKEND_VALUE=$(configured_value EMBEDDING_BACKEND)
+
+    if [ "$CHAT_BACKEND_VALUE" = "ollama" ] || [ "$EMBEDDING_BACKEND_VALUE" = "ollama" ]; then
+        configured_value OLLAMA_KEEP_ALIVE >/dev/null
+    fi
+}
+
 require_local_api_bind
 require_integer API_PORT
 require_integer PUBLIC_HTTP_PORT
@@ -110,6 +119,7 @@ configured_value EMBEDDING_BASE_URL >/dev/null
 configured_value EMBEDDING_MODEL >/dev/null
 require_provider_keys
 require_llama_cpp_when_selected
+require_ollama_when_selected
 
 require_integer RETRIEVAL_TOP_K
 require_integer RETRIEVAL_CANDIDATE_FAN_OUT

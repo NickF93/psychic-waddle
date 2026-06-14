@@ -120,6 +120,18 @@ require_backend() {
     [ "$ACTUAL_BACKEND" = "$EXPECTED_BACKEND" ] || fail "$BACKEND_KEY must be $EXPECTED_BACKEND in $ENV_FILE"
 }
 
+require_ollama_keep_alive() {
+    configured_value OLLAMA_KEEP_ALIVE >/dev/null
+}
+
+warm_ollama_chat_model() {
+    CHAT_MODEL_NAME=$(configured_value CHAT_MODEL)
+    require_ollama_keep_alive
+    compose_profile ollama exec -T ollama ollama run "$CHAT_MODEL_NAME" "" >/dev/null
+    compose_profile ollama exec -T ollama ollama ps | grep -F "$CHAT_MODEL_NAME" >/dev/null \
+        || fail "Ollama chat model did not remain loaded: $CHAT_MODEL_NAME"
+}
+
 configured_value() {
     VALUE_KEY=$1
     VALUE=$(env_value "$VALUE_KEY")
