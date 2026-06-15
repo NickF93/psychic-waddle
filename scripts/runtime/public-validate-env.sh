@@ -96,6 +96,9 @@ require_ollama_when_selected() {
     if [ "$CHAT_BACKEND_VALUE" = "ollama" ] || [ "$EMBEDDING_BACKEND_VALUE" = "ollama" ]; then
         configured_value OLLAMA_KEEP_ALIVE >/dev/null
     fi
+    if [ "$CHAT_BACKEND_VALUE" = "ollama" ]; then
+        configured_value OLLAMA_CHAT_WARMUP_PROMPT >/dev/null
+    fi
 }
 
 require_local_api_bind

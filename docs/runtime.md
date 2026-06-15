@@ -426,11 +426,13 @@ CHAT_BACKEND=ollama
 CHAT_BASE_URL=http://ollama:11434/api
 CHAT_MODEL=llama3.2
 OLLAMA_KEEP_ALIVE=-1
+OLLAMA_CHAT_WARMUP_PROMPT="Reply with OK."
 ```
 
 `OLLAMA_KEEP_ALIVE=-1` keeps loaded Ollama models resident. This avoids the
 cold first request after an idle period, but it requires enough system memory
-for the selected local model or models.
+for the selected local model or models. `OLLAMA_CHAT_WARMUP_PROMPT` is required
+for Ollama chat and is used only by the setup/start warmup command.
 
 Model download is explicit. Use the matching setup script for the configured
 capability:
@@ -447,8 +449,9 @@ docker compose --env-file .env --profile ollama exec ollama ollama pull llama3.2
 docker compose --env-file .env --profile ollama exec ollama ollama pull nomic-embed-text
 ```
 
-The chat setup and start scripts also preload the configured chat model. Check
-the resident model list with:
+The chat setup and start scripts also warm the configured chat model through a
+timeout-bounded non-interactive prompt, then verify that it remains in Ollama's
+loaded-model list. Check the resident model list with:
 
 ```sh
 docker compose --env-file .env --profile ollama exec ollama ollama ps

@@ -35,6 +35,15 @@ compose_profile() {
     compose --profile "$PROFILE_NAME" "$@"
 }
 
+compose_profile_exec_timeout() {
+    PROFILE_NAME=$1
+    shift
+    require_command docker
+    require_command timeout
+    require_env_file
+    (cd "$ROOT_DIR" && timeout "$(wait_timeout)" docker compose --env-file "$ENV_FILE" --profile "$PROFILE_NAME" exec -T "$@")
+}
+
 compose_config() {
     compose config >/dev/null
 }
@@ -126,9 +135,14 @@ require_ollama_keep_alive() {
 
 warm_ollama_chat_model() {
     CHAT_MODEL_NAME=$(configured_value CHAT_MODEL)
+    CHAT_WARMUP_PROMPT=$(configured_value OLLAMA_CHAT_WARMUP_PROMPT)
     require_ollama_keep_alive
-    compose_profile ollama exec -T ollama ollama run "$CHAT_MODEL_NAME" "" >/dev/null
-    compose_profile ollama exec -T ollama ollama ps | grep -F "$CHAT_MODEL_NAME" >/dev/null \
+    info "warming Ollama chat model: $CHAT_MODEL_NAME"
+    compose_profile_exec_timeout ollama ollama ollama run "$CHAT_MODEL_NAME" "$CHAT_WARMUP_PROMPT" >/dev/null \
+        || fail "Ollama chat model warmup failed or timed out: $CHAT_MODEL_NAME"
+    OLLAMA_LOADED_MODELS=$(compose_profile_exec_timeout ollama ollama ollama ps) \
+        || fail "Ollama loaded-model verification failed or timed out: $CHAT_MODEL_NAME"
+    printf '%s\n' "$OLLAMA_LOADED_MODELS" | grep -F "$CHAT_MODEL_NAME" >/dev/null \
         || fail "Ollama chat model did not remain loaded: $CHAT_MODEL_NAME"
 }
 

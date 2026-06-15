@@ -253,6 +253,9 @@ names, or hidden fallbacks are allowed.
 - `EMBEDDING_MODEL`: embedding model name.
 - `OLLAMA_KEEP_ALIVE`: Ollama model residency setting, required when either
   chat or embeddings use the Ollama backend.
+- `OLLAMA_CHAT_WARMUP_PROMPT`: prompt used by runtime setup/start scripts to
+  warm the configured Ollama chat model, required when chat uses the Ollama
+  backend.
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: PostgreSQL
   connection fields.
 - `RETRIEVAL_TOP_K`: number of ranked chunks returned by retrieval.

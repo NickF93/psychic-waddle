@@ -267,6 +267,10 @@ loaded local models remain resident between visitor requests. This prevents
 idle cold-start latency, but the server must have enough memory for the loaded
 model or models.
 
+When the chat backend is Ollama, also set `OLLAMA_CHAT_WARMUP_PROMPT` so the
+runtime setup/start scripts can warm the configured chat model before serving
+traffic.
+
 `public-smoke.sh` defaults to the local HTTP edge:
 
 ```sh

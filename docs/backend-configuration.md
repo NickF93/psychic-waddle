@@ -29,6 +29,7 @@ defaults.
 | `EMBEDDING_MODEL` | Yes | Embedding model used for indexing and retrieval. |
 | `EMBEDDING_API_KEY` | No | Optional bearer token for embedding requests. |
 | `OLLAMA_KEEP_ALIVE` | When Ollama is selected | Ollama model residency setting passed to the Ollama service. Use `-1` for resident local models when the host has enough memory. |
+| `OLLAMA_CHAT_WARMUP_PROMPT` | When Ollama chat is selected | Prompt used by runtime setup/start scripts to warm the configured Ollama chat model before serving traffic. |
 
 Use one provider for both capabilities by setting both base URLs to the same
 API root:

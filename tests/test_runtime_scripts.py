@@ -204,8 +204,13 @@ def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
         in _script("ollama-chat-setup.sh")
     )
     assert "warm_ollama_chat_model" in _script("ollama-chat-setup.sh")
-    assert "ollama run" in _script("_common.sh")
-    assert "ollama ps" in _script("_common.sh")
+    common = _script("_common.sh")
+    assert "compose_profile_exec_timeout" in common
+    assert 'require_command timeout' in common
+    assert "OLLAMA_CHAT_WARMUP_PROMPT" in common
+    assert 'ollama run "$CHAT_MODEL_NAME" "$CHAT_WARMUP_PROMPT"' in common
+    assert 'ollama run "$CHAT_MODEL_NAME" ""' not in common
+    assert "ollama ps" in common
     assert "require_backend EMBEDDING_BACKEND ollama" in _script(
         "ollama-embeddings-setup.sh"
     )
@@ -414,6 +419,7 @@ def test_public_env_validator_checks_explicit_public_runtime_contract() -> None:
         "EMBEDDING_BASE_URL",
         "EMBEDDING_MODEL",
         "OLLAMA_KEEP_ALIVE",
+        "OLLAMA_CHAT_WARMUP_PROMPT",
         "RETRIEVAL_TOP_K",
         "RETRIEVAL_CANDIDATE_FAN_OUT",
         "RETRIEVAL_MIN_SCORE",
@@ -429,6 +435,7 @@ def test_public_env_validator_checks_explicit_public_runtime_contract() -> None:
     assert "configured_value EMBEDDING_API_KEY" in validate
     assert "require_ollama_when_selected" in validate
     assert "configured_value OLLAMA_KEEP_ALIVE" in validate
+    assert "configured_value OLLAMA_CHAT_WARMUP_PROMPT" in validate
     assert "require_llama_model_file LLAMA_CPP_CHAT_MODEL_PATH" in validate
     assert "require_llama_model_file LLAMA_CPP_EMBEDDING_MODEL_PATH" in validate
     assert "require_config_file INTENT_PROFILES_PATH" in validate

@@ -95,6 +95,7 @@ INTENT_PROFILES_PATH=config/intent-profiles.json
 QUESTION_COLLECTION_ENABLED=false
 
 OLLAMA_KEEP_ALIVE=-1
+OLLAMA_CHAT_WARMUP_PROMPT="Reply with OK."
 
 LLAMA_CPP_MODEL_DIR=./models
 LLAMA_CPP_CHAT_MODEL_PATH=/models/replace-with-chat-model.gguf
@@ -195,9 +196,10 @@ docker compose --env-file .env --profile ollama exec ollama ollama ps
 ```
 
 Expected result: `llama3.2` and `nomic-embed-text` are listed, and the chat
-model appears in `ollama ps`. `OLLAMA_KEEP_ALIVE=-1` keeps loaded Ollama models
-resident, so the host must have enough memory for the configured local model or
-models.
+model appears in `ollama ps`. The chat setup and start scripts warm the chat
+model through a timeout-bounded non-interactive prompt before checking the
+loaded-model list. `OLLAMA_KEEP_ALIVE=-1` keeps loaded Ollama models resident,
+so the host must have enough memory for the configured local model or models.
 
 ## 6. Use The Reviewed Knowledge File
 
