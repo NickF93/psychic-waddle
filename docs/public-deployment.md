@@ -262,10 +262,9 @@ Provider setup and start behavior is selected from `.env`:
 - `EMBEDDING_BACKEND=llama-cpp` starts the llama.cpp embedding path.
 - `EMBEDDING_BACKEND=openai-compatible` starts no local embedding service.
 
-When either Ollama path is selected, set `OLLAMA_KEEP_ALIVE=-1` in `.env` so
-loaded local models remain resident between visitor requests. This prevents
-idle cold-start latency, but the server must have enough memory for the loaded
-model or models.
+When Ollama is selected, set `OLLAMA_KEEP_ALIVE`. On the portfolio VPS,
+`OLLAMA_KEEP_ALIVE=-1` keeps the chat model resident; setup and start preload
+the chat model through Ollama's HTTP API and verify it through `/api/ps`.
 
 `public-smoke.sh` defaults to the local HTTP edge:
 
@@ -360,12 +359,6 @@ RUNTIME_WAIT_TIMEOUT_SECONDS=600 scripts/runtime/public-upgrade.sh
 The upgrade script refreshes committed `knowledge/profile.json` by default. Use
 `--skip-knowledge-refresh` only for an emergency deploy where the database
 knowledge must be left untouched.
-
-For Ollama-backed public deployments, verify residency after upgrade:
-
-```sh
-docker compose --env-file .env --profile ollama exec ollama ollama ps
-```
 
 `public-deploy.sh` intentionally does not issue or renew certificates. Prefer
 `public-upgrade.sh` for normal updates, use `public-setup.sh

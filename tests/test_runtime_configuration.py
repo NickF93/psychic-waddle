@@ -316,6 +316,7 @@ def test_env_example_contains_placeholders_not_real_secrets() -> None:
     assert values["EMBEDDING_BASE_URL"] == "https://example.invalid/v1"
     assert values["INTENT_PROFILES_PATH"] == "config/intent-profiles.json"
     assert values["QUESTION_COLLECTION_ENABLED"] == "false"
+    assert values["OLLAMA_KEEP_ALIVE"] == "-1"
     assert not values["CHAT_API_KEY"].startswith("sk-")
     assert not values["EMBEDDING_API_KEY"].startswith("sk-")
 

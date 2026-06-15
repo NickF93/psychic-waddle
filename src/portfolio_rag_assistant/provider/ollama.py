@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from numbers import Real
 from typing import Any
 from urllib.parse import urlparse
@@ -76,6 +77,59 @@ class OllamaProvider:
             embeddings=_read_embeddings(response_payload, len(request.inputs)),
         )
 
+    async def preload_model(self, *, model: str, keep_alive: str) -> None:
+        payload: dict[str, Any] = {
+            "model": _require_model_name(model),
+            "prompt": " ",
+            "stream": False,
+            "keep_alive": _read_keep_alive(keep_alive),
+            "options": {"num_predict": 1},
+        }
+        await self._post_json("/generate", payload)
+
+    async def loaded_models(self) -> tuple[str, ...]:
+        payload = await self._get_json("/ps")
+        models = payload.get("models")
+        if not isinstance(models, list):
+            raise LLMProviderResponseError("provider model list must be a JSON array")
+
+        loaded = []
+        for model in models:
+            if not isinstance(model, dict):
+                raise LLMProviderResponseError("provider model entry must be an object")
+            for key in ("model", "name"):
+                name = model.get(key)
+                if isinstance(name, str) and name.strip():
+                    loaded.append(name.strip())
+        return tuple(dict.fromkeys(loaded))
+
+    async def model_is_loaded(self, *, model: str) -> bool:
+        expected_model = _require_model_name(model)
+        loaded_models = await self.loaded_models()
+        return any(
+            _model_name_matches(expected=expected_model, loaded=loaded_model)
+            for loaded_model in loaded_models
+        )
+
+    async def _get_json(self, path: str) -> dict[str, Any]:
+        headers = {}
+        if self._api_key is not None:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=self._timeout,
+                transport=self._transport,
+            ) as client:
+                response = await client.get(
+                    f"{self._base_url}{path}",
+                    headers=headers,
+                )
+        except httpx.TransportError as exc:
+            raise LLMProviderTransportError("provider transport failed") from exc
+
+        return _read_json_response(response)
+
     async def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         headers = {}
         if self._api_key is not None:
@@ -94,19 +148,25 @@ class OllamaProvider:
         except httpx.TransportError as exc:
             raise LLMProviderTransportError("provider transport failed") from exc
 
-        if not 200 <= response.status_code <= 299:
-            raise LLMProviderRequestError(
-                f"provider returned HTTP {response.status_code}"
-            )
+        return _read_json_response(response)
 
-        try:
-            data = response.json()
-        except ValueError as exc:
-            raise LLMProviderResponseError("provider returned invalid JSON") from exc
 
-        if not isinstance(data, dict):
-            raise LLMProviderResponseError("provider response must be a JSON object")
-        return data
+def _read_json_response(response: httpx.Response) -> dict[str, Any]:
+    if not 200 <= response.status_code <= 299:
+        detail = response.text.strip()
+        message = f"provider returned HTTP {response.status_code}"
+        if detail:
+            message = f"{message}: {detail}"
+        raise LLMProviderRequestError(message)
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise LLMProviderResponseError("provider returned invalid JSON") from exc
+
+    if not isinstance(data, dict):
+        raise LLMProviderResponseError("provider response must be a JSON object")
+    return data
 
 
 def _normalize_base_url(value: str) -> str:
@@ -132,6 +192,29 @@ def _require_positive_timeout(value: float) -> float:
     if isinstance(value, bool) or not isinstance(value, Real) or value <= 0:
         raise LLMProviderConfigurationError("timeout must be positive")
     return float(value)
+
+
+def _require_model_name(value: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise LLMProviderConfigurationError("model must be set")
+    return value.strip()
+
+
+def _read_keep_alive(value: str) -> str | int:
+    if not isinstance(value, str) or not value.strip():
+        raise LLMProviderConfigurationError("keep_alive must be set")
+    keep_alive = value.strip()
+    if re.fullmatch(r"-?[0-9]+", keep_alive):
+        return int(keep_alive)
+    return keep_alive
+
+
+def _model_name_matches(*, expected: str, loaded: str) -> bool:
+    if loaded == expected:
+        return True
+    if ":" not in expected and loaded == f"{expected}:latest":
+        return True
+    return False
 
 
 def _read_model(payload: dict[str, Any]) -> str:
