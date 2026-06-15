@@ -251,8 +251,6 @@ names, or hidden fallbacks are allowed.
 - `EMBEDDING_BASE_URL`: base URL for embedding requests.
 - `EMBEDDING_API_KEY`: optional API key for embedding requests.
 - `EMBEDDING_MODEL`: embedding model name.
-- `OLLAMA_KEEP_ALIVE`: Ollama model residency setting, required when either
-  chat or embeddings use the Ollama backend.
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: PostgreSQL
   connection fields.
 - `RETRIEVAL_TOP_K`: number of ranked chunks returned by retrieval.

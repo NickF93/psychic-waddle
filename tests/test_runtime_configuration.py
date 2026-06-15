@@ -172,9 +172,6 @@ def test_compose_local_llms_are_profile_gated() -> None:
     services = _compose()["services"]
 
     assert services["ollama"]["profiles"] == ["ollama"]
-    assert services["ollama"]["environment"]["OLLAMA_KEEP_ALIVE"] == (
-        "${OLLAMA_KEEP_ALIVE}"
-    )
     assert services["llama-cpp-chat"]["profiles"] == ["llama-cpp"]
     assert services["llama-cpp-embeddings"]["profiles"] == ["llama-cpp"]
 
