@@ -114,13 +114,72 @@ def test_ollama_embed_uses_native_embed_endpoint_with_optional_auth() -> None:
     assert response.embeddings == ((0.1, 0.2), (0.3, 0.4))
 
 
+def test_ollama_preload_sends_generate_payload_with_numeric_keep_alive() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/api/generate"
+        assert json.loads(request.content) == {
+            "model": "qwen2.5:3b-instruct",
+            "prompt": " ",
+            "stream": False,
+            "keep_alive": -1,
+            "options": {"num_predict": 1},
+        }
+        return httpx.Response(200, json={"model": "qwen2.5:3b-instruct"})
+
+    provider = OllamaProvider(
+        base_url="http://localhost:11434/api",
+        transport=httpx.MockTransport(handler),
+    )
+
+    run_async(
+        provider.preload_model(model="qwen2.5:3b-instruct", keep_alive="-1")
+    )
+
+
+def test_ollama_preload_preserves_duration_keep_alive() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert json.loads(request.content)["keep_alive"] == "10m"
+        return httpx.Response(200, json={"model": "llama3.2"})
+
+    provider = OllamaProvider(
+        base_url="http://localhost:11434/api",
+        transport=httpx.MockTransport(handler),
+    )
+
+    run_async(provider.preload_model(model="llama3.2", keep_alive="10m"))
+
+
+def test_ollama_model_residency_reads_loaded_models() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/api/ps"
+        return httpx.Response(
+            200,
+            json={
+                "models": [
+                    {"model": "llama3.2:latest"},
+                    {"name": "qwen2.5:3b-instruct"},
+                ],
+            },
+        )
+
+    provider = OllamaProvider(
+        base_url="http://localhost:11434/api",
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert run_async(provider.model_is_loaded(model="llama3.2")) is True
+    assert run_async(provider.model_is_loaded(model="qwen2.5:3b-instruct")) is True
+
+
 def test_ollama_provider_maps_http_errors() -> None:
     provider = OllamaProvider(
         base_url="http://localhost:11434/api",
-        transport=httpx.MockTransport(lambda request: httpx.Response(404)),
+        transport=httpx.MockTransport(lambda request: httpx.Response(404, text="nope")),
     )
 
-    with pytest.raises(LLMProviderRequestError):
+    with pytest.raises(LLMProviderRequestError, match="HTTP 404: nope"):
         run_async(
             provider.chat(
                 ChatRequest(

@@ -262,6 +262,10 @@ Provider setup and start behavior is selected from `.env`:
 - `EMBEDDING_BACKEND=llama-cpp` starts the llama.cpp embedding path.
 - `EMBEDDING_BACKEND=openai-compatible` starts no local embedding service.
 
+When Ollama is selected, set `OLLAMA_KEEP_ALIVE`. On the portfolio VPS,
+`OLLAMA_KEEP_ALIVE=-1` keeps the chat model resident; setup and start preload
+the chat model through Ollama's HTTP API and verify it through `/api/ps`.
+
 `public-smoke.sh` defaults to the local HTTP edge:
 
 ```sh

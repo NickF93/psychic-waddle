@@ -94,6 +94,8 @@ RETRIEVAL_MIN_SCORE=0.3
 INTENT_PROFILES_PATH=config/intent-profiles.json
 QUESTION_COLLECTION_ENABLED=false
 
+OLLAMA_KEEP_ALIVE=-1
+
 LLAMA_CPP_MODEL_DIR=./models
 LLAMA_CPP_CHAT_MODEL_PATH=/models/replace-with-chat-model.gguf
 LLAMA_CPP_EMBEDDING_MODEL_PATH=/models/replace-with-embedding-model.gguf
@@ -104,6 +106,10 @@ EOF
 If this server already had an older `.env`, verify that the complete public
 deployment block above is present. Compose intentionally fails when public edge
 variables are missing instead of silently defaulting to an occupied port.
+
+`OLLAMA_KEEP_ALIVE=-1` keeps Ollama models resident on the portfolio VPS. Runtime
+setup preloads the configured chat model through Ollama's HTTP API and verifies
+it through `/api/ps`.
 
 Validate the Compose configuration:
 

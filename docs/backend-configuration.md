@@ -28,6 +28,7 @@ defaults.
 | `EMBEDDING_BASE_URL` | Yes | API root URL for embedding requests. |
 | `EMBEDDING_MODEL` | Yes | Embedding model used for indexing and retrieval. |
 | `EMBEDDING_API_KEY` | No | Optional bearer token for embedding requests. |
+| `OLLAMA_KEEP_ALIVE` | When Ollama is selected | Ollama model residency setting passed to the Ollama service. Use `-1` when local models should remain resident. |
 
 Use one provider for both capabilities by setting both base URLs to the same
 API root:
@@ -55,6 +56,7 @@ CHAT_API_KEY=replace-me
 EMBEDDING_BACKEND=ollama
 EMBEDDING_BASE_URL=http://localhost:11434/api
 EMBEDDING_MODEL=nomic-embed-text
+OLLAMA_KEEP_ALIVE=-1
 ```
 
 ## Provider Routes

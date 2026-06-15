@@ -172,6 +172,9 @@ def test_compose_local_llms_are_profile_gated() -> None:
     services = _compose()["services"]
 
     assert services["ollama"]["profiles"] == ["ollama"]
+    assert services["ollama"]["environment"]["OLLAMA_KEEP_ALIVE"] == (
+        "${OLLAMA_KEEP_ALIVE}"
+    )
     assert services["llama-cpp-chat"]["profiles"] == ["llama-cpp"]
     assert services["llama-cpp-embeddings"]["profiles"] == ["llama-cpp"]
 
@@ -313,6 +316,7 @@ def test_env_example_contains_placeholders_not_real_secrets() -> None:
     assert values["EMBEDDING_BASE_URL"] == "https://example.invalid/v1"
     assert values["INTENT_PROFILES_PATH"] == "config/intent-profiles.json"
     assert values["QUESTION_COLLECTION_ENABLED"] == "false"
+    assert values["OLLAMA_KEEP_ALIVE"] == "-1"
     assert not values["CHAT_API_KEY"].startswith("sk-")
     assert not values["EMBEDDING_API_KEY"].startswith("sk-")
 

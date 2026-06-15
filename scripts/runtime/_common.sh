@@ -120,6 +120,20 @@ require_backend() {
     [ "$ACTUAL_BACKEND" = "$EXPECTED_BACKEND" ] || fail "$BACKEND_KEY must be $EXPECTED_BACKEND in $ENV_FILE"
 }
 
+require_ollama_keep_alive() {
+    configured_value OLLAMA_KEEP_ALIVE >/dev/null
+}
+
+preload_ollama_model() {
+    MODEL_NAME=$1
+    KEEP_ALIVE_VALUE=$(configured_value OLLAMA_KEEP_ALIVE)
+    compose_profile ollama run --rm api \
+        portfolio-rag-assistant runtime preload-ollama-model \
+        --base-url http://ollama:11434/api \
+        --model "$MODEL_NAME" \
+        --keep-alive "$KEEP_ALIVE_VALUE"
+}
+
 configured_value() {
     VALUE_KEY=$1
     VALUE=$(env_value "$VALUE_KEY")

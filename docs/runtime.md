@@ -416,6 +416,7 @@ Use Ollama for embeddings:
 EMBEDDING_BACKEND=ollama
 EMBEDDING_BASE_URL=http://ollama:11434/api
 EMBEDDING_MODEL=nomic-embed-text
+OLLAMA_KEEP_ALIVE=-1
 ```
 
 Use Ollama for chat:
@@ -424,6 +425,7 @@ Use Ollama for chat:
 CHAT_BACKEND=ollama
 CHAT_BASE_URL=http://ollama:11434/api
 CHAT_MODEL=llama3.2
+OLLAMA_KEEP_ALIVE=-1
 ```
 
 Model download is explicit. Use the matching setup script for the configured
@@ -433,6 +435,11 @@ capability:
 scripts/runtime/ollama-chat-setup.sh
 scripts/runtime/ollama-embeddings-setup.sh
 ```
+
+When Ollama chat is selected, setup and start preload the configured chat model
+through Ollama's HTTP API and verify residency through `/api/ps`. Use
+`OLLAMA_KEEP_ALIVE=-1` on small CPU-only deployments when the chat model should
+remain resident between requests.
 
 Equivalent manual commands are:
 
