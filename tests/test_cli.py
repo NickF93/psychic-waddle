@@ -154,6 +154,49 @@ def test_runtime_smoke_requires_intent_catalog_settings() -> None:
     assert "INTENT_PROFILES_PATH must be set" in stderr.getvalue()
 
 
+def test_runtime_preload_ollama_model_uses_provider_residency(monkeypatch) -> None:
+    created: list[Any] = []
+    stdout = StringIO()
+
+    class FakeOllamaProvider:
+        def __init__(self, *, base_url: str, timeout: float) -> None:
+            self.base_url = base_url
+            self.timeout = timeout
+            self.preload_calls: list[tuple[str, str]] = []
+            created.append(self)
+
+        async def preload_model(self, *, model: str, keep_alive: str) -> None:
+            self.preload_calls.append((model, keep_alive))
+
+        async def model_is_loaded(self, *, model: str) -> bool:
+            return model == "qwen2.5:3b-instruct"
+
+    monkeypatch.setattr(cli, "OllamaProvider", FakeOllamaProvider)
+
+    exit_code = cli.run(
+        (
+            "runtime",
+            "preload-ollama-model",
+            "--base-url",
+            "http://ollama:11434/api",
+            "--model",
+            "qwen2.5:3b-instruct",
+            "--keep-alive",
+            "-1",
+            "--timeout",
+            "7",
+        ),
+        stdout=stdout,
+    )
+
+    assert exit_code == 0
+    assert len(created) == 1
+    assert created[0].base_url == "http://ollama:11434/api"
+    assert created[0].timeout == 7
+    assert created[0].preload_calls == [("qwen2.5:3b-instruct", "-1")]
+    assert "ollama model resident: qwen2.5:3b-instruct" in stdout.getvalue()
+
+
 def test_runtime_smoke_rejects_stale_semantic_calibration(monkeypatch) -> None:
     provider_calls: list[str] = []
     stdout = StringIO()

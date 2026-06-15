@@ -10,4 +10,4 @@ require_ollama_keep_alive
 compose_profile ollama config >/dev/null
 compose_profile_up_wait ollama ollama
 compose_profile ollama exec -T ollama ollama pull "$CHAT_MODEL_NAME"
-warm_ollama_chat_model
+preload_ollama_model "$CHAT_MODEL_NAME"

@@ -54,6 +54,7 @@ from portfolio_rag_assistant.provider import (
     EmbeddingProvider,
     EmbeddingRequest,
     LLMProviderError,
+    OllamaProvider,
 )
 from portfolio_rag_assistant.questions import (
     QUESTION_REVIEW_CATEGORIES,
@@ -100,6 +101,8 @@ def run(
         if args.command == "runtime":
             if args.runtime_command == "smoke":
                 return _run_runtime_smoke(environment, output)
+            if args.runtime_command == "preload-ollama-model":
+                return _run_runtime_preload_ollama_model(args, output)
         if args.command == "intent":
             if args.intent_command == "calibrate-semantic":
                 return _run_intent_calibrate_semantic(args, environment, output)
@@ -295,6 +298,36 @@ def _run_runtime_smoke(env: Mapping[str, str], stdout: TextIO) -> int:
     return 0
 
 
+def _run_runtime_preload_ollama_model(
+    args: argparse.Namespace,
+    stdout: TextIO,
+) -> int:
+    provider = OllamaProvider(base_url=args.base_url, timeout=args.timeout)
+    asyncio.run(
+        _preload_ollama_model(
+            provider=provider,
+            model=args.model,
+            keep_alive=args.keep_alive,
+        )
+    )
+    print(f"ollama model resident: {args.model}", file=stdout)
+    return 0
+
+
+async def _preload_ollama_model(
+    *,
+    provider: OllamaProvider,
+    model: str,
+    keep_alive: str,
+) -> None:
+    await provider.preload_model(model=model, keep_alive=keep_alive)
+    if not await provider.model_is_loaded(model=model):
+        loaded = ", ".join(await provider.loaded_models()) or "none"
+        raise CommandError(
+            f"Ollama model did not remain loaded: {model}; loaded: {loaded}"
+        )
+
+
 def _run_intent_calibrate_semantic(
     args: argparse.Namespace,
     env: Mapping[str, str],
@@ -395,6 +428,11 @@ def _build_parser() -> argparse.ArgumentParser:
     runtime = subcommands.add_parser("runtime")
     runtime_subcommands = runtime.add_subparsers(dest="runtime_command")
     runtime_subcommands.add_parser("smoke")
+    preload_ollama_model = runtime_subcommands.add_parser("preload-ollama-model")
+    preload_ollama_model.add_argument("--base-url", required=True)
+    preload_ollama_model.add_argument("--model", required=True)
+    preload_ollama_model.add_argument("--keep-alive", required=True)
+    preload_ollama_model.add_argument("--timeout", type=float, default=30.0)
 
     intent = subcommands.add_parser("intent")
     intent_subcommands = intent.add_subparsers(dest="intent_command")
