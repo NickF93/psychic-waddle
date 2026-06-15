@@ -203,9 +203,14 @@ def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
         'compose_profile ollama exec -T ollama ollama pull "$CHAT_MODEL_NAME"'
         in _script("ollama-chat-setup.sh")
     )
-    assert "warm_ollama_chat_model" in _script("ollama-chat-setup.sh")
-    assert "ollama run" in _script("_common.sh")
-    assert "ollama ps" in _script("_common.sh")
+    assert 'preload_ollama_model "$CHAT_MODEL_NAME"' in _script(
+        "ollama-chat-setup.sh"
+    )
+    assert "portfolio-rag-assistant runtime preload-ollama-model" in _script(
+        "_common.sh"
+    )
+    assert 'ollama run "$' not in _script("_common.sh")
+    assert "ollama ps" not in _script("_common.sh")
     assert "require_backend EMBEDDING_BACKEND ollama" in _script(
         "ollama-embeddings-setup.sh"
     )
@@ -231,9 +236,12 @@ def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
     ):
         assert "ollama" in _script(name)
     assert "require_backend CHAT_BACKEND ollama" in _script("ollama-chat-start.sh")
+    assert "configured_value CHAT_MODEL" in _script("ollama-chat-start.sh")
     assert "require_ollama_keep_alive" in _script("ollama-chat-start.sh")
     assert "compose_profile_up_wait ollama ollama" in _script("ollama-chat-start.sh")
-    assert "warm_ollama_chat_model" in _script("ollama-chat-start.sh")
+    assert 'preload_ollama_model "$CHAT_MODEL_NAME"' in _script(
+        "ollama-chat-start.sh"
+    )
     assert "require_backend EMBEDDING_BACKEND ollama" in _script(
         "ollama-embeddings-start.sh"
     )
@@ -427,10 +435,10 @@ def test_public_env_validator_checks_explicit_public_runtime_contract() -> None:
     assert "require_backend_value EMBEDDING_BACKEND" in validate
     assert "configured_value CHAT_API_KEY" in validate
     assert "configured_value EMBEDDING_API_KEY" in validate
-    assert "require_ollama_when_selected" in validate
-    assert "configured_value OLLAMA_KEEP_ALIVE" in validate
     assert "require_llama_model_file LLAMA_CPP_CHAT_MODEL_PATH" in validate
     assert "require_llama_model_file LLAMA_CPP_EMBEDDING_MODEL_PATH" in validate
+    assert "require_ollama_when_selected" in validate
+    assert "configured_value OLLAMA_KEEP_ALIVE" in validate
     assert "require_config_file INTENT_PROFILES_PATH" in validate
     assert "must point inside config/" in validate
     assert "require_boolean QUESTION_COLLECTION_ENABLED" in validate

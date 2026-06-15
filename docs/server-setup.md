@@ -107,6 +107,10 @@ If this server already had an older `.env`, verify that the complete public
 deployment block above is present. Compose intentionally fails when public edge
 variables are missing instead of silently defaulting to an occupied port.
 
+`OLLAMA_KEEP_ALIVE=-1` keeps Ollama models resident on the portfolio VPS. Runtime
+setup preloads the configured chat model through Ollama's HTTP API and verifies
+it through `/api/ps`.
+
 Validate the Compose configuration:
 
 ```sh
@@ -191,13 +195,9 @@ Check Ollama and the installed models:
 ```sh
 docker compose --env-file .env --profile ollama ps
 docker compose --env-file .env --profile ollama exec ollama ollama list
-docker compose --env-file .env --profile ollama exec ollama ollama ps
 ```
 
-Expected result: `llama3.2` and `nomic-embed-text` are listed, and the chat
-model appears in `ollama ps`. `OLLAMA_KEEP_ALIVE=-1` keeps loaded Ollama models
-resident, so the host must have enough memory for the configured local model or
-models.
+Expected result: `llama3.2` and `nomic-embed-text` are listed.
 
 ## 6. Use The Reviewed Knowledge File
 
@@ -505,12 +505,6 @@ For later code/config updates after the certificate exists, use:
 
 ```sh
 PUBLIC_SMOKE_BASE_URL=https://vps.madnick.ovh scripts/runtime/public-upgrade.sh --tls-runtime
-```
-
-After an Ollama-backed upgrade, verify that the model remains loaded:
-
-```sh
-docker compose --env-file .env --profile ollama exec ollama ollama ps
 ```
 
 The public smoke script checks both portfolio CORS origins, rejection of an

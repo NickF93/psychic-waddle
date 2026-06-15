@@ -428,10 +428,6 @@ CHAT_MODEL=llama3.2
 OLLAMA_KEEP_ALIVE=-1
 ```
 
-`OLLAMA_KEEP_ALIVE=-1` keeps loaded Ollama models resident. This avoids the
-cold first request after an idle period, but it requires enough system memory
-for the selected local model or models.
-
 Model download is explicit. Use the matching setup script for the configured
 capability:
 
@@ -440,18 +436,16 @@ scripts/runtime/ollama-chat-setup.sh
 scripts/runtime/ollama-embeddings-setup.sh
 ```
 
+When Ollama chat is selected, setup and start preload the configured chat model
+through Ollama's HTTP API and verify residency through `/api/ps`. Use
+`OLLAMA_KEEP_ALIVE=-1` on small CPU-only deployments when the chat model should
+remain resident between requests.
+
 Equivalent manual commands are:
 
 ```sh
 docker compose --env-file .env --profile ollama exec ollama ollama pull llama3.2
 docker compose --env-file .env --profile ollama exec ollama ollama pull nomic-embed-text
-```
-
-The chat setup and start scripts also preload the configured chat model. Check
-the resident model list with:
-
-```sh
-docker compose --env-file .env --profile ollama exec ollama ollama ps
 ```
 
 Ollama model data is stored in the `ollama-models` named volume.
