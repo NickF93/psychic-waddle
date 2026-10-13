@@ -87,6 +87,7 @@ def test_compose_api_uses_capability_specific_config_without_database_url() -> N
     assert environment["DB_PASSWORD"] == "${POSTGRES_PASSWORD}"
     assert environment["CHAT_BACKEND"] == "${CHAT_BACKEND}"
     assert environment["CHAT_BASE_URL"] == "${CHAT_BASE_URL}"
+    assert environment["CHAT_TIMEOUT_SECONDS"] == "${CHAT_TIMEOUT_SECONDS:-30}"
     assert environment["EMBEDDING_BACKEND"] == "${EMBEDDING_BACKEND}"
     assert environment["EMBEDDING_BASE_URL"] == "${EMBEDDING_BASE_URL}"
     assert environment["INTENT_PROFILES_PATH"] == "${INTENT_PROFILES_PATH}"

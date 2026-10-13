@@ -15,8 +15,8 @@ not switch directly on concrete provider classes.
 
 ## Environment Variables
 
-All names are explicit. There are no aliases, legacy names, or fallback
-defaults.
+All names are explicit. There are no aliases or legacy names. Optional settings
+with defaults are documented below.
 
 | Name | Required | Description |
 | --- | --- | --- |
@@ -24,11 +24,19 @@ defaults.
 | `CHAT_BASE_URL` | Yes | API root URL for chat requests. |
 | `CHAT_MODEL` | Yes | Chat model used by answer generation. |
 | `CHAT_API_KEY` | No | Optional bearer token for chat requests. |
+| `CHAT_TIMEOUT_SECONDS` | No | Finite positive HTTP timeout in seconds for chat provider requests; defaults to `30`. Set `60` for CPU deployments that need longer to generate an answer. |
 | `EMBEDDING_BACKEND` | Yes | One of `ollama`, `llama-cpp`, `openai-compatible`. |
 | `EMBEDDING_BASE_URL` | Yes | API root URL for embedding requests. |
 | `EMBEDDING_MODEL` | Yes | Embedding model used for indexing and retrieval. |
 | `EMBEDDING_API_KEY` | No | Optional bearer token for embedding requests. |
 | `OLLAMA_KEEP_ALIVE` | When Ollama is selected | Ollama model residency setting passed to the Ollama service. Use `-1` when local models should remain resident. |
+
+The chat timeout applies to each HTTP timeout phase, including the wait for
+response data; it is not a total deadline for retrieval and answer generation.
+The embedding provider retains its 30-second timeout. Changing
+`CHAT_TIMEOUT_SECONDS` in a Compose deployment requires recreating the API
+container. Keep the public edge and browser request deadlines long enough for
+the complete request; this setting does not change those deadlines.
 
 Use one provider for both capabilities by setting both base URLs to the same
 API root:
