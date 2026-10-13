@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -37,6 +38,7 @@ class ChatProviderSettings:
     base_url: str
     model: str
     api_key: str | None = None
+    timeout_seconds: float = 30.0
 
     def __post_init__(self) -> None:
         _require_supported_backend(self.backend, "CHAT_BACKEND")
@@ -47,6 +49,15 @@ class ChatProviderSettings:
         )
         object.__setattr__(self, "model", _require_text(self.model, "CHAT_MODEL"))
         object.__setattr__(self, "api_key", _normalize_api_key(self.api_key))
+        if (
+            isinstance(self.timeout_seconds, bool)
+            or not isinstance(self.timeout_seconds, (int, float))
+            or not math.isfinite(self.timeout_seconds)
+            or self.timeout_seconds <= 0
+        ):
+            raise LLMProviderConfigurationError(
+                "CHAT_TIMEOUT_SECONDS must be a finite positive number"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,6 +189,7 @@ def load_chat_provider_settings(
         base_url=_require_text(source.get("CHAT_BASE_URL"), "CHAT_BASE_URL"),
         model=_require_text(source.get("CHAT_MODEL"), "CHAT_MODEL"),
         api_key=source.get("CHAT_API_KEY"),
+        timeout_seconds=_require_chat_timeout(source.get("CHAT_TIMEOUT_SECONDS", "30")),
     )
 
 
@@ -265,6 +277,7 @@ def build_chat_provider(settings: ChatProviderSettings) -> ChatProvider:
         backend=settings.backend,
         base_url=settings.base_url,
         api_key=settings.api_key,
+        timeout=settings.timeout_seconds,
     )
     return cast(ChatProvider, provider)
 
@@ -287,14 +300,24 @@ def _build_provider(
     backend: ProviderBackend,
     base_url: str,
     api_key: str | None,
+    timeout: float = 30.0,
 ) -> object:
     if backend == "ollama":
-        return OllamaProvider(base_url=base_url, api_key=api_key)
+        return OllamaProvider(base_url=base_url, api_key=api_key, timeout=timeout)
     if backend == "llama-cpp":
-        return LlamaCppProvider(base_url=base_url, api_key=api_key)
+        return LlamaCppProvider(base_url=base_url, api_key=api_key, timeout=timeout)
     if backend == "openai-compatible":
-        return OpenAICompatibleProvider(base_url=base_url, api_key=api_key)
+        return OpenAICompatibleProvider(base_url=base_url, api_key=api_key, timeout=timeout)
     raise LLMProviderConfigurationError("unsupported provider backend")
+
+
+def _require_chat_timeout(value: str) -> float:
+    try:
+        return float(value)
+    except ValueError as exc:
+        raise LLMProviderConfigurationError(
+            "CHAT_TIMEOUT_SECONDS must be a finite positive number"
+        ) from exc
 
 
 def _require_supported_backend(value: str, field_name: str) -> None:

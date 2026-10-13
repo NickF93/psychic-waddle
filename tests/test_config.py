@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+
+import httpx
 import pytest
 
 from portfolio_rag_assistant.config import (
@@ -20,6 +23,9 @@ from portfolio_rag_assistant.config import (
     load_retrieval_settings,
 )
 from portfolio_rag_assistant.provider import (
+    ChatMessage,
+    ChatRequest,
+    EmbeddingRequest,
     LLMProviderConfigurationError,
     LlamaCppProvider,
     OllamaProvider,
@@ -44,6 +50,110 @@ def test_load_chat_provider_settings_reads_exact_env_names() -> None:
         model="chat-model",
         api_key="chat-secret",
     )
+
+
+@pytest.mark.parametrize("value", ("", "bad", "0", "-1", "nan", "inf", "-inf"))
+def test_chat_timeout_rejects_invalid_environment_values(value: str) -> None:
+    with pytest.raises(LLMProviderConfigurationError, match="CHAT_TIMEOUT_SECONDS"):
+        load_chat_provider_settings(
+            {
+                "CHAT_BACKEND": "ollama",
+                "CHAT_BASE_URL": "http://provider.test/api",
+                "CHAT_MODEL": "chat-model",
+                "CHAT_TIMEOUT_SECONDS": value,
+            }
+        )
+
+
+@pytest.mark.parametrize("backend", ("ollama", "llama-cpp", "openai-compatible"))
+@pytest.mark.parametrize("timeout_value", ("30", "60", "0.5"))
+def test_chat_timeout_reaches_http_requests(
+    backend: str,
+    timeout_value: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        message = {"role": "assistant", "content": "answer"}
+        return httpx.Response(
+            200,
+            json={
+                "model": "chat-model",
+                "message": message,
+                "choices": [{"message": message}],
+            },
+        )
+
+    client_type = httpx.AsyncClient
+
+    def client_factory(
+        *,
+        timeout: float,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> httpx.AsyncClient:
+        return client_type(timeout=timeout, transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(httpx, "AsyncClient", client_factory)
+    provider = build_chat_provider(
+        load_chat_provider_settings(
+            {
+                "CHAT_BACKEND": backend,
+                "CHAT_BASE_URL": "http://provider.test/api",
+                "CHAT_MODEL": "chat-model",
+                "CHAT_TIMEOUT_SECONDS": timeout_value,
+            }
+        )
+    )
+    response = asyncio.run(
+        provider.chat(
+            ChatRequest(
+                model="chat-model",
+                messages=(ChatMessage(role="user", content="hello"),),
+            )
+        )
+    )
+
+    assert response.message.content == "answer"
+    assert len(requests) == 1
+    assert requests[0].extensions["timeout"]["read"] == float(timeout_value)
+
+
+def test_chat_timeout_does_not_change_embedding_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200, json={"model": "embedding-model", "embeddings": [[0.1]]}
+        )
+
+    client_type = httpx.AsyncClient
+
+    def client_factory(
+        *,
+        timeout: float,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> httpx.AsyncClient:
+        return client_type(timeout=timeout, transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(httpx, "AsyncClient", client_factory)
+    env = {
+        "CHAT_TIMEOUT_SECONDS": "60",
+        "EMBEDDING_BACKEND": "ollama",
+        "EMBEDDING_BASE_URL": "http://provider.test/api",
+        "EMBEDDING_MODEL": "embedding-model",
+    }
+    provider = build_embedding_provider(load_embedding_provider_settings(env))
+    asyncio.run(
+        provider.embed(EmbeddingRequest(model="embedding-model", inputs=("hello",)))
+    )
+
+    assert len(requests) == 1
+    assert requests[0].extensions["timeout"]["read"] == 30.0
 
 
 def test_load_embedding_provider_settings_reads_exact_env_names() -> None:
