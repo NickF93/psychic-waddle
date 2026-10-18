@@ -73,6 +73,26 @@ def test_compose_uses_pinned_images_and_private_runtime_network() -> None:
     assert _compose()["networks"]["runtime"]["driver"] == "bridge"
 
 
+@pytest.mark.parametrize(
+    "service",
+    (
+        "api",
+        "db",
+        "ollama",
+        "nginx",
+        "nginx-tls",
+        "llama-cpp-chat",
+        "llama-cpp-embeddings",
+    ),
+)
+def test_long_running_services_have_automatic_recovery(service: str) -> None:
+    assert _compose()["services"][service].get("restart") == "unless-stopped"
+
+
+def test_one_shot_certbot_does_not_restart() -> None:
+    assert _compose()["services"]["certbot"].get("restart", "no") == "no"
+
+
 def test_compose_api_uses_capability_specific_config_without_database_url() -> None:
     environment = _compose()["services"]["api"]["environment"]
 
@@ -227,6 +247,11 @@ def test_docker_compose_config_renders_supported_profiles() -> None:
             ("public-tls", ("--profile", "public-tls")),
         )
     }
+
+    for config in rendered.values():
+        for name, service in config["services"].items():
+            expected_restart = "no" if name == "certbot" else "unless-stopped"
+            assert service.get("restart", "no") == expected_restart
 
     assert "api" in rendered["default"]["services"]
     assert "db" in rendered["default"]["services"]

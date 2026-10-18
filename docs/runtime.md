@@ -107,6 +107,31 @@ their own component:
 - Let's Encrypt setup and renewal scripts do not remove certificate, work, or
   ACME challenge volumes.
 
+### Automatic recovery
+
+Long-running Compose services use `restart: unless-stopped`. Once deployed and
+started, their containers recover after process exits, Docker daemon restarts,
+and host reboots. Docker itself must be enabled at boot. Certbot remains a
+one-shot service without automatic restarts.
+
+Profile selection still controls which services are created. Configuring this
+policy does not activate an unused provider or edge profile. An intentionally
+stopped container stays stopped across Docker restarts and reboots; use the
+component start script or `public-start.sh` to resume it. Removed containers must
+be recreated through the same scripts.
+
+Docker restores containers independently at boot; Compose `depends_on` readiness
+conditions apply to Compose startup, not daemon restoration. The API may exit
+while PostgreSQL is unavailable and then restart under this policy. A running
+container or a successful `/health` request alone does not prove readiness:
+verify `/ready` and run the public smoke after recovery. Restart policies do not
+restart a process solely because its healthcheck reports unhealthy.
+
+Apply policy changes by running the existing start scripts, which reconcile
+Compose configuration. Preserve the selected providers, persistent volumes and
+private environment; automatic recovery does not run setup, migrations,
+knowledge ingestion or model downloads.
+
 Script matrix:
 
 | Component | Build | Setup | Start | Stop | Down | Cleanup | Extra |
