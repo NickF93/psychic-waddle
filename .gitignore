@@ -221,3 +221,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Operator-owned private service publication
+deploy/nginx/private-services/*.conf
