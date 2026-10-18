@@ -127,6 +127,11 @@ container or a successful `/health` request alone does not prove readiness:
 verify `/ready` and run the public smoke after recovery. Restart policies do not
 restart a process solely because its healthcheck reports unhealthy.
 
+Both Nginx profiles resolve the API through Docker embedded DNS and refresh its
+upstream address without a proxy restart. This keeps the public routes working
+when API recovery assigns a different container address. Validate health and
+readiness through the public edge as well as directly against the API.
+
 Apply policy changes by running the existing start scripts, which reconcile
 Compose configuration. Preserve the selected providers, persistent volumes and
 private environment; automatic recovery does not run setup, migrations,

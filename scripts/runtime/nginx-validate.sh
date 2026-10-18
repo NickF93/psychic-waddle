@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
+SCRIPT_DIR=$(CDPATH='' cd "$(dirname "$0")" && pwd)
 . "$SCRIPT_DIR/_common.sh"
 
 require_command grep
@@ -21,12 +21,17 @@ require_config_line() {
 
 validate_public_routes() {
     CONFIG_FILE=$1
+    require_config_line "$CONFIG_FILE" "resolver 127.0.0.11 valid=5s ipv6=off;"
+    require_config_line "$CONFIG_FILE" "resolver_timeout 2s;"
+    require_config_line "$CONFIG_FILE" "upstream assistant_api {"
+    require_config_line "$CONFIG_FILE" "zone assistant_api 64k;"
+    require_config_line "$CONFIG_FILE" "server api:8000 resolve;"
     require_config_line "$CONFIG_FILE" "location = /api/assistant/chat"
-    require_config_line "$CONFIG_FILE" "proxy_pass http://api:8000/chat?;"
+    require_config_line "$CONFIG_FILE" "proxy_pass http://assistant_api/chat?;"
     require_config_line "$CONFIG_FILE" "location = /api/assistant/health"
-    require_config_line "$CONFIG_FILE" "proxy_pass http://api:8000/health?;"
+    require_config_line "$CONFIG_FILE" "proxy_pass http://assistant_api/health?;"
     require_config_line "$CONFIG_FILE" "location = /api/assistant/ready"
-    require_config_line "$CONFIG_FILE" "proxy_pass http://api:8000/ready?;"
+    require_config_line "$CONFIG_FILE" "proxy_pass http://assistant_api/ready?;"
     require_config_line "$CONFIG_FILE" "\"https://pigreco.xyz\""
     require_config_line "$CONFIG_FILE" "\"https://www.pigreco.xyz\""
     require_config_line "$CONFIG_FILE" "limit_req zone=assistant_chat burst=40 nodelay;"

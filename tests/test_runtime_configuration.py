@@ -93,6 +93,16 @@ def test_one_shot_certbot_does_not_restart() -> None:
     assert _compose()["services"]["certbot"].get("restart", "no") == "no"
 
 
+def test_nginx_tracks_api_service_address_changes() -> None:
+    for config in (_nginx_config(), _nginx_config("nginx-tls.conf")):
+        assert "resolver 127.0.0.11 valid=5s ipv6=off;" in config
+        assert "resolver_timeout 2s;" in config
+        assert "upstream assistant_api {" in config
+        assert "zone assistant_api 64k;" in config
+        assert "server api:8000 resolve;" in config
+        assert "proxy_pass http://api:8000/" not in config
+
+
 def test_compose_api_uses_capability_specific_config_without_database_url() -> None:
     environment = _compose()["services"]["api"]["environment"]
 
@@ -400,11 +410,11 @@ def test_public_edge_routes_are_mapped_to_internal_api() -> None:
 
     for config in (nginx, nginx_tls):
         assert "location = /api/assistant/chat" in config
-        assert "proxy_pass http://api:8000/chat?;" in config
+        assert "proxy_pass http://assistant_api/chat?;" in config
         assert "location = /api/assistant/health" in config
-        assert "proxy_pass http://api:8000/health?;" in config
+        assert "proxy_pass http://assistant_api/health?;" in config
         assert "location = /api/assistant/ready" in config
-        assert "proxy_pass http://api:8000/ready?;" in config
+        assert "proxy_pass http://assistant_api/ready?;" in config
 
 
 def test_public_edge_cors_allows_only_portfolio_origins() -> None:
