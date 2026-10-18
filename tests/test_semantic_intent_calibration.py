@@ -78,7 +78,8 @@ def test_semantic_near_duplicate_report_writes_only_under_tmp(
         match="report path must be inside /tmp",
     ):
         write_tmp_json_report(
-            Path.cwd() / "intent-near-duplicates.json",
+            # Merge validation may run the checkout itself under /tmp.
+            Path("/intent-near-duplicates.json"),
             {"schema_version": 1},
         )
 
