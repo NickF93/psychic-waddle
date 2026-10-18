@@ -143,6 +143,7 @@ def test_compose_public_bootstrap_edge_is_profile_gated_and_http_only() -> None:
     assert "443" not in "\n".join(nginx["ports"])
     assert nginx["volumes"] == [
         "./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro",
+        "./deploy/nginx/private-services:/etc/nginx/private-services:ro",
         "acme-challenges:/var/www/certbot:ro",
     ]
     assert nginx["networks"] == ["runtime"]
@@ -161,6 +162,7 @@ def test_compose_public_tls_edge_is_profile_gated_and_owns_443() -> None:
     ]
     assert nginx_tls["volumes"] == [
         "./deploy/nginx/nginx-tls.conf:/etc/nginx/nginx.conf:ro",
+        "./deploy/nginx/private-services:/etc/nginx/private-services:ro",
         "acme-challenges:/var/www/certbot:ro",
         "letsencrypt-certs:/etc/letsencrypt:ro",
     ]

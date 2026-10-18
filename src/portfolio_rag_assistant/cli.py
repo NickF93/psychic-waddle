@@ -7,6 +7,8 @@ import asyncio
 import json
 import os
 import sys
+
+import httpx
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractContextManager
 from pathlib import Path
@@ -56,6 +58,7 @@ from portfolio_rag_assistant.provider import (
     LLMProviderError,
     OllamaProvider,
 )
+from portfolio_rag_assistant.runtime_catalog import export_catalog
 from portfolio_rag_assistant.questions import (
     QUESTION_REVIEW_CATEGORIES,
     QUESTION_REVIEW_STATES,
@@ -99,6 +102,21 @@ def run(
             if args.knowledge_command == "index-embeddings":
                 return _run_knowledge_index_embeddings(environment, output)
         if args.command == "runtime":
+            if args.runtime_command == "export-ollama-catalog":
+                try:
+                    document = export_catalog(
+                        environment,
+                        source_commit=args.source_commit,
+                        chat_context=args.chat_context,
+                        chat_output=args.chat_output,
+                        embedding_context=args.embedding_context,
+                    )
+                except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
+                    raise CommandError(
+                        "Cannot export the selected Ollama catalog; check provider metadata and configured limits"
+                    ) from exc
+                print(json.dumps(document, indent=2, sort_keys=True), file=output)
+                return 0
             if args.runtime_command == "smoke":
                 return _run_runtime_smoke(environment, output)
             if args.runtime_command == "preload-ollama-model":
@@ -369,10 +387,7 @@ def _require_matching_semantic_calibration(
     calibrated_backend: str,
     calibrated_model: str,
 ) -> None:
-    if (
-        configured_backend != calibrated_backend
-        or configured_model != calibrated_model
-    ):
+    if configured_backend != calibrated_backend or configured_model != calibrated_model:
         raise CommandError(
             "intent semantic calibration must match configured embedding backend "
             "and model"
@@ -428,6 +443,11 @@ def _build_parser() -> argparse.ArgumentParser:
     runtime = subcommands.add_parser("runtime")
     runtime_subcommands = runtime.add_subparsers(dest="runtime_command")
     runtime_subcommands.add_parser("smoke")
+    export = runtime_subcommands.add_parser("export-ollama-catalog")
+    export.add_argument("--source-commit", required=True)
+    export.add_argument("--chat-context", required=True, type=int)
+    export.add_argument("--chat-output", required=True, type=int)
+    export.add_argument("--embedding-context", required=True, type=int)
     preload_ollama_model = runtime_subcommands.add_parser("preload-ollama-model")
     preload_ollama_model.add_argument("--base-url", required=True)
     preload_ollama_model.add_argument("--model", required=True)
@@ -462,7 +482,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     mark_question = question_subcommands.add_parser("mark")
     mark_question.add_argument("event_id", type=int)
-    mark_question.add_argument("--state", required=True, choices=sorted(QUESTION_REVIEW_STATES))
+    mark_question.add_argument(
+        "--state", required=True, choices=sorted(QUESTION_REVIEW_STATES)
+    )
     mark_question.add_argument("--category", choices=sorted(QUESTION_REVIEW_CATEGORIES))
     mark_question.add_argument("--note")
 
