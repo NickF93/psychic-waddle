@@ -90,6 +90,16 @@ def test_tracked_intent_catalog_reproduces_current_evidence_matching() -> None:
         assert catalog.text_satisfies_intent_evidence(text, profile.intent)
 
 
+@pytest.mark.parametrize("question", (
+    "What languages does Niccolo Ferrari speak?",
+    "Which spoken languages does he know?",
+    "Tell me about his language fluency.",
+))
+def test_spoken_language_questions_use_existing_skills_intent(question: str) -> None:
+    catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
+    assert _intent_identifiers(catalog.detect_question_intents(question)) == ("skills",)
+
+
 @pytest.mark.parametrize(
     "question",
     (
