@@ -133,6 +133,18 @@ def test_research_contributions_have_primary_source_provenance() -> None:
         assert any(all(fragment in _fact_text(fact) for fragment in fragments) for fact in evidence)
 
 
+def test_refreshed_sources_supply_their_existing_intent_evidence() -> None:
+    catalog = tracked_intent_catalog()
+    for fact in _facts():
+        uri = fact["source_uri"]
+        if uri == EXPECTED_SOURCE_URI:
+            continue
+        intent = catalog.intent_for_identifier(
+            "publications" if fact["category"] == "research" else "projects"
+        )
+        assert catalog.text_satisfies_intent_evidence(_fact_text(fact), intent), uri
+
+
 def test_tracked_profile_knowledge_covers_common_recruiter_intents() -> None:
     facts = _fact_texts()
 
