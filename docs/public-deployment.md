@@ -132,15 +132,21 @@ Proxy timeouts must account for local LLM latency while still bounding stuck
 requests. Timeout values belong to the public edge configuration, not to the
 answer generation authority.
 
-The shipped edge allows 210 seconds for the complete response. On the current
+The shipped edge allows 270 seconds for the complete response. On the current
 CPU deployment, question embedding and the first request's semantic-anchor
-embedding can each take up to 30 seconds before the configured 120-second chat
+embedding can each take up to 30 seconds before the qualified 180-second chat
 provider deadline; 30 additional seconds cover retrieval and handling overhead.
 Assigning the generation deadline to the proxy cuts off the API's own failure
 response. Leave room for every phase and handling overhead. If the
 operator increases provider timeouts, review the inner edge, outer portfolio
 proxy and verification-client deadlines together. Provider failures remain
 bounded and explicit; this does not increase model output limits.
+
+M10 measured a correct cold response at 133 seconds after the former 120-second
+provider setting failed. The operator's CPU deployment therefore uses
+`CHAT_TIMEOUT_SECONDS=180`; the portable application default remains unchanged.
+Cold latency is resource-dependent. This qualification preserves the configured
+model, the 384-token output limit, deterministic policy and reviewed context.
 
 ## TLS
 

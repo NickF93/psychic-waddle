@@ -532,7 +532,7 @@ def test_public_edge_rate_limit_and_bounds_are_configured() -> None:
         assert "client_max_body_size 4k;" in config
         assert "proxy_connect_timeout 5s;" in config
         assert "proxy_send_timeout 90s;" in config
-        assert "proxy_read_timeout 210s;" in config
+        assert "proxy_read_timeout 270s;" in config
 
     normalized_deployment = " ".join(deployment.split())
     assert "volatile Nginx memory" in normalized_deployment
