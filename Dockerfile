@@ -15,6 +15,12 @@ COPY src ./src
 COPY migrations ./migrations
 COPY config ./config
 
+ARG RELEASE_VERSION=0.3.0
+ARG SOURCE_REVISION=unknown
+LABEL org.opencontainers.image.version=$RELEASE_VERSION \
+      org.opencontainers.image.revision=$SOURCE_REVISION \
+      org.opencontainers.image.source="https://github.com/NickF93/psychic-waddle"
+
 RUN python -m pip install --constraint requirements.lock .
 
 USER app

@@ -93,6 +93,14 @@ def test_one_shot_certbot_does_not_restart() -> None:
     assert _compose()["services"]["certbot"].get("restart", "no") == "no"
 
 
+def test_all_runtime_components_have_bounded_logs() -> None:
+    for name, service in _compose()["services"].items():
+        assert service.get("logging") == {
+            "driver": "json-file",
+            "options": {"max-size": "10m", "max-file": "3"},
+        }, name
+
+
 def test_nginx_tracks_api_service_address_changes() -> None:
     for config in (_nginx_config(), _nginx_config("nginx-tls.conf")):
         assert "resolver 127.0.0.11 valid=5s ipv6=off;" in config
