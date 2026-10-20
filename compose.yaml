@@ -1,7 +1,14 @@
 name: portfolio-rag-assistant
 
+x-bounded-logging: &bounded-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   api:
+    logging: *bounded-logging
     restart: unless-stopped
     build:
       context: .
@@ -45,6 +52,7 @@ services:
       start_period: 10s
 
   nginx:
+    logging: *bounded-logging
     restart: unless-stopped
     image: nginx:1.27.5-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     profiles:
@@ -72,6 +80,7 @@ services:
       start_period: 10s
 
   nginx-tls:
+    logging: *bounded-logging
     restart: unless-stopped
     image: nginx:1.27.5-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     profiles:
@@ -101,6 +110,7 @@ services:
       start_period: 10s
 
   certbot:
+    logging: *bounded-logging
     image: certbot/certbot:latest@sha256:0107d084c225631fc64a8313e19adb07275f7296fde338f7dfa93986c80b2e3e
     profiles:
       - public
@@ -113,6 +123,7 @@ services:
       - runtime
 
   db:
+    logging: *bounded-logging
     restart: unless-stopped
     image: pgvector/pgvector:0.8.2-pg17@sha256:feb68f4f15446397d8cac7f4fe48fe4586de83160d1fc48b46283312d1a33966
     environment:
@@ -134,6 +145,7 @@ services:
       start_period: 10s
 
   ollama:
+    logging: *bounded-logging
     restart: unless-stopped
     image: ollama/ollama:latest@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
     profiles:
@@ -155,6 +167,7 @@ services:
       start_period: 10s
 
   llama-cpp-chat:
+    logging: *bounded-logging
     restart: unless-stopped
     image: ghcr.io/ggml-org/llama.cpp:server@sha256:1c2e5802addaaf61684532d828664027b5daaf2e2b29943cf338b7005e4ea9ca
     profiles:
@@ -185,6 +198,7 @@ services:
       start_period: 10s
 
   llama-cpp-embeddings:
+    logging: *bounded-logging
     restart: unless-stopped
     image: ghcr.io/ggml-org/llama.cpp:server@sha256:1c2e5802addaaf61684532d828664027b5daaf2e2b29943cf338b7005e4ea9ca
     profiles:
