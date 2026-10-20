@@ -110,7 +110,7 @@ def test_tracked_profile_knowledge_excludes_private_contact_data() -> None:
 
 def test_tracked_profile_reflects_current_reviewed_cv() -> None:
     facts = _fact_texts()
-    _assert_fact_contains(facts, "submitted", "applied soft computing", "acceptance has not been announced")
+    _assert_fact_contains(facts, "submitted", "paper", "applied soft computing", "acceptance has not been announced")
     _assert_fact_contains(facts, "spoken languages", "english fluent")
     _assert_fact_contains(facts, "nais's software and machine-learning contribution", "pharmaceutical transportation")
     _assert_fact_contains(facts, "co-supervised", "simone reale", "2025/26")

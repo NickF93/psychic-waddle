@@ -673,7 +673,7 @@
     {
       "source_uri": "cv://niccolo/main",
       "category": "research",
-      "fact_text": "In 2026, Niccolo Ferrari, Oligert Osmani, Evelina Lamma submitted Mahalanobis PatchCore: Covariance-Aware and Streaming-Compatible Industrial Anomaly Detection to Applied Soft Computing (ASOC); journal acceptance has not been announced.",
+      "fact_text": "In 2026, Niccolo Ferrari, Oligert Osmani, Evelina Lamma submitted the paper Mahalanobis PatchCore: Covariance-Aware and Streaming-Compatible Industrial Anomaly Detection to Applied Soft Computing (ASOC); journal acceptance has not been announced.",
       "source_locator": "Publications and Research Outputs",
       "public_visible": true
     },
