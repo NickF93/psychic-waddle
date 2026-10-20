@@ -656,6 +656,9 @@ def test_postgres_retriever_retrieves_workplace_aggregate_for_natural_question(
     retriever = _retriever(
         connection=db_connection,
         provider=provider,
+        # Fusion needs a candidate window wider than the final result set.
+        # Four candidates exclude this fixture's fifth row before fusion.
+        candidate_fan_out=len(chunk_rows),
     )
 
     response = asyncio.run(
@@ -665,6 +668,17 @@ def test_postgres_retriever_retrieves_workplace_aggregate_for_natural_question(
     retrieved_text = "\n".join(result.chunk_text for result in response.results)
     assert "professional workplaces include NAIS S.r.l." in retrieved_text
     assert "Bonfiglioli Engineering" in retrieved_text
+    # Without the intent channel, equal vectors plus the ordinary keyword query
+    # select the work/publication distractors instead of the workplace aggregate.
+    from portfolio_rag_assistant.retrieval.postgres import _rank_candidates
+
+    without_intent = _rank_candidates(
+        vector_candidates=retriever._search_vectors(query_embedding=(1.0, 0.0), limit=len(chunk_rows)),
+        keyword_candidates=retriever._search_keywords(question="Where did Niccolo work?", limit=len(chunk_rows)),
+        intent_candidates=(),
+        top_k=4,
+    )
+    assert all("professional workplaces" not in result.chunk_text for result in without_intent)
 
 
 def _row(

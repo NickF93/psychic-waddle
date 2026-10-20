@@ -73,6 +73,44 @@ def test_compose_uses_pinned_images_and_private_runtime_network() -> None:
     assert _compose()["networks"]["runtime"]["driver"] == "bridge"
 
 
+@pytest.mark.parametrize(
+    "service",
+    (
+        "api",
+        "db",
+        "ollama",
+        "nginx",
+        "nginx-tls",
+        "llama-cpp-chat",
+        "llama-cpp-embeddings",
+    ),
+)
+def test_long_running_services_have_automatic_recovery(service: str) -> None:
+    assert _compose()["services"][service].get("restart") == "unless-stopped"
+
+
+def test_one_shot_certbot_does_not_restart() -> None:
+    assert _compose()["services"]["certbot"].get("restart", "no") == "no"
+
+
+def test_all_runtime_components_have_bounded_logs() -> None:
+    for name, service in _compose()["services"].items():
+        assert service.get("logging") == {
+            "driver": "json-file",
+            "options": {"max-size": "10m", "max-file": "3"},
+        }, name
+
+
+def test_nginx_tracks_api_service_address_changes() -> None:
+    for config in (_nginx_config(), _nginx_config("nginx-tls.conf")):
+        assert "resolver 127.0.0.11 valid=5s ipv6=off;" in config
+        assert "resolver_timeout 2s;" in config
+        assert "upstream assistant_api {" in config
+        assert "zone assistant_api 64k;" in config
+        assert "server api:8000 resolve;" in config
+        assert "proxy_pass http://api:8000/" not in config
+
+
 def test_compose_api_uses_capability_specific_config_without_database_url() -> None:
     environment = _compose()["services"]["api"]["environment"]
 
@@ -87,6 +125,7 @@ def test_compose_api_uses_capability_specific_config_without_database_url() -> N
     assert environment["DB_PASSWORD"] == "${POSTGRES_PASSWORD}"
     assert environment["CHAT_BACKEND"] == "${CHAT_BACKEND}"
     assert environment["CHAT_BASE_URL"] == "${CHAT_BASE_URL}"
+    assert environment["CHAT_TIMEOUT_SECONDS"] == "${CHAT_TIMEOUT_SECONDS:-30}"
     assert environment["EMBEDDING_BACKEND"] == "${EMBEDDING_BACKEND}"
     assert environment["EMBEDDING_BASE_URL"] == "${EMBEDDING_BASE_URL}"
     assert environment["INTENT_PROFILES_PATH"] == "${INTENT_PROFILES_PATH}"
@@ -112,6 +151,7 @@ def test_compose_public_bootstrap_edge_is_profile_gated_and_http_only() -> None:
     assert "443" not in "\n".join(nginx["ports"])
     assert nginx["volumes"] == [
         "./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro",
+        "./deploy/nginx/private-services:/etc/nginx/private-services:ro",
         "acme-challenges:/var/www/certbot:ro",
     ]
     assert nginx["networks"] == ["runtime"]
@@ -130,6 +170,7 @@ def test_compose_public_tls_edge_is_profile_gated_and_owns_443() -> None:
     ]
     assert nginx_tls["volumes"] == [
         "./deploy/nginx/nginx-tls.conf:/etc/nginx/nginx.conf:ro",
+        "./deploy/nginx/private-services:/etc/nginx/private-services:ro",
         "acme-challenges:/var/www/certbot:ro",
         "letsencrypt-certs:/etc/letsencrypt:ro",
     ]
@@ -226,6 +267,11 @@ def test_docker_compose_config_renders_supported_profiles() -> None:
             ("public-tls", ("--profile", "public-tls")),
         )
     }
+
+    for config in rendered.values():
+        for name, service in config["services"].items():
+            expected_restart = "no" if name == "certbot" else "unless-stopped"
+            assert service.get("restart", "no") == expected_restart
 
     assert "api" in rendered["default"]["services"]
     assert "db" in rendered["default"]["services"]
@@ -374,11 +420,11 @@ def test_public_edge_routes_are_mapped_to_internal_api() -> None:
 
     for config in (nginx, nginx_tls):
         assert "location = /api/assistant/chat" in config
-        assert "proxy_pass http://api:8000/chat?;" in config
+        assert "proxy_pass http://assistant_api/chat?;" in config
         assert "location = /api/assistant/health" in config
-        assert "proxy_pass http://api:8000/health?;" in config
+        assert "proxy_pass http://assistant_api/health?;" in config
         assert "location = /api/assistant/ready" in config
-        assert "proxy_pass http://api:8000/ready?;" in config
+        assert "proxy_pass http://assistant_api/ready?;" in config
 
 
 def test_public_edge_cors_allows_only_portfolio_origins() -> None:
@@ -486,7 +532,7 @@ def test_public_edge_rate_limit_and_bounds_are_configured() -> None:
         assert "client_max_body_size 4k;" in config
         assert "proxy_connect_timeout 5s;" in config
         assert "proxy_send_timeout 90s;" in config
-        assert "proxy_read_timeout 120s;" in config
+        assert "proxy_read_timeout 270s;" in config
 
     normalized_deployment = " ".join(deployment.split())
     assert "volatile Nginx memory" in normalized_deployment

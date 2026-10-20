@@ -313,3 +313,11 @@ API, or stored in application data.
 - Privacy rules prohibit visitor identity storage.
 - No runtime code, schema, ingestion, provider implementation, or API endpoint is
   introduced by Milestone 0.
+
+## Optional private provider publication
+
+The existing Nginx runtime accepts optional operator-owned private service virtual
+hosts through a read-only include directory. Its empty default publishes nothing.
+The platform owns allowlists and public aliases; this application owns its direct
+provider configuration and selected-model metadata export. This does not change
+visitor retrieval, answer policy, provider selection or storage.

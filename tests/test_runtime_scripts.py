@@ -820,9 +820,9 @@ def test_nginx_validate_checks_both_public_edge_configs() -> None:
     assert "configured_value PUBLIC_HTTPS_PORT" in validate
     assert "deploy/nginx/nginx.conf" in validate
     assert "deploy/nginx/nginx-tls.conf" in validate
-    assert "proxy_pass http://api:8000/chat?;" in validate
-    assert "proxy_pass http://api:8000/health?;" in validate
-    assert "proxy_pass http://api:8000/ready?;" in validate
+    assert "proxy_pass http://assistant_api/chat?;" in validate
+    assert "proxy_pass http://assistant_api/health?;" in validate
+    assert "proxy_pass http://assistant_api/ready?;" in validate
     assert "listen 443 ssl;" in validate
 
 
