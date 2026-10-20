@@ -132,6 +132,14 @@ Proxy timeouts must account for local LLM latency while still bounding stuck
 requests. Timeout values belong to the public edge configuration, not to the
 answer generation authority.
 
+The shipped edge allows 180 seconds for the complete response. On the current
+CPU deployment, embedding/retrieval can precede the configured 120-second chat
+provider deadline; assigning that same deadline to the proxy cuts off the API's
+own failure response. Leave room for both phases and handling overhead. If the
+operator increases provider timeouts, review the inner edge, outer portfolio
+proxy and verification-client deadlines together. Provider failures remain
+bounded and explicit; this does not increase model output limits.
+
 ## TLS
 
 TLS uses free Let's Encrypt certificates. No paid certificate is required.
