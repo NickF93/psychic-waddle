@@ -211,7 +211,7 @@
     {
       "source_uri": "cv://niccolo/main",
       "category": "experience",
-      "fact_text": "During his Ph.D. work, Niccolo Ferrari designed two Python-based architectures.",
+      "fact_text": "During his Ph.D. work, Niccolo Ferrari designed and evaluated generative, reconstruction-based and PatchCore-style architectures through reproducible Python and PyTorch pipelines.",
       "source_locator": "Professional Experience",
       "public_visible": true
     },
@@ -225,7 +225,7 @@
     {
       "source_uri": "cv://niccolo/main",
       "category": "experience",
-      "fact_text": "Niccolo Ferrari's Ph.D. work resulted in two publications.",
+      "fact_text": "Niccolo Ferrari's Ph.D. work included GRD-Net and industrial anomaly-detection research, continued Mahalanobis and PatchCore research, and M.Sc. thesis co-supervision.",
       "source_locator": "Professional Experience",
       "public_visible": true
     },
@@ -281,7 +281,7 @@
     {
       "source_uri": "cv://niccolo/main",
       "category": "education",
-      "fact_text": "Since October 2025, Niccolo Ferrari has followed a Game Programming and AI Programming learning path at Digital Bros Game Academy.",
+      "fact_text": "From October 2025 to July 2026, Niccolo Ferrari followed the Game Programming and AI Programming learning path at Digital Bros Game Academy.",
       "source_locator": "Degrees",
       "public_visible": true
     },
@@ -885,6 +885,13 @@
       "category": "projects",
       "fact_text": "Niccolo Ferrari's GRD-Net software integration is proposed in anomalib draft PR #3812; it is not yet merged or released as an anomalib model.",
       "source_locator": "PR description, author and draft status, reviewed 21 October 2026",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "projects",
+      "fact_text": "Fading Memories is a Digital Bros Game Academy team project, a first-person puzzle game on which Niccolo Ferrari worked as a game programmer. Its public project page is https://digital-bros-game-academy.itch.io/fading-memories.",
+      "source_locator": "Personal Projects",
       "public_visible": true
     }
   ]

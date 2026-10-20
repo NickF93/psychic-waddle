@@ -114,6 +114,8 @@ def test_tracked_profile_reflects_current_reviewed_cv() -> None:
     _assert_fact_contains(facts, "spoken languages", "english fluent")
     _assert_fact_contains(facts, "nais's software and machine-learning contribution", "pharmaceutical transportation")
     _assert_fact_contains(facts, "co-supervised", "simone reale", "2025/26")
+    _assert_fact_contains(facts, "october 2025 to july 2026", "digital bros")
+    _assert_fact_contains(facts, "fading memories", "game programmer", "itch.io")
     assert not any("eaai" in text or "english at b2" in text for text in facts)
 
 
