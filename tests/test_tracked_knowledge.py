@@ -145,6 +145,8 @@ def test_refreshed_sources_supply_their_existing_intent_evidence() -> None:
             "publications" if fact["category"] == "research" else "projects"
         )
         assert catalog.text_satisfies_intent_evidence(_fact_text(fact), intent), uri
+        profile = catalog.profile_for_intent(intent)
+        assert any(term in _fact_text(fact) for term in profile.lexical_expansion_terms), uri
 
 
 def test_tracked_profile_knowledge_covers_common_recruiter_intents() -> None:

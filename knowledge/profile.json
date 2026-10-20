@@ -869,14 +869,14 @@
     {
       "source_uri": "https://github.com/open-edge-platform/anomalib/pull/3809",
       "category": "projects",
-      "fact_text": "Niccolo Ferrari contributed the standalone MH-PatchCore model to anomalib in merged PR #3809; the implementation uses PCA projection, covariance whitening and bounded merge-reduce coreset construction.",
+      "fact_text": "Niccolo Ferrari contributed the standalone MH-PatchCore source code to anomalib in merged PR #3809; the implementation uses PCA projection, covariance whitening and bounded merge-reduce coreset construction.",
       "source_locator": "PR description, author and merged status",
       "public_visible": true
     },
     {
       "source_uri": "https://github.com/open-edge-platform/anomalib/releases/tag/lib%2Fv2.7.0",
       "category": "projects",
-      "fact_text": "Niccolo Ferrari's MH-PatchCore implementation is included in anomalib library v2.7.0, whose release notes credit NickF93 for PR #3809.",
+      "fact_text": "Niccolo Ferrari's MH-PatchCore software implementation is included in anomalib library v2.7.0, whose release notes credit NickF93 for PR #3809.",
       "source_locator": "Added models and new contributors",
       "public_visible": true
     },
