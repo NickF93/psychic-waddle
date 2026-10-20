@@ -4,7 +4,32 @@
     {
       "source_uri": "cv://niccolo/main",
       "title": "Niccolo Ferrari CV",
-      "reviewed_at": "2026-06-01T00:00:00+00:00"
+      "reviewed_at": "2026-10-21T00:00:00+02:00"
+    },
+    {
+      "source_uri": "https://arxiv.org/abs/2605.27748",
+      "title": "Mahalanobis PatchCore preprint",
+      "reviewed_at": "2026-10-21T00:00:00+02:00"
+    },
+    {
+      "source_uri": "https://arxiv.org/abs/2604.23862",
+      "title": "Graph Memory Transformer preprint",
+      "reviewed_at": "2026-10-21T00:00:00+02:00"
+    },
+    {
+      "source_uri": "https://github.com/open-edge-platform/anomalib/pull/3809",
+      "title": "MH-PatchCore contribution to anomalib",
+      "reviewed_at": "2026-10-21T00:00:00+02:00"
+    },
+    {
+      "source_uri": "https://github.com/open-edge-platform/anomalib/pull/3812",
+      "title": "GRD-Net draft contribution to anomalib",
+      "reviewed_at": "2026-10-21T00:00:00+02:00"
+    },
+    {
+      "source_uri": "https://github.com/open-edge-platform/anomalib/releases/tag/lib%2Fv2.7.0",
+      "title": "anomalib library v2.7.0 release",
+      "reviewed_at": "2026-10-21T00:00:00+02:00"
     }
   ],
   "facts": [
@@ -95,7 +120,7 @@
     {
       "source_uri": "cv://niccolo/main",
       "category": "experience",
-      "fact_text": "At NAIS S.r.l., Niccolo Ferrari leads an industrial machine learning project on vibration-based mechanical data.",
+      "fact_text": "At NAIS S.r.l., Niccolo Ferrari leads NAIS's software and machine-learning contribution within a European research project on vibration analysis for pharmaceutical transportation.",
       "source_locator": "Professional Experience",
       "public_visible": true
     },
@@ -550,7 +575,7 @@
     {
       "source_uri": "cv://niccolo/main",
       "category": "skills",
-      "fact_text": "Niccolo Ferrari's main spoken languages are Italian at native level and English at B2 level.",
+      "fact_text": "Niccolo Ferrari's main spoken languages are Italian at native level and English fluent.",
       "source_locator": "Languages",
       "public_visible": true
     },
@@ -648,7 +673,7 @@
     {
       "source_uri": "cv://niccolo/main",
       "category": "research",
-      "fact_text": "In 2026, Niccolo Ferrari, Oligert Osmani, Evelina Lamma submitted Mahalanobis PatchCore: Covariance-Aware and Streaming-Compatible Industrial Anomaly Detection to EAAI.",
+      "fact_text": "In 2026, Niccolo Ferrari, Oligert Osmani, Evelina Lamma submitted Mahalanobis PatchCore: Covariance-Aware and Streaming-Compatible Industrial Anomaly Detection to Applied Soft Computing (ASOC); journal acceptance has not been announced.",
       "source_locator": "Publications and Research Outputs",
       "public_visible": true
     },
@@ -718,7 +743,7 @@
     {
       "source_uri": "cv://niccolo/main",
       "category": "projects",
-      "fact_text": "MH-PatchCore contains PatchCore and Mahalanobis PatchCore code for Niccolo Ferrari's submitted EAAI paper.",
+      "fact_text": "MH-PatchCore contains PatchCore and Mahalanobis PatchCore code for Niccolo Ferrari's paper submitted to Applied Soft Computing (ASOC).",
       "source_locator": "Research Software",
       "public_visible": true
     },
@@ -797,6 +822,69 @@
       "category": "contact",
       "fact_text": "Niccolo Ferrari's ORCID is https://orcid.org/0000-0002-2578-3211.",
       "source_locator": "Public profile links",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "Niccolo Ferrari co-supervised Simone Reale's M.Sc. thesis Efficient Vehicle State Estimation on CAN-Bus/IMU Time-Series: Leveraging Convolutional Methodologies for Real-Time Maneuver Recognition, academic year 2025/26.",
+      "source_locator": "Research Supervision",
+      "public_visible": true
+    },
+    {
+      "source_uri": "cv://niccolo/main",
+      "category": "research",
+      "fact_text": "The supervisor of Simone Reale's M.Sc. thesis was Michele Lombardi; co-supervisors were Claudio Forte, Alfio Siliato, Niccolo Ferrari, Andrea Moro and Marco Ricco.",
+      "source_locator": "Research Supervision",
+      "public_visible": true
+    },
+    {
+      "source_uri": "https://arxiv.org/abs/2605.27748",
+      "category": "research",
+      "fact_text": "Mahalanobis PatchCore uses a regularised covariance model to whiten reduced patch embeddings, making Euclidean nearest-neighbour retrieval in the transformed space implement Mahalanobis scoring.",
+      "source_locator": "Abstract: covariance-aware retrieval",
+      "public_visible": true
+    },
+    {
+      "source_uri": "https://arxiv.org/abs/2605.27748",
+      "category": "research",
+      "fact_text": "Mahalanobis PatchCore builds its memory bank with bounded-memory training over a re-iterable normal dataset, using incremental dimensionality reduction, covariance estimation and streaming aggregation; this is not a claim of continual adaptation during production inspection.",
+      "source_locator": "Abstract and streaming-compatible training description",
+      "public_visible": true
+    },
+    {
+      "source_uri": "https://arxiv.org/abs/2604.23862",
+      "category": "research",
+      "fact_text": "Graph Memory Transformer keeps causal self-attention and replaces dense feed-forward sublayers with learned graph-memory navigation and a gated displacement from a source memory state toward a token-conditioned target.",
+      "source_locator": "Abstract: architecture and displacement readout",
+      "public_visible": true
+    },
+    {
+      "source_uri": "https://arxiv.org/abs/2604.23862",
+      "category": "research",
+      "fact_text": "The evaluated base-v7 Graph Memory Transformer has 82.2M parameters versus a 103.0M dense baseline, and trails it in validation perplexity, 36.58 versus 26.85; the work does not claim state-of-the-art performance.",
+      "source_locator": "Abstract: evaluated base-v7 results and limitations",
+      "public_visible": true
+    },
+    {
+      "source_uri": "https://github.com/open-edge-platform/anomalib/pull/3809",
+      "category": "projects",
+      "fact_text": "Niccolo Ferrari contributed the standalone MH-PatchCore model to anomalib in merged PR #3809; the implementation uses PCA projection, covariance whitening and bounded merge-reduce coreset construction.",
+      "source_locator": "PR description, author and merged status",
+      "public_visible": true
+    },
+    {
+      "source_uri": "https://github.com/open-edge-platform/anomalib/releases/tag/lib%2Fv2.7.0",
+      "category": "projects",
+      "fact_text": "Niccolo Ferrari's MH-PatchCore implementation is included in anomalib library v2.7.0, whose release notes credit NickF93 for PR #3809.",
+      "source_locator": "Added models and new contributors",
+      "public_visible": true
+    },
+    {
+      "source_uri": "https://github.com/open-edge-platform/anomalib/pull/3812",
+      "category": "projects",
+      "fact_text": "Niccolo Ferrari's GRD-Net integration is proposed in anomalib draft PR #3812; it is not yet merged or released as an anomalib model.",
+      "source_locator": "PR description, author and draft status, reviewed 21 October 2026",
       "public_visible": true
     }
   ]

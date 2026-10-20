@@ -78,7 +78,7 @@ AGGREGATE_EXPECTATIONS: tuple[AggregateExpectation, ...] = (
 def test_tracked_profile_knowledge_is_valid() -> None:
     report = validate_knowledge_files((PROFILE_KNOWLEDGE,))
 
-    assert report.source_count == 1
+    assert report.source_count >= 1
     assert report.fact_count >= 100
     assert report.public_fact_count == report.fact_count
     assert report.chunk_count == report.public_fact_count
@@ -106,6 +106,31 @@ def test_tracked_profile_knowledge_excludes_private_contact_data() -> None:
         "question_recorded",
     ):
         assert forbidden not in text.lower()
+
+
+def test_tracked_profile_reflects_current_reviewed_cv() -> None:
+    facts = _fact_texts()
+    _assert_fact_contains(facts, "submitted", "applied soft computing", "acceptance has not been announced")
+    _assert_fact_contains(facts, "spoken languages", "english fluent")
+    _assert_fact_contains(facts, "nais's software and machine-learning contribution", "pharmaceutical transportation")
+    _assert_fact_contains(facts, "co-supervised", "simone reale", "2025/26")
+    assert not any("eaai" in text or "english at b2" in text for text in facts)
+
+
+def test_research_contributions_have_primary_source_provenance() -> None:
+    expectations = {
+        "https://github.com/open-edge-platform/anomalib/pull/3809": ("mh-patchcore", "merged"),
+        "https://github.com/open-edge-platform/anomalib/pull/3812": ("grd-net", "draft", "not yet merged or released"),
+        "https://github.com/open-edge-platform/anomalib/releases/tag/lib%2Fv2.7.0": ("mh-patchcore", "included", "v2.7.0"),
+        "https://arxiv.org/abs/2605.27748": ("bounded-memory", "re-iterable", "not a claim of continual adaptation"),
+        "https://arxiv.org/abs/2604.23862": ("82.2m", "103.0m", "36.58", "26.85", "does not claim state-of-the-art"),
+    }
+    data = json.loads(PROFILE_KNOWLEDGE.read_text(encoding="utf-8"))
+    sources = {source["source_uri"] for source in data["sources"]}
+    for source_uri, fragments in expectations.items():
+        assert source_uri in sources
+        evidence = [fact for fact in _facts() if fact["source_uri"] == source_uri]
+        assert any(all(fragment in _fact_text(fact) for fragment in fragments) for fact in evidence)
 
 
 def test_tracked_profile_knowledge_covers_common_recruiter_intents() -> None:
