@@ -24,7 +24,7 @@ with defaults are documented below.
 | `CHAT_BASE_URL` | Yes | API root URL for chat requests. |
 | `CHAT_MODEL` | Yes | Chat model used by answer generation. |
 | `CHAT_API_KEY` | No | Optional bearer token for chat requests. |
-| `CHAT_TIMEOUT_SECONDS` | No | Finite positive HTTP timeout in seconds for chat provider requests; defaults to `30`. Set `60` for CPU deployments that need longer to generate an answer. |
+| `CHAT_TIMEOUT_SECONDS` | No | Finite positive HTTP timeout in seconds for chat provider requests; defaults to `30`. Qualify longer values against actual cold CPU generation; see [the operational deployment qualification](public-deployment.md#edge-policy). |
 | `EMBEDDING_BACKEND` | Yes | One of `ollama`, `llama-cpp`, `openai-compatible`. |
 | `EMBEDDING_BASE_URL` | Yes | API root URL for embedding requests. |
 | `EMBEDDING_MODEL` | Yes | Embedding model used for indexing and retrieval. |
