@@ -30,6 +30,70 @@ from portfolio_rag_assistant.provider import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.mark.parametrize("streaming", [False, True])
+def test_runtime_budget_configuration_reaches_actual_inference_requests(streaming):
+    from portfolio_rag_assistant.api import create_api_app
+    from portfolio_rag_assistant.api.composition import build_runtime_services
+    from portfolio_rag_assistant.provider import LLMProviderTransportError
+    from portfolio_rag_assistant.policy import AnswerPolicyDecision
+    from test_generation_delivery import Provider
+    from test_chat_service import (
+        FakeRetriever,
+        FakePolicy,
+        _context,
+        _retrieval_response,
+    )
+
+    primary = Provider([LLMProviderTransportError("unavailable")])
+    fallback = Provider(["Reviewed answer."])
+    env = {
+        **_env(),
+        "CHAT_MAX_TOKENS": "1024",
+        "CHAT_FALLBACK_BACKEND": "ollama",
+        "CHAT_FALLBACK_BASE_URL": "http://local:11434/api",
+        "CHAT_FALLBACK_MODEL": "fallback",
+        "CHAT_FALLBACK_MAX_TOKENS": "384",
+    }
+    services = build_runtime_services(
+        env=env,
+        chat_provider_factory=lambda settings: (
+            primary if settings.model == "chat-model" else fallback
+        ),
+        embedding_provider_factory=lambda settings: FakeEmbeddingProvider(
+            ((1.0, 0.0),)
+        ),
+        connection_factory=lambda settings: FakeRetrievalConnection(),
+    )
+    context = _context()
+    services.chat_service._retriever = FakeRetriever(
+        _retrieval_response(question="Where did Niccolo work?", results=(context,)), []
+    )
+    services.chat_service._answer_policy = FakePolicy(
+        AnswerPolicyDecision(
+            status="answerable", reason="test", approved_context=(context,)
+        ),
+        [],
+    )
+
+    async def run():
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(
+                app=create_api_app(chat_service=services.chat_service)
+            ),
+            base_url="http://test",
+        ) as client:
+            return await client.post(
+                "/chat",
+                json={"question": "Where did Niccolo work?", "language": "en"},
+                headers={"Accept": "text/event-stream"} if streaming else {},
+            )
+
+    response = asyncio.run(run())
+    assert response.status_code == 200
+    assert "Reviewed answer." in response.text
+    assert primary.budgets == [1024] and fallback.budgets == [384]
+
+
 def test_runtime_api_composition_uses_separate_chat_and_embedding_authorities() -> None:
     chat_provider = FakeChatProvider("unused")
     embedding_provider = FakeEmbeddingProvider(embeddings=((0.0, 0.0),))
@@ -112,7 +176,9 @@ def test_runtime_api_composition_uses_separate_chat_and_embedding_authorities() 
     assert len(intent_calls) == 1
     assert "work history" in str(intent_calls[0][1][0])
     assert intent_calls[0][1][1] == ["experience"]
-    assert not any("INSERT INTO question_events" in query for query, _ in connection.calls)
+    assert not any(
+        "INSERT INTO question_events" in query for query, _ in connection.calls
+    )
     assert "access-control-allow-origin" not in response.headers
 
 
