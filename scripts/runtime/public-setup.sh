@@ -39,6 +39,7 @@ setup_embedding_backend() {
 "$SCRIPT_DIR/public-migrate.sh"
 setup_chat_backend
 setup_embedding_backend
+chat_fallback_phase setup
 
 if [ "$ISSUE_CERTIFICATE" = true ]; then
     "$SCRIPT_DIR/letsencrypt-setup.sh"

@@ -1,5 +1,11 @@
 # Public Chat API
 
+M16 adds negotiated streaming on the same POST route. Send
+`Accept: text/event-stream` for status/delta/complete/error events; ordinary
+requests retain the JSON response. See [M16 delivery](m16-delivery.md) for exact
+events, deadlines, explicit fallback and interruption semantics. Completion is
+authoritative; provisional deltas alone never establish an answer or citations.
+
 ## Purpose
 
 The public API is the backend boundary for the portfolio chat widget. It accepts

@@ -8,12 +8,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN addgroup --system app && adduser --system --ingroup app app
+RUN addgroup --system app && adduser --system --ingroup app app \
+    && install -d -m 0755 /opt/tokenizers
 
 COPY pyproject.toml requirements.lock PLAN.md LICENSE ./
 COPY src ./src
 COPY migrations ./migrations
 COPY config ./config
+
+# Tokenizer only, pinned to the fallback's immutable upstream artifact.
+ADD --chmod=0444 --checksum=sha256:c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539 https://huggingface.co/Qwen/Qwen2.5-3B-Instruct/resolve/aa8e72537993ba99e69dfaafa59ed015b17504d1/tokenizer.json /opt/tokenizers/qwen-tokenizer.json
 
 ARG RELEASE_VERSION=0.3.0
 ARG SOURCE_REVISION=unknown
@@ -24,6 +28,9 @@ LABEL org.opencontainers.image.version=$RELEASE_VERSION \
 RUN python -m pip install --constraint requirements.lock .
 
 USER app
+
+# Exercise installed resources as the actual runtime user before shipping.
+RUN python -c "from portfolio_rag_assistant.provider.parameters import ParameterProfile; ParameterProfile.load('openai'); open('/opt/tokenizers/qwen-tokenizer.json', 'rb').read(1)"
 
 EXPOSE 8000
 

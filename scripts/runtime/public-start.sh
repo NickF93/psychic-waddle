@@ -26,6 +26,7 @@ start_embedding_backend() {
 
 start_chat_backend
 start_embedding_backend
+chat_fallback_phase start
 "$SCRIPT_DIR/postgres-start.sh"
 "$SCRIPT_DIR/api-start.sh"
 compose_profile public stop nginx

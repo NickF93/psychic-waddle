@@ -1,5 +1,24 @@
 # Architecture Contract
 
+M16 extends generation delivery with explicit fallback and streaming as defined
+in [M16 delivery](m16-delivery.md). Evidence approval, retrieval and question
+collection retain their existing authority and privacy boundaries.
+
+M16 follow-up separates `GenerationStrategy` (dispatch, deadlines, cancellation,
+and pre-visible fallback) from `GroundedAnswerGenerator` (approved prompt,
+insufficiency filter, classification and citations). The strategy receives a
+grounding-owned text gate; it does not select or discard evidence.
+Delivery buffers Markdown structure until its parsed text matches the widget's
+rendered-text visibility contract. It uses markdown-it-py with the widget's
+JavaScript-default syntax and safe options. Unrendered primary prefixes never
+cross a fallback boundary; once renderable text is emitted, fallback stays
+disabled. Grounding-suppressed completions remain classified by grounding.
+Provider-neutral request controls are encoded by validated parameter profiles,
+shared by JSON and streaming adapters. `.env` owns target identities, credentials,
+controls and input limits; JSON profiles own capability declarations and wire
+mappings. Transport and adapters must not branch on a provider hostname or model
+name. Input admission precedes every dispatch and never trims approved evidence.
+
 This file is the authoritative architecture contract. For a shorter narrative
 about why the system is shaped this way, see
 [Design Decisions](design-decisions.md).

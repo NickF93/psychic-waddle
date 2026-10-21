@@ -57,6 +57,7 @@ def test_llama_cpp_chat_sends_payload_and_reads_response() -> None:
                 "choices": [
                     {
                         "index": 0,
+                        "finish_reason": "stop",
                         "message": {"role": "assistant", "content": "local answer"},
                     }
                 ],

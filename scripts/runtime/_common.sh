@@ -60,6 +60,8 @@ compose_profile_up_wait() {
 compose_provider_run() {
     USE_OLLAMA=false
     USE_LLAMA_CPP=false
+    FALLBACK_BACKEND=$(optional_env_value CHAT_FALLBACK_BACKEND)
+    if [ "$FALLBACK_BACKEND" = ollama ]; then USE_OLLAMA=true; fi
     CHAT_BACKEND_VALUE=$(env_value CHAT_BACKEND)
     EMBEDDING_BACKEND_VALUE=$(env_value EMBEDDING_BACKEND)
 
@@ -129,9 +131,58 @@ preload_ollama_model() {
     KEEP_ALIVE_VALUE=$(configured_value OLLAMA_KEEP_ALIVE)
     compose_profile ollama run --rm api \
         portfolio-rag-assistant runtime preload-ollama-model \
-        --base-url http://ollama:11434/api \
+        --base-url "${2:-http://ollama:11434/api}" \
         --model "$MODEL_NAME" \
         --keep-alive "$KEEP_ALIVE_VALUE"
+}
+
+optional_env_value() {
+    OPTIONAL_KEY=$1
+    require_env_file
+    if awk -v key="$OPTIONAL_KEY" '{line=$0; sub(/^[[:space:]]*/, "", line); if(index(line,key "=")==1) found=1} END {exit !found}' "$ENV_FILE"; then
+        env_value "$OPTIONAL_KEY"
+    else
+        printf '%s' ""
+    fi
+}
+
+validate_chat_fallback() {
+    FALLBACK_BACKEND=$(optional_env_value CHAT_FALLBACK_BACKEND)
+    FALLBACK_URL=$(optional_env_value CHAT_FALLBACK_BASE_URL)
+    FALLBACK_MODEL=$(optional_env_value CHAT_FALLBACK_MODEL)
+    FALLBACK_KEY=$(optional_env_value CHAT_FALLBACK_API_KEY)
+    if [ -z "$FALLBACK_BACKEND$FALLBACK_URL$FALLBACK_MODEL$FALLBACK_KEY" ]; then return; fi
+    [ "$FALLBACK_BACKEND" = ollama ] || fail "containerized fallback requires CHAT_FALLBACK_BACKEND=ollama"
+    configured_value CHAT_FALLBACK_BASE_URL >/dev/null
+    configured_value CHAT_FALLBACK_MODEL >/dev/null
+    configured_value OLLAMA_KEEP_ALIVE >/dev/null
+}
+
+chat_fallback_phase() {
+    FALLBACK_PHASE=$1
+    validate_chat_fallback
+    FALLBACK_BACKEND=$(optional_env_value CHAT_FALLBACK_BACKEND)
+    [ -n "$FALLBACK_BACKEND" ] || return 0
+    case "$FALLBACK_PHASE" in
+        setup|start)
+            FALLBACK_MODEL=$(configured_value CHAT_FALLBACK_MODEL)
+            FALLBACK_URL=$(configured_value CHAT_FALLBACK_BASE_URL)
+            compose_profile_up_wait ollama ollama
+            if [ "$FALLBACK_PHASE" = setup ]; then
+                compose_profile ollama exec -T ollama ollama pull "$FALLBACK_MODEL"
+            fi
+            preload_ollama_model "$FALLBACK_MODEL" "$FALLBACK_URL"
+            info "local chat fallback ready"
+            ;;
+        stop|down)
+            # Shared primary/embedding lifecycle already handles the same container.
+            if [ "$(env_value CHAT_BACKEND)" != ollama ] && [ "$(env_value EMBEDDING_BACKEND)" != ollama ]; then
+                if [ "$FALLBACK_PHASE" = stop ]; then compose_profile ollama stop ollama
+                else remove_profile_service ollama ollama; fi
+            fi
+            ;;
+        *) fail "unsupported chat fallback lifecycle phase" ;;
+    esac
 }
 
 configured_value() {

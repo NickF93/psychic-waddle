@@ -8,6 +8,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import httpx
+from .parameters import ParameterProfile, chat_payload
 
 from portfolio_rag_assistant.provider.contract import (
     ChatMessage,
@@ -34,29 +35,33 @@ class OllamaProvider:
         api_key: str | None = None,
         timeout: float = 30.0,
         transport: httpx.AsyncBaseTransport | None = None,
+        profile: ParameterProfile | None = None,
     ) -> None:
         self._base_url = _normalize_base_url(base_url)
         self._api_key = _normalize_api_key(api_key)
         self._timeout = _require_positive_timeout(timeout)
         self._transport = transport
+        self._profile = profile
+
+    async def stream_chat(self, request: ChatRequest):
+        from portfolio_rag_assistant.provider.streaming import stream_ollama
+
+        async for text in stream_ollama(
+            request,
+            base_url=self._base_url,
+            api_key=self._api_key,
+            timeout=self._timeout,
+            transport=self._transport,
+            profile=self._profile,
+        ):
+            yield text
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
-        payload: dict[str, Any] = {
-            "model": request.model,
-            "messages": [
-                {"role": message.role, "content": message.content}
-                for message in request.messages
-            ],
-            "stream": False,
-        }
-        options: dict[str, Any] = {}
-        if request.temperature is not None:
-            options["temperature"] = request.temperature
-        if request.max_tokens is not None:
-            options["num_predict"] = request.max_tokens
-        if options:
-            payload["options"] = options
-
+        payload = chat_payload(
+            request,
+            stream=False,
+            profile=self._profile or ParameterProfile.load("ollama"),
+        )
         response_payload = await self._post_json("/chat", payload)
         return ChatResponse(
             model=_read_model(response_payload),
@@ -153,11 +158,8 @@ class OllamaProvider:
 
 def _read_json_response(response: httpx.Response) -> dict[str, Any]:
     if not 200 <= response.status_code <= 299:
-        detail = response.text.strip()
         message = f"provider returned HTTP {response.status_code}"
-        if detail:
-            message = f"{message}: {detail}"
-        raise LLMProviderRequestError(message)
+        raise LLMProviderRequestError(message, status_code=response.status_code)
 
     try:
         data = response.json()
@@ -225,6 +227,8 @@ def _read_model(payload: dict[str, Any]) -> str:
 
 
 def _read_chat_message(payload: dict[str, Any]) -> ChatMessage:
+    if payload.get("done") is not True or payload.get("done_reason") != "stop":
+        raise LLMProviderResponseError("provider answer was not completed")
     message = payload.get("message")
     if not isinstance(message, dict):
         raise LLMProviderResponseError("provider response missing message")
