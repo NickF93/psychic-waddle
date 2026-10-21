@@ -26,7 +26,7 @@ request. JSON generation bounds the complete provider attempt. The configuration
 default for the primary remains 30 seconds; the deployment explicitly selects 15.
 `CHAT_MAX_TOKENS` and `CHAT_FALLBACK_MAX_TOKENS` independently bound generation
 output, including any provider reasoning tokens. Both default to 384. The free
-external deployment uses 1,024 to accommodate its hidden reasoning, while the
+external deployment uses 2,048 to accommodate its hidden reasoning, while the
 local fallback retains 384. Answers are instructed to stay under 120 words.
 Human-readable logs report provider role, sanitized failure reason and durations,
 never questions, context, answers, credentials or upstream error bodies.
@@ -56,3 +56,39 @@ The native catalog exporter continues to publish only local Ollama selections:
 when the primary is external, its explicitly selected Ollama fallback supplies
 the local chat declaration. External models are never silently added to the
 private inference gateway.
+
+## Qualification and deployment
+
+The accepted configuration uses anonymous OpenAI-compatible generation at
+`https://ai-gateway.kilo.ai/api/v1` with the explicitly selected
+`minimax/minimax-m3.1-flash:free`. Its catalog advertises zero input/output prices;
+there is no credential and no substitution to paid models. Provider/model
+selection lives in server configuration, not application branches. The earlier
+Liquid candidate was rejected after live truncation and incomplete employer
+coverage. Other free candidates returned capacity/rate failures.
+
+Ollama `qwen2.5:3b-instruct` remains the explicit local fallback. Local embeddings,
+approved knowledge and deterministic evidence policy remain local. The owner
+authorized external generation using public portfolio facts. This authorization
+does not imply a provider retention guarantee: the widget explains the external
+processing boundary and asks visitors to avoid sensitive information.
+
+The API/proxy run from committed source `fe9f738414a96e7c0cd7506a80475677802fd3c3`
+on nklella; persistent database/model/certificate volumes are unchanged. The
+canonical server checkout remains clean on develop while the feature PR awaits
+merge. Source snapshots and the private deployment override are under
+`/opt/m16/`; runtime settings and rollback references are mode 0600.
+
+Validation: 720 backend tests passed against disposable real PostgreSQL/pgvector,
+with one existing skip. Four independent diff-review cycles completed; confirmed
+findings were remediated. Tests exercise fallback exactly once before text,
+no fallback after partial text, cancellation, global deadlines, provider stream
+limits/finish markers, sentinel filtering, citations, safe retrieval failures
+and independently configured primary/fallback budgets through actual API
+dispatches. Deployed content checks verify actual employer coverage rather than
+merely asserting the wording of the prompt.
+
+The cross-repository live results, timings and exact canary cleanup are recorded
+in vpn-hub's `docs/portfolio-assistant-m16-acceptance.md`. The fallback is slower
+and has the existing small local model's quality limits; it is a continuity path,
+not a quality or latency equivalent to the external primary.
