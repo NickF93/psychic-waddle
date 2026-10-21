@@ -147,3 +147,24 @@ The cross-repository live results, timings and exact canary cleanup are recorded
 in vpn-hub's `docs/portfolio-assistant-m16-acceptance.md`. The fallback is slower
 and has the existing small local model's quality limits; it is a continuity path,
 not a quality or latency equivalent to the external primary.
+
+## Rendered-text fallback correction — 21 October 2026
+
+The subsequent supplied review reproduced a backend/widget mismatch: Markdown
+structure alone counted as visible backend output. The correction above covers
+failed and renderer-empty successful streams, while retaining grounding-owned
+insufficiency and the no-fallback-after-visible-output rule.
+
+Source `b05bc492c8d9677d3c9f5aa73bf1b627648eb430` is deployed on nklella as
+`portfolio-rag-assistant:m16-b05bc492c8d9` (image
+`sha256:ff81441aa8a0e181fa5dea02d1314840bea2c509fa72dca01afa035dff6d44d5`).
+The full real-PostgreSQL/pgvector suite passed: 858 tests, no skips. Installed
+wheel, explicit dependency and unprivileged image checks passed. The frontend's
+38 Chromium cases include ten new real-backend desktop/mobile integration cases;
+eight Node tests passed. Actual public desktop/mobile answers streamed before
+completion, returned both workplace facts with citations, and had no page errors.
+The deployed runtime smoke and health/readiness passed. Only the API was replaced;
+five other containers kept IDs/start times. Production question rows stayed
+119 → 119. The task-labelled test database and remote scratch were removed;
+active runtime source/image and protected rollback remain. No home host was used.
+The existing PRs remain unmerged pending owner authorization.
