@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
+from sse_starlette import EventSourceResponse
 
 from portfolio_rag_assistant.api.schemas import (
     MAX_REQUEST_BODY_BYTES,
@@ -113,8 +114,15 @@ def _register_routes(app: FastAPI) -> None:
         return ReadinessResponseBody()
 
     @app.post("/chat", response_model=ChatResponseBody)
-    async def chat(body: ChatRequestBody, request: Request) -> ChatResponseBody:
+    async def chat(body: ChatRequestBody, request: Request):
         service = _require_chat_service(request)
+        accept = request.headers.get("accept", "")
+        if any(part.split(";", 1)[0].strip() == "text/event-stream" for part in accept.split(",")):
+            stream = getattr(service, "stream_answer", None)
+            if not callable(stream):
+                raise ChatServiceError("streaming is not configured")
+            return EventSourceResponse(stream(body), ping=10, send_timeout=15,
+                headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no", "Vary": "Accept"})
         return await service.answer(body)
 
 
