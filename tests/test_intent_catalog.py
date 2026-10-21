@@ -100,6 +100,15 @@ def test_spoken_language_questions_use_existing_skills_intent(question: str) -> 
     assert _intent_identifiers(catalog.detect_question_intents(question)) == ("skills",)
 
 
+@pytest.mark.parametrize("question", (
+    "What does Niccolo's Graph Memory Transformer paper change in language models?",
+    "Explain the Graph Memory Transformer paper for large language models.",
+))
+def test_language_model_research_does_not_require_spoken_language_skills(question: str) -> None:
+    catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
+    assert _intent_identifiers(catalog.detect_question_intents(question)) == ("publications",)
+
+
 @pytest.mark.parametrize(
     "question",
     (

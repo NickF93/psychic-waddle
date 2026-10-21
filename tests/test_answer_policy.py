@@ -103,6 +103,28 @@ def test_policy_rejects_low_confidence_context() -> None:
     assert decision.reason == "low_confidence_context"
 
 
+def test_language_model_research_is_answerable_without_unrelated_skills_evidence() -> None:
+    research = _context(
+        chunk_id=1,
+        category="research",
+        chunk_text=(
+            "research: Niccolo Ferrari co-authored the Graph Memory Transformer "
+            "research paper, arXiv:2604.23862. GMT preserves causal self-attention "
+            "and replaces the feed-forward sublayer with graph memory."
+        ),
+        combined_score=0.99,
+    )
+    decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
+        _request(
+            question="What does Niccolo's Graph Memory Transformer paper change in language models?",
+            retrieved_context=(research,),
+            min_score=0.7,
+        )
+    )
+    assert decision.status == ANSWERABLE
+    assert decision.approved_context == (research,)
+
+
 def test_policy_rejects_unsupported_question_category() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
         _request(

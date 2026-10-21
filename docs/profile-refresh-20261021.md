@@ -114,3 +114,10 @@ embedding is stale and repeat indexing is idle. Repeat real public assistant
 acceptance, including supported factual answers, refusal and validation errors;
 clean only exact canaries. The prior observations above remain historical evidence,
 not a claim that the earlier feature image is the final integration deployment.
+
+Final integration review reproduced a spoken-language alias collision: the bare
+word `language` made supported GMT language-model research require unrelated
+skills evidence. The two broad aliases were narrowed to personal-language
+question phrases. Regression checks preserve spoken-language answers and confirm
+that language-model research remains answerable from publication evidence alone;
+no policy evidence threshold or semantic resolution rule changed.
