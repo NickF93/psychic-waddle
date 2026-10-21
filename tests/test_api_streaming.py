@@ -21,7 +21,7 @@ from test_generation_delivery import Provider
 BODY = {"question": "Where did Niccolo work?", "language": "en"}
 
 
-def service(provider, status="answerable", collector=None):
+def service(provider, status="answerable", collector=None, fallback=None):
     context = _context()
     return _service(
         retriever=FakeRetriever(
@@ -35,7 +35,10 @@ def service(provider, status="answerable", collector=None):
             ),
             [],
         ),
-        generator=GroundedAnswerGenerator(provider, "test"),
+        generator=GroundedAnswerGenerator(
+            provider, "test", fallback_provider=fallback,
+            fallback_model="local" if fallback else None,
+        ),
         question_collector=collector,
     )
 
@@ -90,6 +93,24 @@ def test_partial_failure_is_an_error_event_without_false_completion():
     )
     assert "event: delta" in response.text and "event: error" in response.text
     assert "event: complete" not in response.text and "private" not in response.text
+
+
+@pytest.mark.parametrize("prefix", ["- ", "# ", "```python\n", "> "])
+def test_real_api_discards_nonrendering_primary_before_fallback(prefix):
+    from portfolio_rag_assistant.provider import LLMProviderTransportError
+
+    primary = Provider([prefix, LLMProviderTransportError("private upstream detail")])
+    fallback = Provider(["Local grounded answer."])
+    response = request(service(primary, fallback=fallback))
+    frames = [frame for frame in response.text.replace("\r\n", "\n").split("\n\n") if frame]
+    delta_frames = [frame for frame in frames if frame.startswith("event: delta\n")]
+    assert len(delta_frames) == 1
+    assert '"text": "Local grounded answer."' in delta_frames[0]
+    assert primary.calls == fallback.calls == 1
+    assert response.text.count("event: complete") == 1
+    assert "event: error" not in response.text and "private" not in response.text
+    assert response.text.index('"provider": "fallback"') < response.text.index("event: delta")
+    assert "Niccolo Ferrari CV" in response.text
 
 
 def test_global_deadline_bounds_stream_and_json():

@@ -170,6 +170,76 @@ def test_leading_whitespace_does_not_disable_fallback():
     ]
 
 
+@pytest.mark.parametrize("prefix", ["- ", "# ", "```python\n", "> ", "1. ", "---", "[ref]: https://example.test", "&nbsp;"])
+@pytest.mark.parametrize("ending", ["disconnect", "timeout", "complete"])
+def test_nonrendering_prefix_does_not_disable_fallback(prefix, ending, caplog):
+    parts = [prefix]
+    if ending == "disconnect":
+        parts.append(LLMProviderTransportError("private upstream detail"))
+    elif ending == "timeout":
+        parts.append(1.0)
+    primary = Provider(parts)
+    fallback = Provider(["Local grounded answer."])
+    result = events(primary, fallback, primary_timeout=0.01)
+    assert primary.calls == fallback.calls == 1
+    assert primary.closed and fallback.closed
+    assert [item.text for item in result if isinstance(item, AnswerDelta)] == ["Local grounded answer."]
+    assert result[-1].status == "answerable" and result[-1].sources
+    assert "private upstream detail" not in caplog.text
+    assert "partial=False" in caplog.text
+
+
+@pytest.mark.parametrize("parts", [["- ", "Answer"], ["```python\n", "print(1)"], ["> ", "Answer"], ["-", " ", "Answer"]])
+def test_buffered_markdown_is_preserved_when_text_arrives(parts):
+    result = events(Provider(parts))
+    assert "".join(item.text for item in result if isinstance(item, AnswerDelta)) == "".join(parts)
+    assert result[-1].status == "answerable"
+
+
+@pytest.mark.parametrize("parts", [["- ", "Answer"], ["**"], ["\\*"], ["`", "``"]])
+def test_actual_rendered_text_latches_visibility(parts):
+    fallback = Provider(["must not run"])
+    with pytest.raises(AnswerGenerationProviderError, match="interrupted"):
+        events(Provider([*parts, LLMProviderTransportError("broken")]), fallback)
+    assert fallback.calls == 0
+
+
+def test_empty_rendered_completion_without_fallback_is_unavailable():
+    with pytest.raises(AnswerGenerationProviderError, match="unavailable"):
+        events(Provider(["- "]))
+
+
+def test_nonrendering_primary_and_failed_fallback_stop_after_two_attempts():
+    primary = Provider(["- ", LLMProviderTransportError("broken")])
+    fallback = Provider(["```", LLMProviderTransportError("also broken")])
+    with pytest.raises(AnswerGenerationProviderError, match="unavailable"):
+        events(primary, fallback)
+    assert primary.calls == fallback.calls == 1
+
+
+def test_final_sentinel_safe_character_is_flushed_exactly_once():
+    result = events(Provider(["I"]))
+    assert [item.text for item in result if isinstance(item, AnswerDelta)] == ["I"]
+
+
+def test_cancellation_while_buffering_does_not_fallback():
+    primary = Provider(["- ", 1.0])
+    fallback = Provider(["must not run"])
+
+    async def run():
+        stream = GroundedAnswerGenerator(primary, "primary", fallback_provider=fallback, fallback_model="local").stream(REQUEST)
+        await anext(stream)
+        task = asyncio.create_task(anext(stream))
+        await asyncio.sleep(0.01)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await stream.aclose()
+
+    asyncio.run(run())
+    assert primary.closed and fallback.calls == 0
+
+
 def test_active_stream_can_outlast_inactivity_budget():
     result = events(Provider([0.015, "one", 0.015, "two"]), primary_timeout=0.025)
     assert result[-1].status == "answerable"

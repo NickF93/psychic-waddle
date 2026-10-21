@@ -6,6 +6,16 @@ fallback endpoints/models are explicit; no provider names are embedded in code.
 One fallback attempt is permitted only before visible text, after provider
 failure. An insufficient-evidence answer never triggers fallback.
 
+For streaming, visibility means non-whitespace rendered answer text, using the
+widget's safe Markdown syntax. Delivery buffers empty headings/lists/quotes,
+fences without code, reference definitions and whitespace-only text. A failed
+primary's buffered prefix is discarded before fallback. A successful completion
+with no rendered text is an empty provider response and may use the same one
+fallback attempt. Literal punctuation that renders as text counts as visible;
+once such text is emitted, fallback remains disabled. Grounding still owns
+sentinel suppression and insufficient-evidence classification. JSON delivery is
+unchanged.
+
 Local embeddings, retrieval and deterministic evidence approval remain unchanged.
 External generation receives only application instructions, requested language,
 question and approved public context. It receives no visitor identity, retrieval

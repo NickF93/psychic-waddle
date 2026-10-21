@@ -13,6 +13,7 @@ from .contract import (
     AnswerGenerationConfigurationError,
 )
 from .delivery import failure_reason
+from .visibility import has_visible_answer_text
 from portfolio_rag_assistant.provider.contract import (
     ChatRequest,
     LLMProviderError,
@@ -95,7 +96,7 @@ class GenerationStrategy:
                         text = gate.add(chunk)
                         if not visible:
                             leading += text
-                            if not leading.strip():
+                            if not has_visible_answer_text(leading):
                                 continue
                             text, leading = leading, ""
                             visible = True
@@ -106,9 +107,23 @@ class GenerationStrategy:
                             )
                         if text:
                             yield AnswerDelta(text)
-                if not gate.text.strip():
-                    raise LLMProviderError("provider returned no answer text")
                 tail = gate.add("", final=True)
+                if not visible:
+                    leading += tail
+                    # A grounding-suppressed completion is classified by its
+                    # owner; it is not an empty provider response.
+                    if not has_visible_answer_text(leading):
+                        if not gate.suppressed:
+                            raise LLMProviderError("provider returned no answer text")
+                        tail = ""
+                    else:
+                        tail, leading = leading, ""
+                        visible = True
+                        LOGGER.info(
+                            "First answer text: provider=%s elapsed=%.3fs",
+                            target.role,
+                            time.monotonic() - started,
+                        )
                 if tail:
                     yield AnswerDelta(tail)
                 LOGGER.info(

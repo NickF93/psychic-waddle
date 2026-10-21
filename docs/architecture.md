@@ -8,6 +8,11 @@ M16 follow-up separates `GenerationStrategy` (dispatch, deadlines, cancellation,
 and pre-visible fallback) from `GroundedAnswerGenerator` (approved prompt,
 insufficiency filter, classification and citations). The strategy receives a
 grounding-owned text gate; it does not select or discard evidence.
+Delivery buffers Markdown structure until its parsed text matches the widget's
+rendered-text visibility contract. It uses markdown-it-py with the widget's
+JavaScript-default syntax and safe options. Unrendered primary prefixes never
+cross a fallback boundary; once renderable text is emitted, fallback stays
+disabled. Grounding-suppressed completions remain classified by grounding.
 Provider-neutral request controls are encoded by validated parameter profiles,
 shared by JSON and streaming adapters. `.env` owns target identities, credentials,
 controls and input limits; JSON profiles own capability declarations and wire
