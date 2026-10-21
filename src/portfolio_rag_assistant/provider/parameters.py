@@ -21,9 +21,7 @@ ROOTS = frozenset(
         "chat_template_kwargs",
     }
 )
-DEFAULT_PROFILES = (
-    Path(__file__).resolve().parents[3] / "config/generation-profiles.json"
-)
+DEFAULT_PROFILES = Path(__file__).resolve().parents[1] / "generation-profiles.json"
 
 
 def _put(body, path, value):

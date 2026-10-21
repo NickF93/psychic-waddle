@@ -239,3 +239,31 @@ def test_model_tokenizer_counts_input_without_automatic_truncation(tmp_path):
     InputBudget(context_tokens=642, tokenizer_path=str(path)).check(BASE)
     with pytest.raises(LLMInputBudgetError):
         InputBudget(context_tokens=641, tokenizer_path=str(path)).check(BASE)
+
+
+@pytest.mark.parametrize(
+    "provider_type", [OpenAICompatibleProvider, OllamaProvider, LlamaCppProvider]
+)
+def test_embeddings_do_not_require_chat_configuration(provider_type, monkeypatch):
+    from portfolio_rag_assistant.provider.contract import EmbeddingRequest
+
+    def unavailable(*args, **kwargs):
+        raise AssertionError("embedding I/O must not load chat configuration")
+
+    monkeypatch.setattr(ParameterProfile, "load", unavailable)
+    native = provider_type is OllamaProvider
+    payload = (
+        {"model": "embedding", "embeddings": [[1.0, 2.0]]}
+        if native
+        else {"model": "embedding", "data": [{"index": 0, "embedding": [1.0, 2.0]}]}
+    )
+    provider = provider_type(
+        base_url="http://fixture/api",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=payload)
+        ),
+    )
+    result = asyncio.run(
+        provider.embed(EmbeddingRequest(model="embedding", inputs=("text",)))
+    )
+    assert result.embeddings == ((1.0, 2.0),)

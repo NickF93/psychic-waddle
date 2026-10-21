@@ -41,7 +41,7 @@ class OllamaProvider:
         self._api_key = _normalize_api_key(api_key)
         self._timeout = _require_positive_timeout(timeout)
         self._transport = transport
-        self._profile = profile or ParameterProfile.load("ollama")
+        self._profile = profile
 
     async def stream_chat(self, request: ChatRequest):
         from portfolio_rag_assistant.provider.streaming import stream_ollama
@@ -57,7 +57,11 @@ class OllamaProvider:
             yield text
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
-        payload = chat_payload(request, stream=False, profile=self._profile)
+        payload = chat_payload(
+            request,
+            stream=False,
+            profile=self._profile or ParameterProfile.load("ollama"),
+        )
         response_payload = await self._post_json("/chat", payload)
         return ChatResponse(
             model=_read_model(response_payload),
