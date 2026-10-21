@@ -163,6 +163,14 @@ def build_runtime_services(
                 provider=chat_provider,
                 chat_model=chat_settings.model,
                 max_tokens=chat_settings.max_tokens,
+                generation_options=chat_settings.request_options,
+                input_budget=chat_settings.input_budget,
+                fallback_generation_options=fallback_settings.request_options
+                if fallback_settings
+                else None,
+                fallback_input_budget=fallback_settings.input_budget
+                if fallback_settings
+                else None,
                 primary_timeout=chat_settings.timeout_seconds,
                 fallback_provider=fallback_provider,
                 fallback_model=fallback_settings.model if fallback_settings else None,

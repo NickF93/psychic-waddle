@@ -7,6 +7,7 @@ import asyncio
 import json
 import math
 import time
+from portfolio_rag_assistant.provider.contract import LLMInputBudgetError
 from contextlib import aclosing
 
 from portfolio_rag_assistant.answer.contract import (
@@ -159,8 +160,12 @@ class PublicChatService:
             yield _event(
                 "error",
                 {
-                    "code": "service_unavailable",
-                    "message": "The answer could not be completed. Please retry.",
+                    "code": "context_limit_exceeded"
+                    if isinstance(error, LLMInputBudgetError)
+                    else "service_unavailable",
+                    "message": "Approved information exceeds the configured model input limit."
+                    if isinstance(error, LLMInputBudgetError)
+                    else "The answer could not be completed. Please retry.",
                 },
             )
         finally:

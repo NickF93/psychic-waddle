@@ -36,6 +36,10 @@ class LLMProviderResponseError(LLMProviderError):
     """Raised when a provider response cannot satisfy the contract."""
 
 
+class LLMInputBudgetError(LLMProviderError):
+    """Approved input cannot fit the configured target without truncation."""
+
+
 @dataclass(frozen=True, slots=True)
 class TokenUsage:
     """Optional token accounting returned by a provider."""
@@ -72,14 +76,35 @@ class ChatRequest:
     messages: tuple[ChatMessage, ...]
     temperature: float | None = None
     max_tokens: int | None = None
+    top_p: float | None = None
+    reasoning_mode: str = "default"
+    reasoning_effort: str | None = None
 
     def __post_init__(self) -> None:
         _require_non_empty_text(self.model, "model")
         _require_non_empty_sequence(self.messages, "messages")
         _require_items_of_type(self.messages, ChatMessage, "messages")
-        if self.temperature is not None and not 0 <= self.temperature <= 2:
+        if self.temperature is not None and (
+            isinstance(self.temperature, bool)
+            or not isinstance(self.temperature, (int, float))
+            or not 0 <= self.temperature <= 2
+        ):
             raise ValueError("temperature must be between 0 and 2")
         _require_optional_positive_int(self.max_tokens, "max_tokens")
+        if self.top_p is not None and (
+            isinstance(self.top_p, bool)
+            or not isinstance(self.top_p, (float, int))
+            or not 0 < self.top_p <= 1
+        ):
+            raise ValueError("top_p must be in (0, 1]")
+        if self.reasoning_mode not in ("default", "off", "on"):
+            raise ValueError("reasoning_mode must be default, off or on")
+        if self.reasoning_effort is not None and (
+            self.reasoning_mode != "on"
+            or not isinstance(self.reasoning_effort, str)
+            or not self.reasoning_effort.strip()
+        ):
+            raise ValueError("reasoning effort requires reasoning on")
 
 
 @dataclass(frozen=True, slots=True)

@@ -70,8 +70,34 @@ coverage. Other free candidates returned capacity/rate failures.
 Ollama `qwen2.5:3b-instruct` remains the explicit local fallback. Local embeddings,
 approved knowledge and deterministic evidence policy remain local. The owner
 authorized external generation using public portfolio facts. This authorization
-does not imply a provider retention guarantee: the widget explains the external
-processing boundary and asks visitors to avoid sensitive information.
+does not imply a provider retention guarantee. The widget retains its original
+waiting splash until actual answer text starts; no additional notice is shown.
+
+## Follow-up configuration contract
+
+Primary and fallback retain their existing identity, optional credential, timeout
+and `MAX_TOKENS` environment settings. Each accepts `PARAMETER_PROFILE`,
+`REASONING_MODE` (default/off/on), optional `REASONING_EFFORT`, `TEMPERATURE`,
+`TOP_P`, `INPUT_MAX_BYTES`, `CONTEXT_TOKENS` and `INPUT_TOKENIZER`, under its
+existing `CHAT_` or `CHAT_FALLBACK_` prefix. Blank sampling settings are omitted.
+`GENERATION_PROFILES_PATH` selects the JSON capability/wire mapping file.
+Invalid options or conflicting/unsafe mappings fail at startup. Default OpenAI
+capabilities do not assume reasoning support; explicit effort/nested profiles
+demonstrate the different protocols. No endpoint/model-specific branching exists
+in the adapters or grounding layer.
+
+The configured primary profile supports mandatory reasoning at low effort and
+omits unsupported sampling controls. The example ceiling is 4,096 tokens; live
+qualification must confirm it before deployment. The local profile keeps 384
+output tokens, temperature 0 and its observed 4,096-token context.
+Admission counts every message, reserves 256 framing tokens and the full output
+ceiling, and independently checks the selected fallback. The external profile
+uses conservative UTF-8 size accounting (not exact token usage). Local admission
+uses Hugging Face tokenizers and a checksummed Qwen tokenizer pinned in the image;
+it performs no request-time download and disables tokenizer truncation/padding.
+Oversize input produces `context_limit_exceeded`, without dropping evidence.
+JSON and streaming use the same parameter encoder. JSON completions require a
+successful stop marker; HTTP errors retain status but exclude upstream bodies.
 
 The API/proxy run from committed source `fe9f738414a96e7c0cd7506a80475677802fd3c3`
 on nklella; persistent database/model/certificate volumes are unchanged. The

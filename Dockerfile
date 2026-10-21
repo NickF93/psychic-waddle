@@ -15,6 +15,9 @@ COPY src ./src
 COPY migrations ./migrations
 COPY config ./config
 
+# Tokenizer only, pinned to the fallback's immutable upstream artifact.
+ADD --checksum=sha256:c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539 https://huggingface.co/Qwen/Qwen2.5-3B-Instruct/resolve/aa8e72537993ba99e69dfaafa59ed015b17504d1/tokenizer.json /opt/tokenizers/qwen-tokenizer.json
+
 ARG RELEASE_VERSION=0.3.0
 ARG SOURCE_REVISION=unknown
 LABEL org.opencontainers.image.version=$RELEASE_VERSION \

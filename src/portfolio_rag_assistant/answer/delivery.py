@@ -1,6 +1,8 @@
 """Explicit generation targets and provisional answer filtering."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from portfolio_rag_assistant.provider.budget import InputBudget
+from portfolio_rag_assistant.provider.contract import LLMInputBudgetError
 import math
 
 from portfolio_rag_assistant.provider import ChatProvider
@@ -16,6 +18,8 @@ SENTINEL = "INSUFFICIENT_APPROVED_CONTEXT"
 
 def failure_reason(error: Exception) -> str:
     """Readable operational reason without upstream message/body disclosure."""
+    if isinstance(error, LLMInputBudgetError):
+        return "approved input exceeds target budget"
     if isinstance(error, TimeoutError):
         return "deadline reached"
     if isinstance(error, LLMProviderTransportError):
@@ -39,6 +43,8 @@ class GenerationTarget:
     timeout: float
     role: str
     max_tokens: int = 384
+    options: dict = field(default_factory=dict)
+    input_budget: InputBudget = field(default_factory=InputBudget)
 
     def __post_init__(self):
         if (

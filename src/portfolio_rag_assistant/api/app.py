@@ -20,6 +20,7 @@ from portfolio_rag_assistant.api.schemas import (
     ReadinessResponseBody,
 )
 from portfolio_rag_assistant.api.service import ChatServiceError
+from portfolio_rag_assistant.provider.contract import LLMInputBudgetError
 
 
 class ChatService(Protocol):
@@ -138,6 +139,14 @@ def _register_routes(app: FastAPI) -> None:
 
 
 def _register_error_handlers(app: FastAPI) -> None:
+    @app.exception_handler(LLMInputBudgetError)
+    async def input_budget_error_handler(request: Request, error: LLMInputBudgetError):
+        return _error_response(
+            status_code=503,
+            code="context_limit_exceeded",
+            message="Approved information exceeds the configured model input limit.",
+        )
+
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(
         request: Request,

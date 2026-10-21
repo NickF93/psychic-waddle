@@ -5,9 +5,15 @@ from __future__ import annotations
 import math
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, cast
 from urllib.parse import urlparse
+from portfolio_rag_assistant.provider.parameters import (
+    ParameterProfile,
+    DEFAULT_PROFILES,
+)
+from portfolio_rag_assistant.provider.budget import InputBudget
+from portfolio_rag_assistant.provider.contract import ChatRequest, ChatMessage
 
 from portfolio_rag_assistant.provider import (
     ChatProvider,
@@ -40,9 +46,52 @@ class ChatProviderSettings:
     api_key: str | None = None
     timeout_seconds: float = 30.0
     max_tokens: int = 384
+    temperature: float | None = None
+    top_p: float | None = None
+    reasoning_mode: str = "default"
+    reasoning_effort: str | None = None
+    profile_name: str | None = None
+    profiles_path: str = str(DEFAULT_PROFILES)
+    input_budget: InputBudget = field(default_factory=InputBudget)
+
+    @property
+    def request_options(self):
+        return dict(
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            reasoning_mode=self.reasoning_mode,
+            reasoning_effort=self.reasoning_effort,
+        )
+
+    @property
+    def parameter_profile(self):
+        return ParameterProfile.load(
+            self.profile_name or ("ollama" if self.backend == "ollama" else "openai"),
+            self.profiles_path,
+        )
 
     def __post_init__(self) -> None:
         _require_supported_backend(self.backend, "CHAT_BACKEND")
+        try:
+            sample = ChatRequest(
+                model=self.model,
+                messages=(ChatMessage("user", "validation"),),
+                **self.request_options,
+            )
+            self.parameter_profile.encode(sample)
+        except (ValueError, TypeError) as error:
+            raise LLMProviderConfigurationError(
+                "invalid normalized generation settings"
+            ) from error
+        if (
+            self.input_budget.context_tokens is not None
+            and self.max_tokens + self.input_budget.framing_reserve
+            >= self.input_budget.context_tokens
+        ):
+            raise LLMProviderConfigurationError(
+                "generation reservation exhausts target context"
+            )
         object.__setattr__(
             self,
             "base_url",
@@ -200,6 +249,19 @@ def load_chat_provider_settings(
         api_key=source.get("CHAT_API_KEY"),
         timeout_seconds=_require_chat_timeout(source.get("CHAT_TIMEOUT_SECONDS", "30")),
         max_tokens=_require_chat_max_tokens(source.get("CHAT_MAX_TOKENS", "384")),
+        temperature=_optional_float(source.get("CHAT_TEMPERATURE")),
+        top_p=_optional_float(source.get("CHAT_TOP_P")),
+        reasoning_mode=source.get("CHAT_REASONING_MODE", "default"),
+        reasoning_effort=source.get("CHAT_REASONING_EFFORT") or None,
+        profile_name=source.get("CHAT_PARAMETER_PROFILE") or None,
+        profiles_path=source.get("GENERATION_PROFILES_PATH") or str(DEFAULT_PROFILES),
+        input_budget=InputBudget(
+            max_bytes=_positive_int(source.get("CHAT_INPUT_MAX_BYTES", "65536")),
+            context_tokens=_positive_int(source["CHAT_CONTEXT_TOKENS"])
+            if source.get("CHAT_CONTEXT_TOKENS")
+            else None,
+            tokenizer_path=source.get("CHAT_INPUT_TOKENIZER") or None,
+        ),
     )
 
 
@@ -207,14 +269,36 @@ def load_fallback_chat_provider_settings(
     env: Mapping[str, str],
 ) -> ChatProviderSettings | None:
     """Reuse validated provider settings for one explicitly configured fallback."""
-    fields = ("BACKEND", "BASE_URL", "MODEL", "API_KEY")
-    if not any(env.get(f"CHAT_FALLBACK_{field}", "").strip() for field in fields):
+    fields = (
+        "BACKEND",
+        "BASE_URL",
+        "MODEL",
+        "API_KEY",
+        "TEMPERATURE",
+        "TOP_P",
+        "REASONING_MODE",
+        "REASONING_EFFORT",
+        "PARAMETER_PROFILE",
+        "INPUT_MAX_BYTES",
+        "CONTEXT_TOKENS",
+        "INPUT_TOKENIZER",
+    )
+    if not any(env.get(f"CHAT_FALLBACK_{field}", "").strip() for field in fields[:4]):
         return None
     settings = {
         f"CHAT_{field}": env.get(f"CHAT_FALLBACK_{field}", "") for field in fields
     }
     settings["CHAT_TIMEOUT_SECONDS"] = env.get("CHAT_FALLBACK_TIMEOUT_SECONDS", "180")
     settings["CHAT_MAX_TOKENS"] = env.get("CHAT_FALLBACK_MAX_TOKENS", "384")
+    settings["GENERATION_PROFILES_PATH"] = env.get(
+        "GENERATION_PROFILES_PATH", str(DEFAULT_PROFILES)
+    )
+    settings["CHAT_REASONING_MODE"] = (
+        env.get("CHAT_FALLBACK_REASONING_MODE") or "default"
+    )
+    settings["CHAT_INPUT_MAX_BYTES"] = (
+        env.get("CHAT_FALLBACK_INPUT_MAX_BYTES") or "65536"
+    )
     try:
         return load_chat_provider_settings(settings)
     except LLMProviderConfigurationError as error:
@@ -235,6 +319,24 @@ def _require_chat_max_tokens(value: str) -> int:
             "CHAT_MAX_TOKENS must be a positive integer"
         )
     return result
+
+
+def _positive_int(value):
+    return _require_chat_max_tokens(value)
+
+
+def _optional_float(value):
+    if value is None or value == "":
+        return None
+    try:
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError()
+        return result
+    except (ValueError, TypeError) as error:
+        raise LLMProviderConfigurationError(
+            "generation sampling setting must be finite"
+        ) from error
 
 
 def load_request_timeout(env: Mapping[str, str]) -> float:
@@ -336,6 +438,7 @@ def build_chat_provider(settings: ChatProviderSettings) -> ChatProvider:
         base_url=settings.base_url,
         api_key=settings.api_key,
         timeout=settings.timeout_seconds,
+        profile=settings.parameter_profile,
     )
     return cast(ChatProvider, provider)
 
@@ -359,14 +462,19 @@ def _build_provider(
     base_url: str,
     api_key: str | None,
     timeout: float = 30.0,
+    profile: ParameterProfile | None = None,
 ) -> object:
     if backend == "ollama":
-        return OllamaProvider(base_url=base_url, api_key=api_key, timeout=timeout)
+        return OllamaProvider(
+            base_url=base_url, api_key=api_key, timeout=timeout, profile=profile
+        )
     if backend == "llama-cpp":
-        return LlamaCppProvider(base_url=base_url, api_key=api_key, timeout=timeout)
+        return LlamaCppProvider(
+            base_url=base_url, api_key=api_key, timeout=timeout, profile=profile
+        )
     if backend == "openai-compatible":
         return OpenAICompatibleProvider(
-            base_url=base_url, api_key=api_key, timeout=timeout
+            base_url=base_url, api_key=api_key, timeout=timeout, profile=profile
         )
     raise LLMProviderConfigurationError("unsupported provider backend")
 

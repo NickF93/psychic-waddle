@@ -82,7 +82,9 @@ def test_chat_timeout_reaches_http_requests(
             json={
                 "model": "chat-model",
                 "message": message,
-                "choices": [{"message": message}],
+                "choices": [{"message": message, "finish_reason": "stop"}],
+                "done": True,
+                "done_reason": "stop",
             },
         )
 

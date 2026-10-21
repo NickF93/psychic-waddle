@@ -5,6 +5,7 @@ import json
 
 import httpx
 from httpx_sse import aconnect_sse, SSEError
+from .parameters import ParameterProfile, chat_payload
 
 from portfolio_rag_assistant.provider.contract import (
     ChatRequest,
@@ -49,28 +50,6 @@ class _BoundedTransport(httpx.AsyncBaseTransport):
         await self.transport.aclose()
 
 
-def _payload(request: ChatRequest, *, native: bool) -> dict:
-    body = {
-        "model": request.model,
-        "messages": [
-            {"role": item.role, "content": item.content} for item in request.messages
-        ],
-        "stream": True,
-    }
-    options = {}
-    if request.temperature is not None:
-        options["temperature"] = request.temperature
-    if request.max_tokens is not None:
-        options["num_predict" if native else "max_tokens"] = request.max_tokens
-    if native:
-        if options:
-            body["options"] = options
-    else:
-        body.update(options)
-        body["n"] = 1
-    return body
-
-
 def _headers(api_key: str | None) -> dict[str, str]:
     return {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
@@ -94,6 +73,7 @@ async def stream_openai(
     api_key: str | None,
     timeout: float,
     transport: httpx.AsyncBaseTransport | None,
+    profile: ParameterProfile | None = None,
 ) -> AsyncIterator[str]:
     """Yield answer content only; require a successful native finish marker."""
     finished = False
@@ -107,7 +87,14 @@ async def stream_openai(
                 "POST",
                 f"{base_url}/chat/completions",
                 headers=_headers(api_key),
-                json=_payload(request, native=False),
+                json={
+                    **chat_payload(
+                        request,
+                        stream=True,
+                        profile=profile or ParameterProfile.load("openai"),
+                    ),
+                    "n": 1,
+                },
             ) as stream:
                 if not stream.response.is_success:
                     raise LLMProviderRequestError(
@@ -159,8 +146,7 @@ async def stream_openai(
                             finished = True
     except (httpx.TransportError, SSEError) as error:
         raise LLMProviderTransportError("provider stream transport failed") from error
-    if not finished:
-        raise LLMProviderResponseError("provider stream closed before completion")
+    raise LLMProviderResponseError("provider stream closed before completion")
 
 
 async def stream_ollama(
@@ -170,6 +156,7 @@ async def stream_ollama(
     api_key: str | None,
     timeout: float,
     transport: httpx.AsyncBaseTransport | None,
+    profile: ParameterProfile | None = None,
 ) -> AsyncIterator[str]:
     """Decode native NDJSON without exposing reasoning or upstream errors."""
     received = 0
@@ -181,7 +168,11 @@ async def stream_ollama(
                 "POST",
                 f"{base_url}/chat",
                 headers=_headers(api_key),
-                json=_payload(request, native=True),
+                json=chat_payload(
+                    request,
+                    stream=True,
+                    profile=profile or ParameterProfile.load("ollama"),
+                ),
             ) as response:
                 if not response.is_success:
                     raise LLMProviderRequestError(

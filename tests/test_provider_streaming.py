@@ -67,6 +67,7 @@ def test_openai_stream_optional_auth_content_only_and_usage(key):
     "body",
     [
         sse(choice("partial")),
+        sse(choice("partial"), choice(reason="stop")),
         sse("[DONE]"),
         sse(choice("partial"), choice(reason="length")),
         sse({"error": {"message": "secret"}}),
