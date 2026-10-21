@@ -1,5 +1,9 @@
 # Architecture Contract
 
+M16 extends generation delivery with explicit fallback and streaming as defined
+in [M16 delivery](m16-delivery.md). Evidence approval, retrieval and question
+collection retain their existing authority and privacy boundaries.
+
 This file is the authoritative architecture contract. For a shorter narrative
 about why the system is shaped this way, see
 [Design Decisions](design-decisions.md).
