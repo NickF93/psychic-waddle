@@ -44,6 +44,14 @@ with the same mounts and networks before replacing the live proxy. Then target
 only `nginx-tls` with `up -d --no-deps`; do not run whole-stack deployment or
 certificate bootstrap scripts against an already running TLS edge.
 
+Inspect the effective `docker compose config` mount targets and candidate
+`nginx -T` output as well as syntax. An older deployment override can pin
+`/etc/nginx/nginx.conf` to an earlier snapshot and silently hide the new site.
+Reconcile that target in the final operator override, preserving other mounts.
+Before activation, verify the loaded configuration contains the chosen server
+name, ThingsBoard upstream and shared assistant include. Do not publish full
+configuration dumps or operator environment contents as acceptance artifacts.
+
 ## Routing and privacy
 
 HTTPS `/` serves ThingsBoard, including its REST and WebSocket APIs. The three
@@ -70,6 +78,9 @@ Firmware using those endpoints needs no update. Do not redirect `:8080`.
 Reuse a currently valid matching certificate; do not issue a duplicate just to
 enable this site. The selected nklella certificate covers `vps.madnick.ovh`.
 Reuse the existing webroot Certbot renewal scripts and certificate volumes.
+Renewal and status cover all certificates managed in that volume, including a
+separately named ThingsBoard certificate. Certbot retains authority over each
+certificate's renewal schedule; Nginx reloads only after a successful renewal.
 Install `public-certbot-install-timer.sh` from the persistent deployed source,
 with the effective Compose file list recorded in its environment file. Test
 `public-certbot-test-renewal.sh`, timer activation and Nginx reload behavior.

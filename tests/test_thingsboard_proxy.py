@@ -263,6 +263,18 @@ class ThingsBoardProxy(unittest.TestCase):
         self.assertNotIn(secret, logs)
         self.assertIn("route=device-api status=200", logs)
 
+    def test_redirect_and_fallback_hosts_never_log_tokens(self):
+        secret = "fixture-secret-" + uuid.uuid4().hex
+        path = "/api/v1/" + secret + "/telemetry?token=" + secret
+        connection = http.client.HTTPConnection("127.0.0.1", self.http_port, timeout=5)
+        connection.request("POST", path, b"{}", {"Host": "board.test"})
+        response = connection.getresponse()
+        self.assertEqual(response.status, 308)
+        response.read()
+        connection.close()
+        self.assertEqual(self.request(path, host="other.test")[0], 404)
+        self.assertNotIn(secret, docker("logs", self.edge))
+
     def test_http_redirect_and_acme(self):
         connection = http.client.HTTPConnection("127.0.0.1", self.http_port, timeout=5)
         connection.request("GET", "/login?return=home", headers={"Host": "board.test"})

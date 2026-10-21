@@ -502,7 +502,7 @@ def test_public_edge_logging_is_redacted() -> None:
 
     for log_format in log_formats:
         assert "$request_method" in log_format
-        assert "$uri" in log_format
+        assert "$assistant_log_path" in log_format
         assert "$status" in log_format
         assert "$assistant_cors_origin" in log_format
 
@@ -512,6 +512,7 @@ def test_public_edge_logging_is_redacted() -> None:
             "$http_cookie",
             "$request_body",
             "$request_uri",
+            "$uri",
             "$args",
         ):
             assert forbidden_field not in log_format

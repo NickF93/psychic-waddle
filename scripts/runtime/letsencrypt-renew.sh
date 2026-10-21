@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
+SCRIPT_DIR=$(CDPATH='' cd "$(dirname "$0")" && pwd)
 . "$SCRIPT_DIR/_common.sh"
 
 DRY_RUN=false
@@ -19,7 +19,6 @@ configured_value LETSENCRYPT_EMAIL >/dev/null
 if [ "$DRY_RUN" = true ]; then
     compose_profile public-tls run --rm certbot renew \
         --dry-run \
-        --cert-name portfolio-rag-assistant \
         --webroot \
         --webroot-path /var/www/certbot
     info "certificate renewal dry run passed"
@@ -38,7 +37,6 @@ trap cleanup_marker EXIT
 compose_profile public-tls run --rm \
     --volume "$MARKER_DIR:$MARKER_MOUNT" \
     certbot renew \
-        --cert-name portfolio-rag-assistant \
         --webroot \
         --webroot-path /var/www/certbot \
         --deploy-hook "touch $MARKER_MOUNT/$MARKER_FILE"

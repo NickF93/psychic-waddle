@@ -297,7 +297,7 @@ def test_letsencrypt_scripts_use_explicit_tls_contract() -> None:
     assert "compose_profile public-tls run --rm certbot renew" in renew
     assert "--dry-run" in renew
     assert "--webroot-path /var/www/certbot" in renew
-    assert "--cert-name portfolio-rag-assistant" in renew
+    assert "--cert-name" not in renew
     assert "--deploy-hook" in renew
     assert "MARKER_MOUNT=/var/lib/portfolio-rag-assistant-renewal" in renew
     assert "no certificates renewed; nginx reload skipped" in renew
@@ -311,7 +311,7 @@ def test_public_certbot_operator_scripts_are_bounded() -> None:
     timer = _script("public-certbot-install-timer.sh")
 
     assert "compose_profile public-tls run --rm certbot certificates" in status
-    assert "--cert-name portfolio-rag-assistant" in status
+    assert "--cert-name" not in status
     assert '"$SCRIPT_DIR/letsencrypt-renew.sh" --dry-run' in test_renewal
     assert "usage: public-certbot-install-timer.sh [--dry-run]" in timer
     assert "portfolio-rag-assistant-letsencrypt-renew.service" in timer
