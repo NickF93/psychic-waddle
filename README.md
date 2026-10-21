@@ -77,6 +77,9 @@ the architecture is shaped this way lives in
 [docs/architecture.md](docs/architecture.md) is the authoritative architecture
 contract.
 
+The [platform M11 profile refresh](docs/profile-refresh-20261021.md) records the
+current reviewed corpus, provenance, deployment qualification and acceptance.
+
 ## Local Shape
 
 The default runtime uses FastAPI, PostgreSQL with `pgvector`, and explicit model
