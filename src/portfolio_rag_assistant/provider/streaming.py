@@ -88,7 +88,7 @@ async def stream_openai(request: ChatRequest, *, base_url: str,
             async with aconnect_sse(client, "POST", f"{base_url}/chat/completions",
                                     headers=_headers(api_key), json=_payload(request, native=False)) as stream:
                 if not stream.response.is_success:
-                    raise LLMProviderRequestError(f"provider returned HTTP {stream.response.status_code}")
+                    raise LLMProviderRequestError("provider rejected the request", status_code=stream.response.status_code)
                 async for event in stream.aiter_sse():
                     received += len(event.data.encode())
                     if received > MAX_STREAM_BYTES:
@@ -132,7 +132,7 @@ async def stream_ollama(request: ChatRequest, *, base_url: str,
             async with client.stream("POST", f"{base_url}/chat", headers=_headers(api_key),
                                      json=_payload(request, native=True)) as response:
                 if not response.is_success:
-                    raise LLMProviderRequestError(f"provider returned HTTP {response.status_code}")
+                    raise LLMProviderRequestError("provider rejected the request", status_code=response.status_code)
                 async for line in response.aiter_lines():
                     received += len(line.encode())
                     if received > MAX_STREAM_BYTES:

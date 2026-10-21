@@ -193,6 +193,29 @@ def load_chat_provider_settings(
     )
 
 
+def load_fallback_chat_provider_settings(env: Mapping[str, str]) -> ChatProviderSettings | None:
+    """Reuse validated provider settings for one explicitly configured fallback."""
+    fields = ("BACKEND", "BASE_URL", "MODEL", "API_KEY")
+    if not any(env.get(f"CHAT_FALLBACK_{field}", "").strip() for field in fields):
+        return None
+    settings = {f"CHAT_{field}": env.get(f"CHAT_FALLBACK_{field}", "") for field in fields}
+    settings["CHAT_TIMEOUT_SECONDS"] = env.get("CHAT_FALLBACK_TIMEOUT_SECONDS", "180")
+    try:
+        return load_chat_provider_settings(settings)
+    except LLMProviderConfigurationError as error:
+        raise LLMProviderConfigurationError("CHAT_FALLBACK provider settings are invalid") from error
+
+
+def load_request_timeout(env: Mapping[str, str]) -> float:
+    try:
+        value = float(env.get("CHAT_REQUEST_TIMEOUT_SECONDS", "240"))
+    except ValueError as error:
+        raise RuntimeConfigurationError("CHAT_REQUEST_TIMEOUT_SECONDS must be finite and positive") from error
+    if not math.isfinite(value) or value <= 0:
+        raise RuntimeConfigurationError("CHAT_REQUEST_TIMEOUT_SECONDS must be finite and positive")
+    return value
+
+
 def load_embedding_provider_settings(
     env: Mapping[str, str] | None = None,
 ) -> EmbeddingProviderSettings:

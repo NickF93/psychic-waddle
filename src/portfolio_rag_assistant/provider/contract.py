@@ -23,6 +23,10 @@ class LLMProviderConfigurationError(LLMProviderError):
 class LLMProviderRequestError(LLMProviderError):
     """Raised when the provider rejects a valid contract request."""
 
+    def __init__(self, message: str, *, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
+
 
 class LLMProviderTransportError(LLMProviderError):
     """Raised when provider transport fails."""

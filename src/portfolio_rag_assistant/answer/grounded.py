@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
+import time
+from contextlib import aclosing
+from dataclasses import replace
+
+from portfolio_rag_assistant.answer.delivery import GenerationTarget, ProvisionalText, failure_reason
+from portfolio_rag_assistant.answer.contract import AnswerDelta, GenerationStatus
+from portfolio_rag_assistant.provider.contract import StreamingChatProvider
+
+LOGGER = logging.getLogger(__name__)
+
 from portfolio_rag_assistant.answer.contract import (
     AnswerGenerationConfigurationError,
     AnswerGenerationProviderError,
@@ -43,6 +55,8 @@ Never transfer or generalize a status from one item to another.
 For fit or suitability questions, summarize approved evidence only. Do not give
 a yes/no hiring verdict, hiring recommendation, or prediction.
 Answer in the requested language.
+Use Markdown paragraphs and proper newline-separated bullets for lists.
+Do not flatten a list into one line separated by hyphens.
 """
 
 _LANGUAGE_NAMES: dict[AnswerLanguage, str] = {
@@ -76,6 +90,10 @@ class GroundedAnswerGenerator:
         chat_model: str,
         *,
         max_tokens: int = 384,
+        primary_timeout: float = 15.0,
+        fallback_provider: ChatProvider | None = None,
+        fallback_model: str | None = None,
+        fallback_timeout: float = 180.0,
     ) -> None:
         if not isinstance(provider, ChatProvider):
             raise AnswerGenerationConfigurationError(
@@ -86,6 +104,11 @@ class GroundedAnswerGenerator:
         self._provider = provider
         self._chat_model = chat_model
         self._max_tokens = max_tokens
+        self._targets = (GenerationTarget(provider, chat_model, primary_timeout, "primary"),)
+        if (fallback_provider is None) != (fallback_model is None):
+            raise AnswerGenerationConfigurationError("fallback provider and model must be configured together")
+        if fallback_provider is not None:
+            self._targets += (GenerationTarget(fallback_provider, fallback_model, fallback_timeout, "fallback"),)
 
     async def generate(
         self,
@@ -115,10 +138,18 @@ class GroundedAnswerGenerator:
             max_tokens=self._max_tokens,
         )
 
-        try:
-            chat_response = await self._provider.chat(chat_request)
-        except LLMProviderError as error:
-            raise AnswerGenerationProviderError("provider chat failed") from error
+        for index, target in enumerate(self._targets):
+            started = time.monotonic()
+            LOGGER.info("Generation started: provider=%s", target.role)
+            try:
+                async with asyncio.timeout(target.timeout):
+                    chat_response = await target.provider.chat(replace(chat_request, model=target.model))
+                LOGGER.info("Generation completed: provider=%s elapsed=%.3fs", target.role, time.monotonic()-started)
+                break
+            except (LLMProviderError, TimeoutError) as error:
+                LOGGER.warning("Generation failed: provider=%s reason=%s elapsed=%.3fs", target.role, failure_reason(error), time.monotonic()-started)
+                if index == len(self._targets)-1:
+                    raise AnswerGenerationProviderError("provider chat failed") from error
 
         answer_text = chat_response.message.content.strip()
         if is_insufficient_context_answer(answer_text):
@@ -136,6 +167,55 @@ class GroundedAnswerGenerator:
             status=ANSWERABLE,
             sources=sources,
         )
+
+    async def stream(self, request: AnswerGenerationRequest):
+        """Stream provisional text, then exactly one classified completion."""
+        if request.decision.status != ANSWERABLE:
+            yield await self.generate(request)
+            return
+        sources = _source_references_from_context(request.decision.approved_context)
+        visible = False
+        for index, target in enumerate(self._targets):
+            if not isinstance(target.provider, StreamingChatProvider):
+                raise AnswerGenerationConfigurationError("configured provider does not support streaming")
+            yield GenerationStatus(target.role)
+            started = time.monotonic()
+            LOGGER.info("Generation stream started: provider=%s", target.role)
+            guard = ProvisionalText()
+            provider_request = ChatRequest(model=target.model, messages=(
+                ChatMessage(role="system", content=_SYSTEM_PROMPT),
+                ChatMessage(role="user", content=_user_prompt(request)),
+            ), temperature=0.0, max_tokens=self._max_tokens)
+            try:
+                async with asyncio.timeout(target.timeout):
+                    async with aclosing(target.provider.stream_chat(provider_request)) as stream:
+                        async for chunk in stream:
+                            text = guard.add(chunk)
+                            if text:
+                                if not visible:
+                                    LOGGER.info("First answer text: provider=%s elapsed=%.3fs", target.role, time.monotonic()-started)
+                                visible = True
+                                yield AnswerDelta(text)
+                if not guard.text.strip():
+                    raise LLMProviderError("provider returned no answer text")
+                if is_insufficient_context_answer(guard.text):
+                    yield AnswerGenerationResponse(answer_text=_FALLBACK_TEXT[request.language], status=NOT_ANSWERABLE)
+                else:
+                    tail = guard.add("", final=True)
+                    if tail:
+                        yield AnswerDelta(tail)
+                    yield AnswerGenerationResponse(answer_text=_with_source_note(guard.text.strip(), sources, request.language),
+                                                   status=ANSWERABLE, sources=sources)
+                LOGGER.info("Generation stream completed: provider=%s elapsed=%.3fs", target.role, time.monotonic()-started)
+                return
+            except (LLMProviderError, TimeoutError) as error:
+                LOGGER.warning("Generation stream failed: provider=%s reason=%s elapsed=%.3fs partial=%s",
+                               target.role, failure_reason(error), time.monotonic()-started, visible)
+                if visible or index == len(self._targets)-1:
+                    raise AnswerGenerationProviderError("generation interrupted" if visible else "generation unavailable") from error
+            except asyncio.CancelledError:
+                LOGGER.info("Generation stream cancelled: provider=%s elapsed=%.3fs", target.role, time.monotonic()-started)
+                raise
 
 
 def _user_prompt(request: AnswerGenerationRequest) -> str:

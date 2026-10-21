@@ -34,6 +34,18 @@ class AnswerGenerationProviderError(AnswerGenerationError):
 
 
 @dataclass(frozen=True, slots=True)
+class AnswerDelta:
+    """Provisional answer content; completion remains authoritative."""
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class GenerationStatus:
+    """Code-owned generation activity, never fabricated answer text."""
+    role: Literal["primary", "fallback"]
+
+
+@dataclass(frozen=True, slots=True)
 class AnswerSourceReference:
     """Deterministic source metadata attached to an answer."""
 
