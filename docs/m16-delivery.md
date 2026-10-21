@@ -18,8 +18,12 @@ are status, delta, complete and error. Complete carries the authoritative existi
 response body; early output is provisional. EOF without completion is failure.
 Cancellation closes upstream resources and cannot trigger fallback.
 
-Default delivery limits are 15 seconds primary, 180 seconds fallback and 240
+The deployment uses 15 seconds primary, 180 seconds fallback and 240
 seconds overall including retrieval. Attempts use the remaining request budget.
+For streaming, provider limits bound each upstream wait, allowing a healthy
+answer to continue while text arrives. The overall deadline bounds the complete
+request. JSON generation bounds the complete provider attempt. The configuration
+default for the primary remains 30 seconds; the deployment explicitly selects 15.
 Human-readable logs report provider role, sanitized failure reason and durations,
 never questions, context, answers, credentials or upstream error bodies.
 

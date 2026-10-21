@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import aclosing
 
 import httpx
 import pytest
@@ -104,3 +105,32 @@ def test_global_deadline_bounds_stream_and_json():
     chat_service._retriever = SlowRetriever()
     with pytest.raises(ChatServiceError):
         asyncio.run(chat_service.answer(ChatRequestBody(**BODY)))
+
+
+@pytest.mark.parametrize("failure", [RuntimeError("private detail"), TimeoutError()])
+def test_retrieval_failures_always_terminate_with_safe_error_event(failure):
+    class FailedRetriever:
+        async def retrieve(self, request):
+            raise failure
+
+    chat_service = service(Provider(["must not run"]))
+    chat_service._retriever = FailedRetriever()
+    response = request(chat_service)
+    assert "event: error" in response.text
+    assert (
+        "event: complete" not in response.text and "private detail" not in response.text
+    )
+
+
+def test_request_deadline_does_not_cancel_paused_consumer():
+    async def run():
+        chat_service = service(Provider(["answer"]))
+        chat_service._request_timeout = 0.01
+        async with aclosing(
+            chat_service.stream_answer(ChatRequestBody(**BODY))
+        ) as stream:
+            assert (await anext(stream))["event"] == "status"
+            await asyncio.sleep(0.03)
+            assert (await anext(stream))["event"] == "error"
+
+    asyncio.run(run())

@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import aclosing
 
 import pytest
 
@@ -99,6 +100,34 @@ def test_timeout_before_text_falls_back_once():
     fallback = Provider(["local answer"])
     assert events(primary, fallback, primary_timeout=0.01)[-1].status == "answerable"
     assert primary.closed and fallback.calls == 1
+
+
+def test_leading_whitespace_does_not_disable_fallback():
+    fallback = Provider(["local answer"])
+    result = events(Provider(["\n\n", LLMProviderTransportError("broken")]), fallback)
+    assert fallback.calls == 1
+    assert [item.text for item in result if isinstance(item, AnswerDelta)] == [
+        "local answer"
+    ]
+
+
+def test_active_stream_can_outlast_inactivity_budget():
+    result = events(Provider([0.015, "one", 0.015, "two"]), primary_timeout=0.025)
+    assert result[-1].status == "answerable"
+
+
+def test_provider_timeout_cannot_cancel_consumer_between_events():
+    async def run():
+        generator = GroundedAnswerGenerator(
+            Provider(["answer"]), "primary", primary_timeout=0.01
+        )
+        async with aclosing(generator.stream(REQUEST)) as stream:
+            await anext(stream)
+            assert isinstance(await anext(stream), AnswerDelta)
+            await asyncio.sleep(0.03)
+            assert isinstance(await anext(stream), AnswerGenerationResponse)
+
+    asyncio.run(run())
 
 
 def test_fallback_failure_is_terminal():

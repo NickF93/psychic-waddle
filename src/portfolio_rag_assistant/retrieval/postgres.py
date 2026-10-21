@@ -12,7 +12,11 @@ from portfolio_rag_assistant.intent import (
     SemanticIntentResolver,
 )
 from portfolio_rag_assistant.knowledge import KnowledgeCategory
-from portfolio_rag_assistant.provider import EmbeddingProvider, EmbeddingRequest
+from portfolio_rag_assistant.provider import (
+    EmbeddingProvider,
+    EmbeddingRequest,
+    LLMProviderError,
+)
 from portfolio_rag_assistant.retrieval.contract import (
     RetrievedContext,
     RetrievalConfigurationError,
@@ -112,17 +116,25 @@ class PostgreSQLRetriever:
     async def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
         """Return ranked public source-backed context for a question."""
 
-        embedding_response = await self._provider.embed(
-            EmbeddingRequest(model=self._embedding_model, inputs=(request.question,))
-        )
+        try:
+            embedding_response = await self._provider.embed(
+                EmbeddingRequest(
+                    model=self._embedding_model, inputs=(request.question,)
+                )
+            )
+        except LLMProviderError as error:
+            raise RetrievalStoreError("query embedding unavailable") from error
         if len(embedding_response.embeddings) != 1:
             raise RetrievalStoreError("provider returned the wrong embedding count")
 
         question_embedding = embedding_response.embeddings[0]
-        intent_resolution = await self._intent_resolver.resolve(
-            question=request.question,
-            question_embedding=question_embedding,
-        )
+        try:
+            intent_resolution = await self._intent_resolver.resolve(
+                question=request.question,
+                question_embedding=question_embedding,
+            )
+        except LLMProviderError as error:
+            raise RetrievalStoreError("intent embeddings unavailable") from error
         vector_candidates = self._search_vectors(
             query_embedding=question_embedding,
             limit=self._candidate_fan_out,

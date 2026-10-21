@@ -219,21 +219,30 @@ class GroundedAnswerGenerator:
                 max_tokens=self._max_tokens,
             )
             try:
-                async with asyncio.timeout(target.timeout):
-                    async with aclosing(
-                        target.provider.stream_chat(provider_request)
-                    ) as stream:
-                        async for chunk in stream:
-                            text = guard.add(chunk)
-                            if text:
-                                if not visible:
-                                    LOGGER.info(
-                                        "First answer text: provider=%s elapsed=%.3fs",
-                                        target.role,
-                                        time.monotonic() - started,
-                                    )
-                                visible = True
-                                yield AnswerDelta(text)
+                leading = ""
+                async with aclosing(
+                    target.provider.stream_chat(provider_request)
+                ) as stream:
+                    while True:
+                        # Bound upstream inactivity, never the consumer's work.
+                        async with asyncio.timeout(target.timeout):
+                            chunk = await anext(stream, None)
+                        if chunk is None:
+                            break
+                        text = guard.add(chunk)
+                        if not visible:
+                            leading += text
+                            if not leading.strip():
+                                continue
+                            text, leading = leading, ""
+                            LOGGER.info(
+                                "First answer text: provider=%s elapsed=%.3fs",
+                                target.role,
+                                time.monotonic() - started,
+                            )
+                            visible = True
+                        if text:
+                            yield AnswerDelta(text)
                 if not guard.text.strip():
                     raise LLMProviderError("provider returned no answer text")
                 if is_insufficient_context_answer(guard.text):

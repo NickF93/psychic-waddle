@@ -112,40 +112,45 @@ class PublicChatService:
         """API-owned SSE adaptation of local policy and generation events."""
         started = time.monotonic()
         completed = False
+        deadline = asyncio.get_running_loop().time() + self._request_timeout
         try:
-            async with asyncio.timeout(self._request_timeout):
-                yield _event("status", {"phase": "retrieving"})
+            yield _event("status", {"phase": "retrieving"})
+            if asyncio.get_running_loop().time() >= deadline:
+                raise TimeoutError("request deadline exceeded")
+            async with asyncio.timeout_at(deadline):
                 prepared = await self._prepare(request)
-                stream_method = getattr(self._answer_generator, "stream", None)
-                if not callable(stream_method):
-                    raise ChatServiceError("streaming is not configured")
-                async with aclosing(stream_method(prepared)) as stream:
-                    async for item in stream:
-                        if isinstance(item, GenerationStatus):
-                            yield _event(
-                                "status", {"phase": "generating", "provider": item.role}
-                            )
-                        elif isinstance(item, AnswerDelta):
-                            yield _event("delta", {"text": item.text})
-                        elif isinstance(item, AnswerGenerationResponse):
+            stream_method = getattr(self._answer_generator, "stream", None)
+            if not callable(stream_method):
+                raise ChatServiceError("streaming is not configured")
+            async with aclosing(stream_method(prepared)) as stream:
+                while True:
+                    if asyncio.get_running_loop().time() >= deadline:
+                        raise TimeoutError("request deadline exceeded")
+                    async with asyncio.timeout_at(deadline):
+                        item = await anext(stream, None)
+                    if item is None:
+                        break
+                    if isinstance(item, GenerationStatus):
+                        yield _event(
+                            "status", {"phase": "generating", "provider": item.role}
+                        )
+                    elif isinstance(item, AnswerDelta):
+                        yield _event("delta", {"text": item.text})
+                    elif isinstance(item, AnswerGenerationResponse):
+                        async with asyncio.timeout_at(deadline):
                             body = await self._public_response(request, item)
-                            completed = True
-                            yield _event("complete", body.model_dump(mode="json"))
-                            return
-                raise ChatServiceError("generation ended without completion")
+                        completed = True
+                        yield _event("complete", body.model_dump(mode="json"))
+                        return
+            raise ChatServiceError("generation ended without completion")
         except asyncio.CancelledError:
             LOGGER.info(
                 "Chat stream cancelled: elapsed=%.3fs", time.monotonic() - started
             )
             raise
-        except (
-            AnswerGenerationError,
-            AnswerPolicyError,
-            RetrievalError,
-            ValueError,
-            TimeoutError,
-            ChatServiceError,
-        ) as error:
+        except Exception as error:
+            # Streaming headers are already sent: terminate every application
+            # failure with a safe protocol event, never a raw dropped response.
             LOGGER.warning(
                 "Chat stream failed: reason=%s elapsed=%.3fs",
                 type(error).__name__,
