@@ -248,7 +248,9 @@ def load_chat_provider_settings(
         model=_require_text(source.get("CHAT_MODEL"), "CHAT_MODEL"),
         api_key=source.get("CHAT_API_KEY"),
         timeout_seconds=_require_chat_timeout(source.get("CHAT_TIMEOUT_SECONDS", "30")),
-        max_tokens=_require_chat_max_tokens(source.get("CHAT_MAX_TOKENS", "384")),
+        max_tokens=_positive_int(
+            source.get("CHAT_MAX_TOKENS", "384"), "CHAT_MAX_TOKENS"
+        ),
         temperature=_optional_float(source.get("CHAT_TEMPERATURE")),
         top_p=_optional_float(source.get("CHAT_TOP_P")),
         reasoning_mode=source.get("CHAT_REASONING_MODE", "default"),
@@ -256,8 +258,12 @@ def load_chat_provider_settings(
         profile_name=source.get("CHAT_PARAMETER_PROFILE") or None,
         profiles_path=source.get("GENERATION_PROFILES_PATH") or str(DEFAULT_PROFILES),
         input_budget=InputBudget(
-            max_bytes=_positive_int(source.get("CHAT_INPUT_MAX_BYTES", "65536")),
-            context_tokens=_positive_int(source["CHAT_CONTEXT_TOKENS"])
+            max_bytes=_positive_int(
+                source.get("CHAT_INPUT_MAX_BYTES", "65536"), "CHAT_INPUT_MAX_BYTES"
+            ),
+            context_tokens=_positive_int(
+                source["CHAT_CONTEXT_TOKENS"], "CHAT_CONTEXT_TOKENS"
+            )
             if source.get("CHAT_CONTEXT_TOKENS")
             else None,
             tokenizer_path=source.get("CHAT_INPUT_TOKENIZER") or None,
@@ -303,26 +309,21 @@ def load_fallback_chat_provider_settings(
         return load_chat_provider_settings(settings)
     except LLMProviderConfigurationError as error:
         raise LLMProviderConfigurationError(
-            "CHAT_FALLBACK provider settings are invalid"
+            "CHAT_FALLBACK provider settings are invalid: "
+            + str(error).replace("CHAT_", "CHAT_FALLBACK_")
         ) from error
 
 
-def _require_chat_max_tokens(value: str) -> int:
+def _positive_int(value: str, field_name: str) -> int:
     try:
         result = int(value)
     except (ValueError, TypeError) as error:
         raise LLMProviderConfigurationError(
-            "CHAT_MAX_TOKENS must be a positive integer"
+            f"{field_name} must be a positive integer"
         ) from error
     if result <= 0:
-        raise LLMProviderConfigurationError(
-            "CHAT_MAX_TOKENS must be a positive integer"
-        )
+        raise LLMProviderConfigurationError(f"{field_name} must be a positive integer")
     return result
-
-
-def _positive_int(value):
-    return _require_chat_max_tokens(value)
 
 
 def _optional_float(value):

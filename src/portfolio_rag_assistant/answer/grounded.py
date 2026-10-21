@@ -106,9 +106,6 @@ class GroundedAnswerGenerator:
             )
         _require_non_empty_text(chat_model, "chat_model")
         _require_positive_int(max_tokens, "max_tokens")
-        self._provider = provider
-        self._chat_model = chat_model
-        self._max_tokens = max_tokens
         self._targets = (
             GenerationTarget(
                 provider,

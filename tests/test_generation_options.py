@@ -267,3 +267,22 @@ def test_embeddings_do_not_require_chat_configuration(provider_type, monkeypatch
         provider.embed(EmbeddingRequest(model="embedding", inputs=("text",)))
     )
     assert result.embeddings == ((1.0, 2.0),)
+
+
+@pytest.mark.parametrize("prefix", ["CHAT_", "CHAT_FALLBACK_"])
+@pytest.mark.parametrize("field", ["INPUT_MAX_BYTES", "CONTEXT_TOKENS"])
+@pytest.mark.parametrize("value", ["invalid", "0"])
+def test_invalid_input_limit_identifies_the_actual_target_setting(prefix, field, value):
+    env = {
+        prefix + "BACKEND": "ollama",
+        prefix + "BASE_URL": "http://fixture/api",
+        prefix + "MODEL": "local",
+        prefix + field: value,
+    }
+    loader = (
+        load_chat_provider_settings
+        if prefix == "CHAT_"
+        else load_fallback_chat_provider_settings
+    )
+    with pytest.raises(LLMProviderConfigurationError, match=prefix + field):
+        loader(env)
