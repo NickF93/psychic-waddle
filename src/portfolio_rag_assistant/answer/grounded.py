@@ -63,6 +63,9 @@ Use Markdown paragraphs and proper newline-separated bullets for lists.
 Do not flatten a list into one line separated by hyphens.
 Keep the complete answer under 120 words. Summarize only facts that directly
 answer the question; do not repeat the full context.
+For experience or employer questions, include each relevant employer in the
+approved context. Keep current and past roles distinct and never transfer dates
+or responsibilities between roles. Use one short bullet per employer.
 """
 
 _LANGUAGE_NAMES: dict[AnswerLanguage, str] = {
