@@ -32,7 +32,7 @@ threshold, provider or API contract changed.
 
 ## Deployment and qualification
 
-The nklella API image is built from
+Initial nklella API acceptance used an image built from
 `399d6abf131635055130a0f9c517df622504a3cf`. The existing explicit loader validates,
 ingests and indexes the committed file through the existing Compose services.
 Native readback checks every persisted fact against Git, all 123 embeddings and
@@ -95,6 +95,22 @@ fixtures were also removed: two users, one account/key, one conversation and
 three sessions; synthetic usage was subtracted exactly and removed access is
 denied. Disposable database/build/render/download artifacts and unused M11
 images/sources were removed. Active deployment and M10 rollback identities remain.
-All running services are healthy after cleanup; the existing indexer reports
-zero remaining embeddings. Implementation and deployed acceptance are complete;
-PR #58 remains open for integration.
+All running services were healthy after cleanup; the existing indexer reported
+zero remaining embeddings. Implementation and deployed acceptance passed.
+[PR #58](https://github.com/NickF93/psychic-waddle/pull/58) records integration;
+its GitHub merge record is authoritative for the resulting commit.
+
+## Merged-source deployment
+
+The owner separately approved merging this PR into `develop`, synchronizing the
+local and nklella checkouts, and rebuilding the API from that merged commit.
+The operator deployment receipt records the exact source commit, immutable image
+identity, revision label and effective Compose configuration. Runtime configuration
+comes from the merged source while existing secrets, certificates, provider
+settings, databases and unrelated services are preserved.
+
+Use the existing explicit loader and confirm all reviewed facts match Git, no
+embedding is stale and repeat indexing is idle. Repeat real public assistant
+acceptance, including supported factual answers, refusal and validation errors;
+clean only exact canaries. The prior observations above remain historical evidence,
+not a claim that the earlier feature image is the final integration deployment.
