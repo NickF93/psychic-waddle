@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
         ("letsencrypt-renew.sh", [], False, False, False),
         ("letsencrypt-renew.sh", [], True, False, True),
         ("letsencrypt-renew.sh", [], False, True, False),
+        ("letsencrypt-renew.sh", [], True, True, True),
     ],
 )
 def test_certificate_volume_is_the_renewal_authority(
@@ -38,10 +39,10 @@ def test_certificate_volume_is_the_renewal_authority(
         "with open(os.environ['CALLS'], 'a') as log:\n"
         "    log.write(json.dumps(args) + '\\n')\n"
         "if 'renew' in args:\n"
-        "    if os.environ['FAILURE'] == '1': sys.exit(17)\n"
         "    if os.environ['RENEWED'] == '1' and '--volume' in args:\n"
         "        mount = args[args.index('--volume') + 1].split(':')[0]\n"
         "        pathlib.Path(mount, 'renewed').touch()\n"
+        "    if os.environ['FAILURE'] == '1': sys.exit(17)\n"
     )
     docker.chmod(0o700)
     env = dict(
@@ -62,6 +63,9 @@ def test_certificate_volume_is_the_renewal_authority(
     commands = [json.loads(line) for line in calls.read_text().splitlines()]
     assert all("--cert-name" not in command for command in commands)
     assert (result.returncode != 0) == failure
+    if failure:
+        assert result.returncode == 17
+        assert "certificate renewal failed (exit 17)" in result.stderr
     assert any("reload" in command for command in commands) == reloads
     if reloads:
         assert commands[-2][-2:] == ["nginx", "-t"]

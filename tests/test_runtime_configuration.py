@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -516,6 +515,22 @@ def test_public_edge_logging_is_redacted() -> None:
             "$args",
         ):
             assert forbidden_field not in log_format
+
+
+def test_thingsboard_log_fields_stay_within_the_privacy_allowlist() -> None:
+    template = (ROOT / "deploy/nginx/thingsboard.conf.template").read_text()
+    log_format = re.search(
+        r"log_format thingsboard_redacted(.*?);", template, re.DOTALL
+    )
+    assert log_format is not None
+    assert set(re.findall(r"\$([a-z][a-z0-9_]*)", log_format.group(1))) == {
+        "time_iso8601",
+        "request_method",
+        "thingsboard_route",
+        "status",
+        "body_bytes_sent",
+        "request_time",
+    }
 
 
 def test_public_edge_does_not_forward_visitor_identity_headers() -> None:

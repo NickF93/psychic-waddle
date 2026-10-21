@@ -65,8 +65,8 @@ headers. Untrusted forwarded-address headers are cleared. Its root route permits
 10 MiB request bodies; RAG retains its existing 4 KiB bound. Backend DNS is
 refreshed by Nginx's existing Docker resolver, without hardcoded container IPs.
 
-The site logs fixed route categories, status, upstream status, byte count and
-durations. Device tokens occur in paths and WebSocket credentials can occur in
+The site logs fixed route categories, method, status, byte count and request
+duration. Device tokens occur in paths and WebSocket credentials can occur in
 queries: never log raw URLs, query strings, credentials, bodies or telemetry.
 Do not enable verbose proxy error logs or browser traces containing credentials.
 
@@ -81,6 +81,8 @@ Reuse the existing webroot Certbot renewal scripts and certificate volumes.
 Renewal and status cover all certificates managed in that volume, including a
 separately named ThingsBoard certificate. Certbot retains authority over each
 certificate's renewal schedule; Nginx reloads only after a successful renewal.
+If some certificates renew and others fail, reload the successful renewals and
+still report Certbot's nonzero status so the timer records the remaining failure.
 Install `public-certbot-install-timer.sh` from the persistent deployed source,
 with the effective Compose file list recorded in its environment file. Test
 `public-certbot-test-renewal.sh`, timer activation and Nginx reload behavior.
