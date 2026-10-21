@@ -122,7 +122,7 @@ def test_tracked_profile_reflects_current_reviewed_cv() -> None:
 def test_research_contributions_have_primary_source_provenance() -> None:
     expectations = {
         "https://github.com/open-edge-platform/anomalib/pull/3809": ("mh-patchcore", "merged"),
-        "https://github.com/open-edge-platform/anomalib/pull/3812": ("grd-net", "draft", "not yet merged or released"),
+        "https://github.com/open-edge-platform/anomalib/pull/3812": ("grd-net", "open pr", "not yet merged or released"),
         "https://github.com/open-edge-platform/anomalib/releases/tag/lib%2Fv2.7.0": ("mh-patchcore", "included", "v2.7.0"),
         "https://arxiv.org/abs/2605.27748": ("bounded-memory", "re-iterable", "not a claim of continual adaptation"),
         "https://arxiv.org/abs/2604.23862": ("82.2m", "103.0m", "36.58", "26.85", "does not claim state-of-the-art"),

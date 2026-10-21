@@ -23,7 +23,7 @@
     },
     {
       "source_uri": "https://github.com/open-edge-platform/anomalib/pull/3812",
-      "title": "GRD-Net draft contribution to anomalib",
+      "title": "GRD-Net open contribution to anomalib",
       "reviewed_at": "2026-10-21T00:00:00+02:00"
     },
     {
@@ -883,8 +883,8 @@
     {
       "source_uri": "https://github.com/open-edge-platform/anomalib/pull/3812",
       "category": "projects",
-      "fact_text": "Niccolo Ferrari's GRD-Net software integration is proposed in anomalib draft PR #3812; it is not yet merged or released as an anomalib model.",
-      "source_locator": "PR description, author and draft status, reviewed 21 October 2026",
+      "fact_text": "Niccolo Ferrari's GRD-Net software integration is proposed in anomalib open PR #3812; it is not yet merged or released as an anomalib model.",
+      "source_locator": "PR description, author and open unmerged status, reviewed 21 October 2026",
       "public_visible": true
     },
     {
