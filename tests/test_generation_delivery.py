@@ -14,6 +14,7 @@ from portfolio_rag_assistant.answer.contract import (
 )
 from portfolio_rag_assistant.config import (
     load_fallback_chat_provider_settings,
+    load_chat_provider_settings,
     load_request_timeout,
 )
 from portfolio_rag_assistant.provider import (
@@ -36,10 +37,12 @@ class Provider:
         self.calls = 0
         self.closed = False
         self.models = []
+        self.budgets = []
 
     async def chat(self, request):
         self.calls += 1
         self.models.append(request.model)
+        self.budgets.append(request.max_tokens)
         if isinstance(self.parts[0], Exception):
             raise self.parts[0]
         return ChatResponse(
@@ -50,6 +53,7 @@ class Provider:
     async def stream_chat(self, request):
         self.calls += 1
         self.models.append(request.model)
+        self.budgets.append(request.max_tokens)
         try:
             for part in self.parts:
                 if isinstance(part, Exception):
@@ -85,6 +89,61 @@ def test_one_explicit_fallback_and_model_selection_before_visible_content(caplog
     assert primary.models == ["primary-model"] and fallback.models == ["local-model"]
     assert result[-1].status == "answerable" and result[-1].sources
     assert "secret" not in caplog.text
+
+
+@pytest.mark.parametrize("streaming", [True, False])
+def test_each_generation_target_uses_its_own_token_budget(streaming):
+    primary = Provider([LLMProviderTransportError("unavailable")])
+    fallback = Provider(["local answer"])
+    generator = GroundedAnswerGenerator(
+        primary,
+        "remote",
+        max_tokens=1024,
+        fallback_provider=fallback,
+        fallback_model="local",
+        fallback_max_tokens=384,
+    )
+
+    async def run():
+        if streaming:
+            return [event async for event in generator.stream(REQUEST)]
+        return await generator.generate(REQUEST)
+
+    asyncio.run(run())
+    assert primary.budgets == [1024] and fallback.budgets == [384]
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "nan", "1.5", "invalid", ""])
+def test_invalid_generation_budget_is_rejected(value):
+    with pytest.raises(LLMProviderConfigurationError, match="CHAT_MAX_TOKENS"):
+        load_chat_provider_settings(
+            {
+                "CHAT_BACKEND": "openai-compatible",
+                "CHAT_BASE_URL": "https://example.test/v1",
+                "CHAT_MODEL": "selected",
+                "CHAT_MAX_TOKENS": value,
+            }
+        )
+
+
+def test_primary_and_fallback_budgets_are_loaded_independently():
+    primary = load_chat_provider_settings(
+        {
+            "CHAT_BACKEND": "openai-compatible",
+            "CHAT_BASE_URL": "https://example.test/v1",
+            "CHAT_MODEL": "selected",
+            "CHAT_MAX_TOKENS": "1024",
+        }
+    )
+    fallback = load_fallback_chat_provider_settings(
+        {
+            "CHAT_FALLBACK_BACKEND": "ollama",
+            "CHAT_FALLBACK_BASE_URL": "http://ollama:11434/api",
+            "CHAT_FALLBACK_MODEL": "local",
+            "CHAT_FALLBACK_MAX_TOKENS": "384",
+        }
+    )
+    assert primary.max_tokens == 1024 and fallback.max_tokens == 384
 
 
 def test_no_fallback_after_partial_text():

@@ -24,6 +24,10 @@ For streaming, provider limits bound each upstream wait, allowing a healthy
 answer to continue while text arrives. The overall deadline bounds the complete
 request. JSON generation bounds the complete provider attempt. The configuration
 default for the primary remains 30 seconds; the deployment explicitly selects 15.
+`CHAT_MAX_TOKENS` and `CHAT_FALLBACK_MAX_TOKENS` independently bound generation
+output, including any provider reasoning tokens. Both default to 384. The free
+external deployment uses 1,024 to accommodate its hidden reasoning, while the
+local fallback retains 384. Answers are instructed to stay under 120 words.
 Human-readable logs report provider role, sanitized failure reason and durations,
 never questions, context, answers, credentials or upstream error bodies.
 

@@ -162,12 +162,16 @@ def build_runtime_services(
             answer_generator=GroundedAnswerGenerator(
                 provider=chat_provider,
                 chat_model=chat_settings.model,
+                max_tokens=chat_settings.max_tokens,
                 primary_timeout=chat_settings.timeout_seconds,
                 fallback_provider=fallback_provider,
                 fallback_model=fallback_settings.model if fallback_settings else None,
                 fallback_timeout=fallback_settings.timeout_seconds
                 if fallback_settings
                 else 180,
+                fallback_max_tokens=fallback_settings.max_tokens
+                if fallback_settings
+                else 384,
             ),
             question_collector=question_collector,
             retrieval_settings=retrieval_settings,

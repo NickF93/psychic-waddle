@@ -38,8 +38,17 @@ class GenerationTarget:
     model: str
     timeout: float
     role: str
+    max_tokens: int = 384
 
     def __post_init__(self):
+        if (
+            isinstance(self.max_tokens, bool)
+            or not isinstance(self.max_tokens, int)
+            or self.max_tokens <= 0
+        ):
+            raise AnswerGenerationConfigurationError(
+                "generation max_tokens must be positive"
+            )
         if not isinstance(self.provider, ChatProvider) or not self.model.strip():
             raise AnswerGenerationConfigurationError("invalid generation target")
         if (

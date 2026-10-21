@@ -61,6 +61,8 @@ a yes/no hiring verdict, hiring recommendation, or prediction.
 Answer in the requested language.
 Use Markdown paragraphs and proper newline-separated bullets for lists.
 Do not flatten a list into one line separated by hyphens.
+Keep the complete answer under 120 words. Summarize only facts that directly
+answer the question; do not repeat the full context.
 """
 
 _LANGUAGE_NAMES: dict[AnswerLanguage, str] = {
@@ -98,6 +100,7 @@ class GroundedAnswerGenerator:
         fallback_provider: ChatProvider | None = None,
         fallback_model: str | None = None,
         fallback_timeout: float = 180.0,
+        fallback_max_tokens: int = 384,
     ) -> None:
         if not isinstance(provider, ChatProvider):
             raise AnswerGenerationConfigurationError(
@@ -109,7 +112,9 @@ class GroundedAnswerGenerator:
         self._chat_model = chat_model
         self._max_tokens = max_tokens
         self._targets = (
-            GenerationTarget(provider, chat_model, primary_timeout, "primary"),
+            GenerationTarget(
+                provider, chat_model, primary_timeout, "primary", max_tokens
+            ),
         )
         if (fallback_provider is None) != (fallback_model is None):
             raise AnswerGenerationConfigurationError(
@@ -118,7 +123,11 @@ class GroundedAnswerGenerator:
         if fallback_provider is not None:
             self._targets += (
                 GenerationTarget(
-                    fallback_provider, fallback_model, fallback_timeout, "fallback"
+                    fallback_provider,
+                    fallback_model,
+                    fallback_timeout,
+                    "fallback",
+                    fallback_max_tokens,
                 ),
             )
 
@@ -156,7 +165,11 @@ class GroundedAnswerGenerator:
             try:
                 async with asyncio.timeout(target.timeout):
                     chat_response = await target.provider.chat(
-                        replace(chat_request, model=target.model)
+                        replace(
+                            chat_request,
+                            model=target.model,
+                            max_tokens=target.max_tokens,
+                        )
                     )
                 LOGGER.info(
                     "Generation completed: provider=%s elapsed=%.3fs",
@@ -216,7 +229,7 @@ class GroundedAnswerGenerator:
                     ChatMessage(role="user", content=_user_prompt(request)),
                 ),
                 temperature=0.0,
-                max_tokens=self._max_tokens,
+                max_tokens=target.max_tokens,
             )
             try:
                 leading = ""

@@ -39,6 +39,7 @@ class ChatProviderSettings:
     model: str
     api_key: str | None = None
     timeout_seconds: float = 30.0
+    max_tokens: int = 384
 
     def __post_init__(self) -> None:
         _require_supported_backend(self.backend, "CHAT_BACKEND")
@@ -49,6 +50,14 @@ class ChatProviderSettings:
         )
         object.__setattr__(self, "model", _require_text(self.model, "CHAT_MODEL"))
         object.__setattr__(self, "api_key", _normalize_api_key(self.api_key))
+        if (
+            isinstance(self.max_tokens, bool)
+            or not isinstance(self.max_tokens, int)
+            or self.max_tokens <= 0
+        ):
+            raise LLMProviderConfigurationError(
+                "CHAT_MAX_TOKENS must be a positive integer"
+            )
         if (
             isinstance(self.timeout_seconds, bool)
             or not isinstance(self.timeout_seconds, (int, float))
@@ -190,29 +199,55 @@ def load_chat_provider_settings(
         model=_require_text(source.get("CHAT_MODEL"), "CHAT_MODEL"),
         api_key=source.get("CHAT_API_KEY"),
         timeout_seconds=_require_chat_timeout(source.get("CHAT_TIMEOUT_SECONDS", "30")),
+        max_tokens=_require_chat_max_tokens(source.get("CHAT_MAX_TOKENS", "384")),
     )
 
 
-def load_fallback_chat_provider_settings(env: Mapping[str, str]) -> ChatProviderSettings | None:
+def load_fallback_chat_provider_settings(
+    env: Mapping[str, str],
+) -> ChatProviderSettings | None:
     """Reuse validated provider settings for one explicitly configured fallback."""
     fields = ("BACKEND", "BASE_URL", "MODEL", "API_KEY")
     if not any(env.get(f"CHAT_FALLBACK_{field}", "").strip() for field in fields):
         return None
-    settings = {f"CHAT_{field}": env.get(f"CHAT_FALLBACK_{field}", "") for field in fields}
+    settings = {
+        f"CHAT_{field}": env.get(f"CHAT_FALLBACK_{field}", "") for field in fields
+    }
     settings["CHAT_TIMEOUT_SECONDS"] = env.get("CHAT_FALLBACK_TIMEOUT_SECONDS", "180")
+    settings["CHAT_MAX_TOKENS"] = env.get("CHAT_FALLBACK_MAX_TOKENS", "384")
     try:
         return load_chat_provider_settings(settings)
     except LLMProviderConfigurationError as error:
-        raise LLMProviderConfigurationError("CHAT_FALLBACK provider settings are invalid") from error
+        raise LLMProviderConfigurationError(
+            "CHAT_FALLBACK provider settings are invalid"
+        ) from error
+
+
+def _require_chat_max_tokens(value: str) -> int:
+    try:
+        result = int(value)
+    except (ValueError, TypeError) as error:
+        raise LLMProviderConfigurationError(
+            "CHAT_MAX_TOKENS must be a positive integer"
+        ) from error
+    if result <= 0:
+        raise LLMProviderConfigurationError(
+            "CHAT_MAX_TOKENS must be a positive integer"
+        )
+    return result
 
 
 def load_request_timeout(env: Mapping[str, str]) -> float:
     try:
         value = float(env.get("CHAT_REQUEST_TIMEOUT_SECONDS", "240"))
     except ValueError as error:
-        raise RuntimeConfigurationError("CHAT_REQUEST_TIMEOUT_SECONDS must be finite and positive") from error
+        raise RuntimeConfigurationError(
+            "CHAT_REQUEST_TIMEOUT_SECONDS must be finite and positive"
+        ) from error
     if not math.isfinite(value) or value <= 0:
-        raise RuntimeConfigurationError("CHAT_REQUEST_TIMEOUT_SECONDS must be finite and positive")
+        raise RuntimeConfigurationError(
+            "CHAT_REQUEST_TIMEOUT_SECONDS must be finite and positive"
+        )
     return value
 
 
@@ -330,7 +365,9 @@ def _build_provider(
     if backend == "llama-cpp":
         return LlamaCppProvider(base_url=base_url, api_key=api_key, timeout=timeout)
     if backend == "openai-compatible":
-        return OpenAICompatibleProvider(base_url=base_url, api_key=api_key, timeout=timeout)
+        return OpenAICompatibleProvider(
+            base_url=base_url, api_key=api_key, timeout=timeout
+        )
     raise LLMProviderConfigurationError("unsupported provider backend")
 
 
