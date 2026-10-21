@@ -105,6 +105,10 @@ def test_runtime_smoke_checks_database_and_providers(monkeypatch) -> None:
             "CHAT_BACKEND": "openai-compatible",
             "CHAT_BASE_URL": "https://api.example.test/v1",
             "CHAT_MODEL": "chat-model",
+            "CHAT_PARAMETER_PROFILE": "portfolio-primary",
+            "CHAT_REASONING_MODE": "on",
+            "CHAT_REASONING_EFFORT": "low",
+            "CHAT_MAX_TOKENS": "4096",
             "EMBEDDING_BACKEND": "ollama",
             "EMBEDDING_BASE_URL": "http://localhost:11434/api",
             "EMBEDDING_MODEL": "nomic-embed-text",
@@ -121,8 +125,9 @@ def test_runtime_smoke_checks_database_and_providers(monkeypatch) -> None:
         ChatRequest(
             model="chat-model",
             messages=(ChatMessage(role="user", content="Reply with OK."),),
-            temperature=0.0,
-            max_tokens=8,
+            reasoning_mode="on",
+            reasoning_effort="low",
+            max_tokens=4096,
         ),
     )
     assert embedding_provider.requests == (

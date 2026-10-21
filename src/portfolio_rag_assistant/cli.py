@@ -304,7 +304,7 @@ def _run_runtime_smoke(env: Mapping[str, str], stdout: TextIO) -> int:
     asyncio.run(
         _check_provider_reachability(
             chat_provider=chat_provider,
-            chat_model=chat_settings.model,
+            chat_settings=chat_settings,
             embedding_provider=embedding_provider,
             embedding_model=embedding_settings.model,
         )
@@ -397,7 +397,7 @@ def _require_matching_semantic_calibration(
 async def _check_provider_reachability(
     *,
     chat_provider: ChatProvider,
-    chat_model: str,
+    chat_settings,
     embedding_provider: EmbeddingProvider,
     embedding_model: str,
 ) -> None:
@@ -406,14 +406,13 @@ async def _check_provider_reachability(
     )
     if len(embedding_response.embeddings) != 1:
         raise CommandError("embedding provider returned the wrong embedding count")
-    await chat_provider.chat(
-        ChatRequest(
-            model=chat_model,
-            messages=(ChatMessage(role="user", content="Reply with OK."),),
-            temperature=0.0,
-            max_tokens=8,
-        )
+    request = ChatRequest(
+        model=chat_settings.model,
+        messages=(ChatMessage(role="user", content="Reply with OK."),),
+        **chat_settings.request_options,
     )
+    chat_settings.input_budget.check(request)
+    await chat_provider.chat(request)
 
 
 def _build_parser() -> argparse.ArgumentParser:
