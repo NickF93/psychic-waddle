@@ -150,6 +150,7 @@ def test_compose_public_bootstrap_edge_is_profile_gated_and_http_only() -> None:
     assert nginx["volumes"] == [
         "./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro",
         "./deploy/nginx/private-services:/etc/nginx/private-services:ro",
+        "./deploy/nginx/snippets:/etc/nginx/snippets:ro",
         "acme-challenges:/var/www/certbot:ro",
     ]
     assert nginx["networks"] == ["runtime"]
@@ -169,6 +170,7 @@ def test_compose_public_tls_edge_is_profile_gated_and_owns_443() -> None:
     assert nginx_tls["volumes"] == [
         "./deploy/nginx/nginx-tls.conf:/etc/nginx/nginx.conf:ro",
         "./deploy/nginx/private-services:/etc/nginx/private-services:ro",
+        "./deploy/nginx/snippets:/etc/nginx/snippets:ro",
         "acme-challenges:/var/www/certbot:ro",
         "letsencrypt-certs:/etc/letsencrypt:ro",
     ]
@@ -590,7 +592,11 @@ def _load_env_example() -> dict[str, str]:
 
 
 def _nginx_config(filename: str = "nginx.conf") -> str:
-    return (ROOT / "deploy" / "nginx" / filename).read_text(encoding="utf-8")
+    config = (ROOT / "deploy" / "nginx" / filename).read_text(encoding="utf-8")
+    return config.replace(
+        "include /etc/nginx/snippets/assistant-site.conf;",
+        (ROOT / "deploy/nginx/snippets/assistant-site.conf").read_text(encoding="utf-8"),
+    )
 
 
 def _nginx_map(name: str, filename: str = "nginx.conf") -> str:
