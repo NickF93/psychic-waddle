@@ -855,14 +855,14 @@
     {
       "source_uri": "https://arxiv.org/abs/2604.23862",
       "category": "research",
-      "fact_text": "The Graph Memory Transformer paper keeps causal self-attention and replaces dense feed-forward sublayers with learned graph-memory navigation and a gated displacement from a source memory state toward a token-conditioned target.",
+      "fact_text": "Niccolo Ferrari's research paper Graph Memory Transformer (arXiv:2604.23862) keeps causal self-attention and replaces dense feed-forward sublayers with learned graph-memory navigation and a gated displacement from a source memory state toward a token-conditioned target.",
       "source_locator": "Abstract: architecture and displacement readout",
       "public_visible": true
     },
     {
       "source_uri": "https://arxiv.org/abs/2604.23862",
       "category": "research",
-      "fact_text": "The Graph Memory Transformer paper evaluates a base-v7 model with 82.2M parameters versus a 103.0M dense baseline, and trails it in validation perplexity, 36.58 versus 26.85; the work does not claim state-of-the-art performance.",
+      "fact_text": "Niccolo Ferrari's research paper Graph Memory Transformer (arXiv:2604.23862) evaluates a base-v7 model with 82.2M parameters versus a 103.0M dense baseline, and trails it in validation perplexity, 36.58 versus 26.85; the work does not claim state-of-the-art performance.",
       "source_locator": "Abstract: evaluated base-v7 results and limitations",
       "public_visible": true
     },
