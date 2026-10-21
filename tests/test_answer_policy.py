@@ -56,6 +56,34 @@ def test_policy_rejects_empty_retrieval_results() -> None:
     assert decision.approved_context == ()
 
 
+def test_spoken_language_question_requires_approved_skills_context() -> None:
+    policy = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog())
+    language = _context(
+        chunk_id=1,
+        category="skills",
+        chunk_text="skills: Niccolo's spoken languages are Italian native and English fluent.",
+        combined_score=0.9,
+    )
+    decision = policy.decide(_request(
+        question="What languages does Niccolo speak?",
+        retrieved_context=(language,),
+        min_score=0.7,
+    ))
+    assert decision.status == ANSWERABLE
+    assert decision.approved_context == (language,)
+    unrelated = _context(
+        chunk_id=2,
+        category="research",
+        chunk_text="research: Niccolo published an anomaly detection paper.",
+        combined_score=0.99,
+    )
+    assert policy.decide(_request(
+        question="What languages does Niccolo speak?",
+        retrieved_context=(unrelated,),
+        min_score=0.7,
+    )).status == NOT_ANSWERABLE
+
+
 def test_policy_rejects_low_confidence_context() -> None:
     decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
         _request(
@@ -73,6 +101,28 @@ def test_policy_rejects_low_confidence_context() -> None:
 
     assert decision.status == NOT_ANSWERABLE
     assert decision.reason == "low_confidence_context"
+
+
+def test_language_model_research_is_answerable_without_unrelated_skills_evidence() -> None:
+    research = _context(
+        chunk_id=1,
+        category="research",
+        chunk_text=(
+            "research: Niccolo Ferrari co-authored the Graph Memory Transformer "
+            "research paper, arXiv:2604.23862. GMT preserves causal self-attention "
+            "and replaces the feed-forward sublayer with graph memory."
+        ),
+        combined_score=0.99,
+    )
+    decision = DeterministicAnswerPolicy(intent_catalog=tracked_intent_catalog()).decide(
+        _request(
+            question="What does Niccolo's Graph Memory Transformer paper change in language models?",
+            retrieved_context=(research,),
+            min_score=0.7,
+        )
+    )
+    assert decision.status == ANSWERABLE
+    assert decision.approved_context == (research,)
 
 
 def test_policy_rejects_unsupported_question_category() -> None:

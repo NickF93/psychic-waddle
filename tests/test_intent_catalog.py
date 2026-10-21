@@ -90,6 +90,25 @@ def test_tracked_intent_catalog_reproduces_current_evidence_matching() -> None:
         assert catalog.text_satisfies_intent_evidence(text, profile.intent)
 
 
+@pytest.mark.parametrize("question", (
+    "What languages does Niccolo Ferrari speak?",
+    "Which spoken languages does he know?",
+    "Tell me about his language fluency.",
+))
+def test_spoken_language_questions_use_existing_skills_intent(question: str) -> None:
+    catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
+    assert _intent_identifiers(catalog.detect_question_intents(question)) == ("skills",)
+
+
+@pytest.mark.parametrize("question", (
+    "What does Niccolo's Graph Memory Transformer paper change in language models?",
+    "Explain the Graph Memory Transformer paper for large language models.",
+))
+def test_language_model_research_does_not_require_spoken_language_skills(question: str) -> None:
+    catalog = load_intent_catalog(TRACKED_INTENT_CATALOG)
+    assert _intent_identifiers(catalog.detect_question_intents(question)) == ("publications",)
+
+
 @pytest.mark.parametrize(
     "question",
     (
