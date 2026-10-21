@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import AsyncIterator
 from typing import Literal, Protocol, runtime_checkable
 
 ChatRole = Literal["system", "user", "assistant"]
@@ -132,6 +133,13 @@ class ChatProvider(Protocol):
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
         """Return one chat response for a provider-neutral request."""
+
+
+@runtime_checkable
+class StreamingChatProvider(Protocol):
+    """Incremental final-content I/O with validated upstream completion."""
+
+    def stream_chat(self, request: ChatRequest) -> AsyncIterator[str]: ...
 
 
 @runtime_checkable

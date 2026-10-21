@@ -40,6 +40,13 @@ class OllamaProvider:
         self._timeout = _require_positive_timeout(timeout)
         self._transport = transport
 
+    async def stream_chat(self, request: ChatRequest):
+        from portfolio_rag_assistant.provider.streaming import stream_ollama
+        async for text in stream_ollama(request, base_url=self._base_url,
+                                       api_key=self._api_key, timeout=self._timeout,
+                                       transport=self._transport):
+            yield text
+
     async def chat(self, request: ChatRequest) -> ChatResponse:
         payload: dict[str, Any] = {
             "model": request.model,
