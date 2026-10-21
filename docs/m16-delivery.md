@@ -26,7 +26,7 @@ request. JSON generation bounds the complete provider attempt. The configuration
 default for the primary remains 30 seconds; the deployment explicitly selects 15.
 `CHAT_MAX_TOKENS` and `CHAT_FALLBACK_MAX_TOKENS` independently bound generation
 output, including any provider reasoning tokens. Both default to 384. The free
-external deployment uses 2,048 to accommodate its hidden reasoning, while the
+external deployment uses 4,096 with reasoning explicitly on at low effort; the
 local fallback retains 384. Answers are instructed to stay under 120 words.
 Human-readable logs report provider role, sanitized failure reason and durations,
 never questions, context, answers, credentials or upstream error bodies.
@@ -87,8 +87,8 @@ demonstrate the different protocols. No endpoint/model-specific branching exists
 in the adapters or grounding layer.
 
 The configured primary profile supports mandatory reasoning at low effort and
-omits unsupported sampling controls. The example ceiling is 4,096 tokens; live
-qualification must confirm it before deployment. The local profile keeps 384
+omits unsupported sampling controls. The qualified ceiling is 4,096 tokens after
+six sourced-answer checks at each of 2,048 and 4,096. The local profile keeps 384
 output tokens, temperature 0 and its observed 4,096-token context.
 Admission counts every message, reserves 256 framing tokens and the full output
 ceiling, and independently checks the selected fallback. The external profile
@@ -99,20 +99,39 @@ Oversize input produces `context_limit_exceeded`, without dropping evidence.
 JSON and streaming use the same parameter encoder. JSON completions require a
 successful stop marker; HTTP errors retain status but exclude upstream bodies.
 
-The API/proxy run from committed source `fe9f738414a96e7c0cd7506a80475677802fd3c3`
-on nklella; persistent database/model/certificate volumes are unchanged. The
+The API runs committed source `1a6917de059f68a5df8f1da9f62e73b614474bf7`, image
+`portfolio-rag-assistant:m16-1a6917de059f`, on nklella. The existing proxy remains
+on its initial M16 source and mounts; database/model/certificate volumes are unchanged. The
 canonical server checkout remains clean on develop while the feature PR awaits
 merge. Source snapshots and the private deployment override are under
 `/opt/m16/`; runtime settings and rollback references are mode 0600.
 
-Validation: 720 backend tests passed against disposable real PostgreSQL/pgvector,
-with one existing skip. Four independent diff-review cycles completed; confirmed
-findings were remediated. Tests exercise fallback exactly once before text,
+Follow-up validation: 785 tests passed against disposable real PostgreSQL/pgvector,
+with no skips. One paired independent review used GPT-6.1-Sol high and owner-
+authorized OpenCode Go Kimi K3 high in place of quota-blocked Claude. Confirmed
+packaging, Markdown-prefix, input-variable diagnostics and obsolete-state findings
+were remediated and retested. Initial M16's four review cycles remain historical
+evidence. Tests exercise fallback exactly once before text,
 no fallback after partial text, cancellation, global deadlines, provider stream
 limits/finish markers, sentinel filtering, citations, safe retrieval failures
 and independently configured primary/fallback budgets through actual API
 dispatches. Deployed content checks verify actual employer coverage rather than
 merely asserting the wording of the prompt.
+
+The actual installed wheel and final container resolve packaged profiles; embedding
+I/O does not load chat configuration. Image builds exercise profile and tokenizer
+access as the unprivileged runtime user. The tokenizer directory is traversable
+and its checksummed file read-only. The operational smoke command reuses the
+configured controls/input guard instead of fixed temperature/eight-token settings.
+Startup errors identify the actual primary/fallback input-limit variable.
+
+Isolated live API acceptance verified primary-only, Ollama-only and one real
+connection-failure fallback (134.588s complete, 70.668s first text). Ollama-only
+completed in 70.907s, first text 14.098s. The final image returned explicit JSON
+503 and SSE `context_limit_exceeded` before inference; unsupported reasoning was
+rejected with networking disabled. Public JSON/SSE answers, citations, paper
+status and the deployed operational smoke passed. Context framing accounting is
+conservative, not a claim of exact MiniMax token usage.
 
 The cross-repository live results, timings and exact canary cleanup are recorded
 in vpn-hub's `docs/portfolio-assistant-m16-acceptance.md`. The fallback is slower
