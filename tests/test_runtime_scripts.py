@@ -433,7 +433,8 @@ def test_public_env_validator_checks_explicit_public_runtime_contract() -> None:
     assert "API_BIND_ADDRESS must be 127.0.0.1" in validate
     assert "require_backend_value CHAT_BACKEND" in validate
     assert "require_backend_value EMBEDDING_BACKEND" in validate
-    assert "configured_value CHAT_API_KEY" in validate
+    assert "configured_value CHAT_API_KEY" not in validate
+    assert "validate_chat_fallback" in validate
     assert "configured_value EMBEDDING_API_KEY" in validate
     assert "require_llama_model_file LLAMA_CPP_CHAT_MODEL_PATH" in validate
     assert "require_llama_model_file LLAMA_CPP_EMBEDDING_MODEL_PATH" in validate

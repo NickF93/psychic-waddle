@@ -356,7 +356,7 @@ def test_env_example_contains_placeholders_not_real_secrets() -> None:
     assert values["PUBLIC_SERVER_NAME"] == "vps.madnick.ovh"
     assert values["LETSENCRYPT_EMAIL"] == "replace-with-letsencrypt-email"
     assert values["POSTGRES_PASSWORD"] == "replace-with-local-password"
-    assert values["CHAT_API_KEY"] == "replace-with-chat-provider-token"
+    assert values["CHAT_API_KEY"] == ""
     assert values["EMBEDDING_API_KEY"] == "replace-with-embedding-provider-token"
     assert values["CHAT_BASE_URL"] == "https://example.invalid/v1"
     assert values["EMBEDDING_BASE_URL"] == "https://example.invalid/v1"

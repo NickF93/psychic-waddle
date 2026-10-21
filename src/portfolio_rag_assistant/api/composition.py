@@ -132,7 +132,9 @@ def build_runtime_services(
         calibrated_model=intent_catalog.semantic_calibration.embedding_model,
     )
     chat_provider = chat_provider_factory(chat_settings)
-    fallback_provider = chat_provider_factory(fallback_settings) if fallback_settings else None
+    fallback_provider = (
+        chat_provider_factory(fallback_settings) if fallback_settings else None
+    )
     embedding_provider = embedding_provider_factory(embedding_settings)
     intent_resolver = SemanticIntentResolver(
         catalog=intent_catalog,
@@ -163,7 +165,9 @@ def build_runtime_services(
                 primary_timeout=chat_settings.timeout_seconds,
                 fallback_provider=fallback_provider,
                 fallback_model=fallback_settings.model if fallback_settings else None,
-                fallback_timeout=fallback_settings.timeout_seconds if fallback_settings else 180,
+                fallback_timeout=fallback_settings.timeout_seconds
+                if fallback_settings
+                else 180,
             ),
             question_collector=question_collector,
             retrieval_settings=retrieval_settings,
@@ -185,10 +189,7 @@ def _require_matching_semantic_calibration(
     calibrated_backend: str,
     calibrated_model: str,
 ) -> None:
-    if (
-        configured_backend != calibrated_backend
-        or configured_model != calibrated_model
-    ):
+    if configured_backend != calibrated_backend or configured_model != calibrated_model:
         raise APICompositionError(
             "intent semantic calibration must match configured embedding backend "
             "and model"

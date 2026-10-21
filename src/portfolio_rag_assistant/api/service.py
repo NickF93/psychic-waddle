@@ -9,7 +9,11 @@ import math
 import time
 from contextlib import aclosing
 
-from portfolio_rag_assistant.answer.contract import AnswerDelta, AnswerGenerationResponse, GenerationStatus
+from portfolio_rag_assistant.answer.contract import (
+    AnswerDelta,
+    AnswerGenerationResponse,
+    GenerationStatus,
+)
 
 from portfolio_rag_assistant.answer import (
     AnswerGenerationError,
@@ -75,7 +79,11 @@ class PublicChatService:
         self._answer_generator = answer_generator
         self._question_collector = question_collector
         self._retrieval_settings = retrieval_settings
-        if isinstance(request_timeout, bool) or not math.isfinite(request_timeout) or request_timeout <= 0:
+        if (
+            isinstance(request_timeout, bool)
+            or not math.isfinite(request_timeout)
+            or request_timeout <= 0
+        ):
             raise ChatServiceError("request timeout must be finite and positive")
         self._request_timeout = request_timeout
 
@@ -87,10 +95,18 @@ class PublicChatService:
                 prepared = await self._prepare(request)
                 answer = await self._answer_generator.generate(prepared)
                 return await self._public_response(request, answer)
-        except (AnswerGenerationError, AnswerPolicyError, RetrievalError, ValueError, TimeoutError) as error:
+        except (
+            AnswerGenerationError,
+            AnswerPolicyError,
+            RetrievalError,
+            ValueError,
+            TimeoutError,
+        ) as error:
             raise ChatServiceError("chat service failed") from error
         finally:
-            LOGGER.info("Chat request finished: elapsed=%.3fs", time.monotonic()-started)
+            LOGGER.info(
+                "Chat request finished: elapsed=%.3fs", time.monotonic() - started
+            )
 
     async def stream_answer(self, request: ChatRequestBody):
         """API-owned SSE adaptation of local policy and generation events."""
@@ -106,7 +122,9 @@ class PublicChatService:
                 async with aclosing(stream_method(prepared)) as stream:
                     async for item in stream:
                         if isinstance(item, GenerationStatus):
-                            yield _event("status", {"phase": "generating", "provider": item.role})
+                            yield _event(
+                                "status", {"phase": "generating", "provider": item.role}
+                            )
                         elif isinstance(item, AnswerDelta):
                             yield _event("delta", {"text": item.text})
                         elif isinstance(item, AnswerGenerationResponse):
@@ -116,29 +134,73 @@ class PublicChatService:
                             return
                 raise ChatServiceError("generation ended without completion")
         except asyncio.CancelledError:
-            LOGGER.info("Chat stream cancelled: elapsed=%.3fs", time.monotonic()-started)
+            LOGGER.info(
+                "Chat stream cancelled: elapsed=%.3fs", time.monotonic() - started
+            )
             raise
-        except (AnswerGenerationError, AnswerPolicyError, RetrievalError, ValueError, TimeoutError, ChatServiceError) as error:
-            LOGGER.warning("Chat stream failed: reason=%s elapsed=%.3fs", type(error).__name__, time.monotonic()-started)
-            yield _event("error", {"code": "service_unavailable", "message": "The answer could not be completed. Please retry."})
+        except (
+            AnswerGenerationError,
+            AnswerPolicyError,
+            RetrievalError,
+            ValueError,
+            TimeoutError,
+            ChatServiceError,
+        ) as error:
+            LOGGER.warning(
+                "Chat stream failed: reason=%s elapsed=%.3fs",
+                type(error).__name__,
+                time.monotonic() - started,
+            )
+            yield _event(
+                "error",
+                {
+                    "code": "service_unavailable",
+                    "message": "The answer could not be completed. Please retry.",
+                },
+            )
         finally:
-            LOGGER.info("Chat stream finished: completed=%s elapsed=%.3fs", completed, time.monotonic()-started)
+            LOGGER.info(
+                "Chat stream finished: completed=%s elapsed=%.3fs",
+                completed,
+                time.monotonic() - started,
+            )
 
     async def _prepare(self, request: ChatRequestBody) -> AnswerGenerationRequest:
         started = time.monotonic()
         retrieval_response = await self._retriever.retrieve(
-            RetrievalRequest(question=request.question, top_k=self._retrieval_settings.top_k))
-        decision = self._answer_policy.decide(AnswerPolicyRequest(
-            question=request.question, retrieved_context=retrieval_response.results,
-            intent_resolution=retrieval_response.intent_resolution, min_score=self._retrieval_settings.min_score))
-        LOGGER.info("Local retrieval and evidence approval finished: elapsed=%.3fs", time.monotonic()-started)
-        return AnswerGenerationRequest(question=request.question, decision=decision, language=request.language)
+            RetrievalRequest(
+                question=request.question, top_k=self._retrieval_settings.top_k
+            )
+        )
+        decision = self._answer_policy.decide(
+            AnswerPolicyRequest(
+                question=request.question,
+                retrieved_context=retrieval_response.results,
+                intent_resolution=retrieval_response.intent_resolution,
+                min_score=self._retrieval_settings.min_score,
+            )
+        )
+        LOGGER.info(
+            "Local retrieval and evidence approval finished: elapsed=%.3fs",
+            time.monotonic() - started,
+        )
+        return AnswerGenerationRequest(
+            question=request.question, decision=decision, language=request.language
+        )
 
     async def _public_response(self, request, answer_response) -> ChatResponseBody:
-        notices = await self._collect_question_notice(request=request, status=answer_response.status)
-        return ChatResponseBody(status=answer_response.status, answer=answer_response.answer_text,
-            sources=tuple(ChatSourceBody(title=source.source_title, locator=source.source_locator)
-                          for source in answer_response.sources), notices=notices)
+        notices = await self._collect_question_notice(
+            request=request, status=answer_response.status
+        )
+        return ChatResponseBody(
+            status=answer_response.status,
+            answer=answer_response.answer_text,
+            sources=tuple(
+                ChatSourceBody(title=source.source_title, locator=source.source_locator)
+                for source in answer_response.sources
+            ),
+            notices=notices,
+        )
 
     async def _collect_question_notice(
         self,

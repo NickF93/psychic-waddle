@@ -4,7 +4,11 @@ from dataclasses import dataclass
 import math
 
 from portfolio_rag_assistant.provider import ChatProvider
-from portfolio_rag_assistant.provider.contract import LLMProviderRequestError, LLMProviderTransportError, LLMProviderResponseError
+from portfolio_rag_assistant.provider.contract import (
+    LLMProviderRequestError,
+    LLMProviderTransportError,
+    LLMProviderResponseError,
+)
 from portfolio_rag_assistant.answer.contract import AnswerGenerationConfigurationError
 
 SENTINEL = "INSUFFICIENT_APPROVED_CONTEXT"
@@ -18,7 +22,11 @@ def failure_reason(error: Exception) -> str:
         return "connection or stream transport failed"
     if isinstance(error, LLMProviderRequestError):
         status = error.status_code
-        return f"HTTP {status}" if isinstance(status, int) and 100 <= status <= 599 else "request rejected"
+        return (
+            f"HTTP {status}"
+            if isinstance(status, int) and 100 <= status <= 599
+            else "request rejected"
+        )
     if isinstance(error, LLMProviderResponseError):
         return "invalid or incomplete response"
     return "provider failed"
@@ -34,8 +42,14 @@ class GenerationTarget:
     def __post_init__(self):
         if not isinstance(self.provider, ChatProvider) or not self.model.strip():
             raise AnswerGenerationConfigurationError("invalid generation target")
-        if isinstance(self.timeout, bool) or not math.isfinite(self.timeout) or self.timeout <= 0:
-            raise AnswerGenerationConfigurationError("generation timeout must be finite and positive")
+        if (
+            isinstance(self.timeout, bool)
+            or not math.isfinite(self.timeout)
+            or self.timeout <= 0
+        ):
+            raise AnswerGenerationConfigurationError(
+                "generation timeout must be finite and positive"
+            )
 
 
 class ProvisionalText:

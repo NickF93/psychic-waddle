@@ -60,12 +60,10 @@ require_provider_keys() {
     CHAT_BACKEND_VALUE=$(configured_value CHAT_BACKEND)
     EMBEDDING_BACKEND_VALUE=$(configured_value EMBEDDING_BACKEND)
 
-    env_value CHAT_API_KEY >/dev/null
+    optional_env_value CHAT_API_KEY >/dev/null
     env_value EMBEDDING_API_KEY >/dev/null
 
-    if [ "$CHAT_BACKEND_VALUE" = "openai-compatible" ]; then
-        configured_value CHAT_API_KEY >/dev/null
-    fi
+    # OpenAI-compatible APIs may explicitly support anonymous access.
     if [ "$EMBEDDING_BACKEND_VALUE" = "openai-compatible" ]; then
         configured_value EMBEDDING_API_KEY >/dev/null
     fi
@@ -120,6 +118,7 @@ configured_value EMBEDDING_MODEL >/dev/null
 require_provider_keys
 require_llama_cpp_when_selected
 require_ollama_when_selected
+validate_chat_fallback
 
 require_integer RETRIEVAL_TOP_K
 require_integer RETRIEVAL_CANDIDATE_FAN_OUT

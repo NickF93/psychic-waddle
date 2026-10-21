@@ -26,3 +26,25 @@ never questions, context, answers, credentials or upstream error bodies.
 Deployment must validate optional credentials, start and preload configured local
 fallbacks, preserve persistent data, and keep both proxy deadlines above the
 application deadline. Qualification and live acceptance precede PR readiness.
+
+## Configuration and wire contract
+
+`CHAT_*` selects the primary. `CHAT_API_KEY` may be absent or empty; no
+Authorization header is sent in that case. Set `CHAT_TIMEOUT_SECONDS=15` for
+the external primary. `CHAT_FALLBACK_BACKEND`, `CHAT_FALLBACK_BASE_URL` and
+`CHAT_FALLBACK_MODEL` explicitly enable a fallback. Its API key is optional;
+`CHAT_FALLBACK_TIMEOUT_SECONDS` defaults to 180. The bundled lifecycle supports
+the requested local Ollama fallback. `CHAT_REQUEST_TIMEOUT_SECONDS` defaults to
+240 and covers retrieval plus all generation attempts. Leave fallback identity
+fields empty to disable fallback. Malformed partial settings fail validation.
+
+SSE status data contains phase `retrieving` or `generating` and a code-owned
+primary/fallback role during generation. Delta data contains `text`. Complete
+data is the existing JSON response body; error data contains a public code and
+readable retry instruction. Heartbeat comments contain no answer content.
+Cancellation and partial failure never initiate another provider attempt.
+
+The native catalog exporter continues to publish only local Ollama selections:
+when the primary is external, its explicitly selected Ollama fallback supplies
+the local chat declaration. External models are never silently added to the
+private inference gateway.

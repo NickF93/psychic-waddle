@@ -2,14 +2,31 @@ import asyncio
 
 import pytest
 
-from portfolio_rag_assistant.answer import AnswerGenerationRequest, GroundedAnswerGenerator, AnswerGenerationProviderError
-from portfolio_rag_assistant.answer.contract import AnswerDelta, AnswerGenerationResponse
-from portfolio_rag_assistant.config import load_fallback_chat_provider_settings, load_request_timeout
-from portfolio_rag_assistant.provider import ChatResponse, ChatMessage, LLMProviderTransportError, LLMProviderConfigurationError
+from portfolio_rag_assistant.answer import (
+    AnswerGenerationRequest,
+    GroundedAnswerGenerator,
+    AnswerGenerationProviderError,
+)
+from portfolio_rag_assistant.answer.contract import (
+    AnswerDelta,
+    AnswerGenerationResponse,
+)
+from portfolio_rag_assistant.config import (
+    load_fallback_chat_provider_settings,
+    load_request_timeout,
+)
+from portfolio_rag_assistant.provider import (
+    ChatResponse,
+    ChatMessage,
+    LLMProviderTransportError,
+    LLMProviderConfigurationError,
+)
 from portfolio_rag_assistant.config import RuntimeConfigurationError
 from test_grounded_answer_generation import _answerable_decision
 
-REQUEST = AnswerGenerationRequest(question="Where did Niccolo work?", decision=_answerable_decision(), language="en")
+REQUEST = AnswerGenerationRequest(
+    question="Where did Niccolo work?", decision=_answerable_decision(), language="en"
+)
 
 
 class Provider:
@@ -24,7 +41,10 @@ class Provider:
         self.models.append(request.model)
         if isinstance(self.parts[0], Exception):
             raise self.parts[0]
-        return ChatResponse(model=request.model, message=ChatMessage(role="assistant", content="".join(self.parts)))
+        return ChatResponse(
+            model=request.model,
+            message=ChatMessage(role="assistant", content="".join(self.parts)),
+        )
 
     async def stream_chat(self, request):
         self.calls += 1
@@ -42,10 +62,17 @@ class Provider:
 
 
 def events(primary, fallback=None, **kwargs):
-    generator = GroundedAnswerGenerator(primary, "primary-model", fallback_provider=fallback,
-                                        fallback_model="local-model" if fallback else None, **kwargs)
+    generator = GroundedAnswerGenerator(
+        primary,
+        "primary-model",
+        fallback_provider=fallback,
+        fallback_model="local-model" if fallback else None,
+        **kwargs,
+    )
+
     async def run():
         return [item async for item in generator.stream(REQUEST)]
+
     return asyncio.run(run())
 
 
@@ -95,14 +122,20 @@ def test_split_sentinel_never_becomes_provisional_text(cut):
 def test_final_insufficiency_classification_remains_authoritative():
     result = events(Provider(["I cannot ", "answer from the approved context."]))
     assert isinstance(result[-1], AnswerGenerationResponse)
-    assert result[-1].status == "not_answerable" and "approved context" not in result[-1].answer_text
+    assert (
+        result[-1].status == "not_answerable"
+        and "approved context" not in result[-1].answer_text
+    )
 
 
 def test_cancellation_closes_upstream_without_fallback():
     primary = Provider(["partial answer", 1.0])
     fallback = Provider(["wrong"])
+
     async def run():
-        generator = GroundedAnswerGenerator(primary, "primary", fallback_provider=fallback, fallback_model="local")
+        generator = GroundedAnswerGenerator(
+            primary, "primary", fallback_provider=fallback, fallback_model="local"
+        )
         stream = generator.stream(REQUEST)
         await anext(stream)
         await anext(stream)
@@ -112,6 +145,7 @@ def test_cancellation_closes_upstream_without_fallback():
         with pytest.raises(asyncio.CancelledError):
             await task
         await stream.aclose()
+
     asyncio.run(run())
     assert primary.closed and fallback.calls == 0
 
@@ -119,8 +153,11 @@ def test_cancellation_closes_upstream_without_fallback():
 def test_json_path_uses_the_same_explicit_fallback():
     primary = Provider([LLMProviderTransportError("unavailable")])
     fallback = Provider(["Local answer."])
-    response = asyncio.run(GroundedAnswerGenerator(primary, "primary", fallback_provider=fallback,
-                                                  fallback_model="local").generate(REQUEST))
+    response = asyncio.run(
+        GroundedAnswerGenerator(
+            primary, "primary", fallback_provider=fallback, fallback_model="local"
+        ).generate(REQUEST)
+    )
     assert response.status == "answerable" and primary.calls == fallback.calls == 1
 
 
@@ -128,8 +165,13 @@ def test_optional_fallback_is_explicit_and_partial_configuration_is_rejected():
     assert load_fallback_chat_provider_settings({}) is None
     with pytest.raises(LLMProviderConfigurationError):
         load_fallback_chat_provider_settings({"CHAT_FALLBACK_MODEL": "local"})
-    settings = load_fallback_chat_provider_settings({"CHAT_FALLBACK_BACKEND": "ollama",
-        "CHAT_FALLBACK_BASE_URL": "http://ollama:11434/api", "CHAT_FALLBACK_MODEL": "local"})
+    settings = load_fallback_chat_provider_settings(
+        {
+            "CHAT_FALLBACK_BACKEND": "ollama",
+            "CHAT_FALLBACK_BASE_URL": "http://ollama:11434/api",
+            "CHAT_FALLBACK_MODEL": "local",
+        }
+    )
     assert settings.api_key is None and settings.timeout_seconds == 180
 
 

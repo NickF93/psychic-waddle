@@ -1,5 +1,28 @@
 # Public Deployment Boundary
 
+## M16 generation and delivery update
+
+The portfolio browser uses its same-origin proxy. Both proxy layers disable
+buffering on the chat route for negotiated SSE. The JSON route remains usable.
+Generation can select any explicitly configured OpenAI-compatible endpoint with
+an optional server-side token. The primary's production timeout is 15 seconds,
+the configured local Ollama fallback has 180 seconds, and the complete request
+has a 240-second application deadline. Existing 270/285-second proxy windows
+retain handling overhead. See [M16 delivery](m16-delivery.md).
+
+The containerized local fallback is explicitly configured and preloaded during
+setup/start even when the primary is external. Existing PostgreSQL, model and
+certificate volumes remain authoritative. Embeddings, retrieval and evidence
+approval remain local. External generation receives only application
+instructions, language, question and approved public context; no visitor
+identity, raw database state or unapproved knowledge is forwarded.
+
+Anonymous access identifies the VPS egress rather than requiring a personal
+token; it does not imply private processing or zero retention. Record the exact
+selected free model and current gateway/provider data-handling terms in the
+acceptance record before activation. The widget explains this transmission
+boundary and asks visitors to avoid sensitive information.
+
 ## Purpose
 
 Milestone 7 makes the Portfolio RAG Assistant deployable on
