@@ -26,16 +26,18 @@ validate_public_routes() {
     require_config_line "$CONFIG_FILE" "upstream assistant_api {"
     require_config_line "$CONFIG_FILE" "zone assistant_api 64k;"
     require_config_line "$CONFIG_FILE" "server api:8000 resolve;"
+    require_config_line "$CONFIG_FILE" "location ^~ /.well-known/acme-challenge/"
+    require_config_line "$CONFIG_FILE" "include /etc/nginx/snippets/assistant-site.conf;"
+    require_config_line "$CONFIG_FILE" "\"https://pigreco.xyz\""
+    require_config_line "$CONFIG_FILE" "\"https://www.pigreco.xyz\""
+    CONFIG_FILE="$ROOT_DIR/deploy/nginx/snippets/assistant-site.conf"
     require_config_line "$CONFIG_FILE" "location = /api/assistant/chat"
     require_config_line "$CONFIG_FILE" "proxy_pass http://assistant_api/chat?;"
     require_config_line "$CONFIG_FILE" "location = /api/assistant/health"
     require_config_line "$CONFIG_FILE" "proxy_pass http://assistant_api/health?;"
     require_config_line "$CONFIG_FILE" "location = /api/assistant/ready"
     require_config_line "$CONFIG_FILE" "proxy_pass http://assistant_api/ready?;"
-    require_config_line "$CONFIG_FILE" "\"https://pigreco.xyz\""
-    require_config_line "$CONFIG_FILE" "\"https://www.pigreco.xyz\""
     require_config_line "$CONFIG_FILE" "limit_req zone=assistant_chat burst=40 nodelay;"
-    require_config_line "$CONFIG_FILE" "location ^~ /.well-known/acme-challenge/"
 }
 
 compose_profile public config >/dev/null

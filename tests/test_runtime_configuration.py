@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -150,6 +149,7 @@ def test_compose_public_bootstrap_edge_is_profile_gated_and_http_only() -> None:
     assert nginx["volumes"] == [
         "./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro",
         "./deploy/nginx/private-services:/etc/nginx/private-services:ro",
+        "./deploy/nginx/snippets:/etc/nginx/snippets:ro",
         "acme-challenges:/var/www/certbot:ro",
     ]
     assert nginx["networks"] == ["runtime"]
@@ -169,6 +169,7 @@ def test_compose_public_tls_edge_is_profile_gated_and_owns_443() -> None:
     assert nginx_tls["volumes"] == [
         "./deploy/nginx/nginx-tls.conf:/etc/nginx/nginx.conf:ro",
         "./deploy/nginx/private-services:/etc/nginx/private-services:ro",
+        "./deploy/nginx/snippets:/etc/nginx/snippets:ro",
         "acme-challenges:/var/www/certbot:ro",
         "letsencrypt-certs:/etc/letsencrypt:ro",
     ]
@@ -500,7 +501,7 @@ def test_public_edge_logging_is_redacted() -> None:
 
     for log_format in log_formats:
         assert "$request_method" in log_format
-        assert "$uri" in log_format
+        assert "$assistant_log_path" in log_format
         assert "$status" in log_format
         assert "$assistant_cors_origin" in log_format
 
@@ -510,9 +511,26 @@ def test_public_edge_logging_is_redacted() -> None:
             "$http_cookie",
             "$request_body",
             "$request_uri",
+            "$uri",
             "$args",
         ):
             assert forbidden_field not in log_format
+
+
+def test_thingsboard_log_fields_stay_within_the_privacy_allowlist() -> None:
+    template = (ROOT / "deploy/nginx/thingsboard.conf.template").read_text()
+    log_format = re.search(
+        r"log_format thingsboard_redacted(.*?);", template, re.DOTALL
+    )
+    assert log_format is not None
+    assert set(re.findall(r"\$([a-z][a-z0-9_]*)", log_format.group(1))) == {
+        "time_iso8601",
+        "request_method",
+        "thingsboard_route",
+        "status",
+        "body_bytes_sent",
+        "request_time",
+    }
 
 
 def test_public_edge_does_not_forward_visitor_identity_headers() -> None:
@@ -590,7 +608,11 @@ def _load_env_example() -> dict[str, str]:
 
 
 def _nginx_config(filename: str = "nginx.conf") -> str:
-    return (ROOT / "deploy" / "nginx" / filename).read_text(encoding="utf-8")
+    config = (ROOT / "deploy" / "nginx" / filename).read_text(encoding="utf-8")
+    return config.replace(
+        "include /etc/nginx/snippets/assistant-site.conf;",
+        (ROOT / "deploy/nginx/snippets/assistant-site.conf").read_text(encoding="utf-8"),
+    )
 
 
 def _nginx_map(name: str, filename: str = "nginx.conf") -> str:

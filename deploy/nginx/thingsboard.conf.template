@@ -1,0 +1,57 @@
+# Render only the three named variables; preserve native Nginx $variables.
+upstream thingsboard_web {
+    zone thingsboard_web 64k;
+    server ${THINGSBOARD_UPSTREAM} resolve;
+}
+
+map $http_upgrade $thingsboard_connection {
+    default upgrade;
+    "" close;
+}
+
+# Device tokens occur in paths; authentication tokens may occur in queries.
+# Log fixed categories only, never the raw URI or query string.
+map $uri $thingsboard_route {
+    default web;
+    ~^/api/v1/ device-api;
+    ~^/api/ws websocket;
+    ~^/api/auth/ authentication;
+    ~^/api/ application-api;
+}
+
+log_format thingsboard_redacted
+    '$time_iso8601 method=$request_method route=$thingsboard_route '
+    'status=$status bytes=$body_bytes_sent request_time=$request_time';
+
+server {
+    listen 443 ssl;
+    server_name ${THINGSBOARD_SERVER_NAME};
+    ssl_certificate /etc/letsencrypt/live/${THINGSBOARD_CERTIFICATE_NAME}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${THINGSBOARD_CERTIFICATE_NAME}/privkey.pem;
+    ssl_session_cache shared:assistant_ssl:10m;
+    ssl_session_timeout 1d;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    access_log /dev/stdout thingsboard_redacted;
+    include /etc/nginx/snippets/assistant-site.conf;
+
+    location / {
+        client_max_body_size 10m;
+        client_body_timeout 15s;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 90s;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Port $server_port;
+        proxy_set_header Forwarded "";
+        proxy_set_header X-Forwarded-For "";
+        proxy_set_header X-Real-IP "";
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $thingsboard_connection;
+        proxy_pass http://thingsboard_web;
+    }
+}

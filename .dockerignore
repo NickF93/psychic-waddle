@@ -19,3 +19,7 @@ models
 *.safetensors
 *.pt
 *.bin
+
+# Do not copy operator-generated proxy configuration into application images.
+deploy/nginx/public-services/*.conf
+deploy/nginx/private-services/*.conf

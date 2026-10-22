@@ -224,3 +224,6 @@ __marimo__/
 
 # Operator-owned private service publication
 deploy/nginx/private-services/*.conf
+
+# Operator-owned optional public sites
+deploy/nginx/public-services/*.conf

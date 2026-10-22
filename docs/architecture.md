@@ -340,3 +340,13 @@ hosts through a read-only include directory. Its empty default publishes nothing
 The platform owns allowlists and public aliases; this application owns its direct
 provider configuration and selected-model metadata export. This does not change
 visitor retrieval, answer policy, provider selection or storage.
+
+## Optional shared-host ThingsBoard edge
+
+M17 adds an opt-in public HTTPS virtual host to the existing Nginx runtime.
+The ThingsBoard deployment retains application, storage, Kafka and telemetry
+authority; no ThingsBoard logic enters the assistant. Deployment configuration
+owns hostname, certificate reference, upstream DNS and external network. Shared
+RAG locations retain one definition and their existing privacy/access contracts.
+The public site categorizes ThingsBoard paths before logging to exclude device
+tokens and query credentials. See [ThingsBoard HTTPS](thingsboard-https.md).
