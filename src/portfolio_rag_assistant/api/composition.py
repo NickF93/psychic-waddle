@@ -20,6 +20,8 @@ from portfolio_rag_assistant.config import (
     build_chat_provider,
     build_embedding_provider,
     load_chat_provider_settings,
+    load_fallback_chat_provider_settings,
+    load_request_timeout,
     load_database_settings,
     load_embedding_provider_settings,
     load_intent_catalog_settings,
@@ -116,6 +118,8 @@ def build_runtime_services(
     environment = os.environ if env is None else env
     database_settings = load_database_settings(environment)
     chat_settings = load_chat_provider_settings(environment)
+    fallback_settings = load_fallback_chat_provider_settings(environment)
+    request_timeout = load_request_timeout(environment)
     embedding_settings = load_embedding_provider_settings(environment)
     retrieval_settings = load_retrieval_settings(environment)
     question_collection_settings = load_question_collection_settings(environment)
@@ -128,6 +132,9 @@ def build_runtime_services(
         calibrated_model=intent_catalog.semantic_calibration.embedding_model,
     )
     chat_provider = chat_provider_factory(chat_settings)
+    fallback_provider = (
+        chat_provider_factory(fallback_settings) if fallback_settings else None
+    )
     embedding_provider = embedding_provider_factory(embedding_settings)
     intent_resolver = SemanticIntentResolver(
         catalog=intent_catalog,
@@ -155,9 +162,28 @@ def build_runtime_services(
             answer_generator=GroundedAnswerGenerator(
                 provider=chat_provider,
                 chat_model=chat_settings.model,
+                max_tokens=chat_settings.max_tokens,
+                generation_options=chat_settings.request_options,
+                input_budget=chat_settings.input_budget,
+                fallback_generation_options=fallback_settings.request_options
+                if fallback_settings
+                else None,
+                fallback_input_budget=fallback_settings.input_budget
+                if fallback_settings
+                else None,
+                primary_timeout=chat_settings.timeout_seconds,
+                fallback_provider=fallback_provider,
+                fallback_model=fallback_settings.model if fallback_settings else None,
+                fallback_timeout=fallback_settings.timeout_seconds
+                if fallback_settings
+                else 180,
+                fallback_max_tokens=fallback_settings.max_tokens
+                if fallback_settings
+                else 384,
             ),
             question_collector=question_collector,
             retrieval_settings=retrieval_settings,
+            request_timeout=request_timeout,
         ),
         readiness_service=DatabaseReadinessService(
             connection=connection,
@@ -175,10 +201,7 @@ def _require_matching_semantic_calibration(
     calibrated_backend: str,
     calibrated_model: str,
 ) -> None:
-    if (
-        configured_backend != calibrated_backend
-        or configured_model != calibrated_model
-    ):
+    if configured_backend != calibrated_backend or configured_model != calibrated_model:
         raise APICompositionError(
             "intent semantic calibration must match configured embedding backend "
             "and model"

@@ -30,4 +30,5 @@ remove_profile_service public certbot
 "$SCRIPT_DIR/api-down.sh"
 down_chat_backend
 down_embedding_backend
+chat_fallback_phase down
 "$SCRIPT_DIR/postgres-down.sh"

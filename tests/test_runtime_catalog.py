@@ -98,3 +98,11 @@ def test_export_rejects_role_mismatch():
 def test_export_requires_the_actual_configured_provider():
     with pytest.raises(CatalogExportError):
         export(env={**ENV, "CHAT_BACKEND": "openai-compatible"})
+
+
+def test_external_primary_exports_only_the_explicit_local_fallback():
+    result, _ = export(env={**ENV, "CHAT_BACKEND": "openai-compatible", "CHAT_MODEL": "external-model",
+        "CHAT_BASE_URL": "https://external.invalid/v1", "CHAT_FALLBACK_BACKEND": "ollama",
+        "CHAT_FALLBACK_BASE_URL": ENV["CHAT_BASE_URL"], "CHAT_FALLBACK_MODEL": ENV["CHAT_MODEL"]})
+    assert [model["native_id"] for model in result["models"]] == ["chat:small", "embedding"]
+    assert "external-model" not in str(result)

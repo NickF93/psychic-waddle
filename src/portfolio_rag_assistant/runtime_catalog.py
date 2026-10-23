@@ -45,9 +45,10 @@ def export_catalog(
 ) -> dict:
     if not re.fullmatch(r"[0-9a-f]{40}", source_commit):
         raise CatalogExportError("Supply the full application source commit")
-    if env.get("CHAT_BACKEND") != "ollama" or env.get("EMBEDDING_BACKEND") != "ollama":
-        raise CatalogExportError("Both configured selections must use Ollama")
-    base = env.get("CHAT_BASE_URL", "").rstrip("/")
+    chat_prefix = "CHAT" if env.get("CHAT_BACKEND") == "ollama" else "CHAT_FALLBACK"
+    if env.get(f"{chat_prefix}_BACKEND") != "ollama" or env.get("EMBEDDING_BACKEND") != "ollama":
+        raise CatalogExportError("The selected local chat and embeddings must use Ollama")
+    base = env.get(f"{chat_prefix}_BASE_URL", "").rstrip("/")
     if not base.endswith("/api") or base != env.get("EMBEDDING_BASE_URL", "").rstrip(
         "/"
     ):
@@ -66,7 +67,7 @@ def export_catalog(
     tags = read(root, "/api/tags")["models"]
     models = []
     for mode, variable, context, output in [
-        ("chat", "CHAT_MODEL", chat_context, chat_output),
+        ("chat", f"{chat_prefix}_MODEL", chat_context, chat_output),
         ("embedding", "EMBEDDING_MODEL", embedding_context, None),
     ]:
         native = env.get(variable, "")

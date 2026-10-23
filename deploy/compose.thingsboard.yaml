@@ -1,0 +1,13 @@
+# Opt-in addition to compose.yaml. The existing ThingsBoard project owns this
+# network and backend; only nginx-tls joins it. No application service is changed.
+services:
+  nginx-tls:
+    volumes:
+      - ./deploy/nginx/public-services:/etc/nginx/public-services:ro
+    networks:
+      - thingsboard
+
+networks:
+  thingsboard:
+    external: true
+    name: ${THINGSBOARD_NETWORK:?missing THINGSBOARD_NETWORK}

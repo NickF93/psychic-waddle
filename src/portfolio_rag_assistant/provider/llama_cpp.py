@@ -7,6 +7,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import httpx
+from .parameters import ParameterProfile, chat_payload
 
 from portfolio_rag_assistant.provider.contract import (
     ChatMessage,
@@ -33,27 +34,34 @@ class LlamaCppProvider:
         api_key: str | None = None,
         timeout: float = 30.0,
         transport: httpx.AsyncBaseTransport | None = None,
+        profile: ParameterProfile | None = None,
     ) -> None:
         self._base_url = _normalize_base_url(base_url)
         self._api_key = _normalize_api_key(api_key)
         self._timeout = _require_positive_timeout(timeout)
         self._transport = transport
+        self._profile = profile
+
+    async def stream_chat(self, request: ChatRequest):
+        from portfolio_rag_assistant.provider.streaming import stream_openai
+
+        async for text in stream_openai(
+            request,
+            base_url=self._base_url,
+            api_key=self._api_key,
+            timeout=self._timeout,
+            transport=self._transport,
+            profile=self._profile,
+        ):
+            yield text
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
-        payload: dict[str, Any] = {
-            "model": request.model,
-            "messages": [
-                {"role": message.role, "content": message.content}
-                for message in request.messages
-            ],
-            "stream": False,
-            "n": 1,
-        }
-        if request.temperature is not None:
-            payload["temperature"] = request.temperature
-        if request.max_tokens is not None:
-            payload["max_tokens"] = request.max_tokens
-
+        payload = chat_payload(
+            request,
+            stream=False,
+            profile=self._profile or ParameterProfile.load("openai"),
+        )
+        payload["n"] = 1
         response_payload = await self._post_json("/chat/completions", payload)
         return ChatResponse(
             model=_read_model(response_payload),
@@ -94,7 +102,8 @@ class LlamaCppProvider:
 
         if not 200 <= response.status_code <= 299:
             raise LLMProviderRequestError(
-                f"provider returned HTTP {response.status_code}"
+                f"provider returned HTTP {response.status_code}",
+                status_code=response.status_code,
             )
 
         try:
@@ -147,6 +156,8 @@ def _read_chat_message(payload: dict[str, Any]) -> ChatMessage:
     choice = choices[0]
     if not isinstance(choice, dict):
         raise LLMProviderResponseError("provider choice must be an object")
+    if choice.get("finish_reason") != "stop":
+        raise LLMProviderResponseError("provider answer was not completed")
 
     message = choice.get("message")
     if not isinstance(message, dict):
@@ -200,7 +211,9 @@ def _read_embeddings(
             raise LLMProviderResponseError("provider embedding item must be an object")
         index = item.get("index")
         if isinstance(index, bool) or not isinstance(index, int):
-            raise LLMProviderResponseError("provider embedding index must be an integer")
+            raise LLMProviderResponseError(
+                "provider embedding index must be an integer"
+            )
         if index in by_index:
             raise LLMProviderResponseError("provider embedding indexes must be unique")
         by_index[index] = _read_embedding_vector(item.get("embedding"))

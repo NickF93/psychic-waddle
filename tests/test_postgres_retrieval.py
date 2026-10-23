@@ -27,10 +27,25 @@ from portfolio_rag_assistant.retrieval import (
 )
 
 KNOWLEDGE_MIGRATION_SQL = (
-    Path(__file__).resolve().parents[1]
-    / "migrations"
-    / "0001_knowledge_schema.sql"
+    Path(__file__).resolve().parents[1] / "migrations" / "0001_knowledge_schema.sql"
 ).read_text(encoding="utf-8")
+
+
+def test_embedding_transport_failure_is_a_retrieval_error():
+    from portfolio_rag_assistant.provider import LLMProviderTransportError
+
+    class FailedEmbeddingProvider:
+        async def embed(self, request):
+            raise LLMProviderTransportError("private provider detail")
+
+    retriever = _retriever(
+        connection=FakeRetrievalConnection(vector_rows=(), keyword_rows=()),
+        provider=FailedEmbeddingProvider(),
+    )
+    with pytest.raises(RetrievalStoreError, match="query embedding unavailable"):
+        asyncio.run(retriever.retrieve(RetrievalRequest(question="test", top_k=1)))
+
+
 EMBEDDING_HASH_MIGRATION_SQL = (
     Path(__file__).resolve().parents[1]
     / "migrations"
@@ -48,9 +63,7 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
             _row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.9),
             _row(3, "experience: Niccolo worked at Bonfiglioli.", 0.5),
         ),
-        intent_rows=(
-            _row(3, "experience: Niccolo worked at Bonfiglioli.", 0.8),
-        ),
+        intent_rows=(_row(3, "experience: Niccolo worked at Bonfiglioli.", 0.8),),
     )
     provider = FakeEmbeddingProvider(((1.0, 0.0),))
     retriever = _retriever(
@@ -59,7 +72,9 @@ def test_postgres_retriever_embeds_question_and_returns_hybrid_results() -> None
     )
 
     response = asyncio.run(
-        retriever.retrieve(RetrievalRequest(question="Where did Niccolo work?", top_k=2))
+        retriever.retrieve(
+            RetrievalRequest(question="Where did Niccolo work?", top_k=2)
+        )
     )
 
     assert provider.embedding_requests == (
@@ -88,12 +103,8 @@ def test_postgres_retriever_uses_candidate_fan_out_for_channel_limits() -> None:
             _row(2, "experience: Niccolo worked at Bonfiglioli.", 0.8),
             _row(3, "experience: Niccolo worked at CIAS.", 0.7),
         ),
-        keyword_rows=(
-            _row(2, "experience: Niccolo worked at Bonfiglioli.", 0.8),
-        ),
-        intent_rows=(
-            _row(3, "experience: Niccolo worked at CIAS.", 0.7),
-        ),
+        keyword_rows=(_row(2, "experience: Niccolo worked at Bonfiglioli.", 0.8),),
+        intent_rows=(_row(3, "experience: Niccolo worked at CIAS.", 0.7),),
     )
     provider = FakeEmbeddingProvider(((1.0, 0.0),))
     retriever = _retriever(
@@ -103,7 +114,9 @@ def test_postgres_retriever_uses_candidate_fan_out_for_channel_limits() -> None:
     )
 
     response = asyncio.run(
-        retriever.retrieve(RetrievalRequest(question="Where did Niccolo work?", top_k=2))
+        retriever.retrieve(
+            RetrievalRequest(question="Where did Niccolo work?", top_k=2)
+        )
     )
 
     assert len(response.results) == 2
@@ -234,7 +247,9 @@ def test_postgres_retriever_uses_bounded_intent_expansion() -> None:
     )
 
     response = asyncio.run(
-        retriever.retrieve(RetrievalRequest(question="Where did Niccolo work?", top_k=4))
+        retriever.retrieve(
+            RetrievalRequest(question="Where did Niccolo work?", top_k=4)
+        )
     )
 
     assert tuple(result.chunk_id for result in response.results) == (7,)
@@ -250,8 +265,8 @@ def test_postgres_retriever_uses_bounded_intent_expansion() -> None:
     assert '"professional workplaces"' in intent_query_text
     assert '"work history"' in intent_query_text
     assert "employers" in intent_query_text
-    assert not re.search(r'(^| OR )work($| OR )', intent_query_text)
-    assert not re.search(r'(^| OR )worked($| OR )', intent_query_text)
+    assert not re.search(r"(^| OR )work($| OR )", intent_query_text)
+    assert not re.search(r"(^| OR )worked($| OR )", intent_query_text)
     assert intent_params[1] == ["experience"]
     assert intent_params[2] == 4
     assert not any(
@@ -299,9 +314,7 @@ def test_postgres_retriever_fuses_candidate_ranks() -> None:
             _row(2, "experience: high vector score but single channel", 0.99),
             _row(1, "experience: appears in both vector and keyword", 0.4),
         ),
-        keyword_rows=(
-            _row(1, "experience: appears in both vector and keyword", 0.1),
-        ),
+        keyword_rows=(_row(1, "experience: appears in both vector and keyword", 0.1),),
     )
     provider = FakeEmbeddingProvider(((0.1, 0.2),))
     retriever = _retriever(
@@ -309,7 +322,9 @@ def test_postgres_retriever_fuses_candidate_ranks() -> None:
         provider=provider,
     )
 
-    response = asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=2)))
+    response = asyncio.run(
+        retriever.retrieve(RetrievalRequest(question="NAIS", top_k=2))
+    )
 
     assert tuple(result.chunk_id for result in response.results) == (1, 2)
     assert response.results[0].score.combined_score < (
@@ -321,15 +336,9 @@ def test_postgres_retriever_fuses_candidate_ranks() -> None:
 
 def test_postgres_retriever_threshold_score_ignores_missing_optional_channels() -> None:
     connection = FakeRetrievalConnection(
-        vector_rows=(
-            _row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.72),
-        ),
-        keyword_rows=(
-            _row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.9),
-        ),
-        intent_rows=(
-            _row(2, "experience: weaker intent-only workplace context", 0.8),
-        ),
+        vector_rows=(_row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.72),),
+        keyword_rows=(_row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.9),),
+        intent_rows=(_row(2, "experience: weaker intent-only workplace context", 0.8),),
     )
     provider = FakeEmbeddingProvider(((0.1, 0.2),))
     retriever = _retriever(
@@ -338,7 +347,9 @@ def test_postgres_retriever_threshold_score_ignores_missing_optional_channels() 
     )
 
     response = asyncio.run(
-        retriever.retrieve(RetrievalRequest(question="Where did Niccolo work?", top_k=2))
+        retriever.retrieve(
+            RetrievalRequest(question="Where did Niccolo work?", top_k=2)
+        )
     )
 
     assert response.results[0].chunk_id == 1
@@ -368,9 +379,7 @@ def test_postgres_retriever_does_not_apply_policy_score_threshold() -> None:
 
 def test_postgres_retriever_does_not_expand_unsupported_questions() -> None:
     connection = FakeRetrievalConnection(
-        vector_rows=(
-            _row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.88),
-        ),
+        vector_rows=(_row(1, "experience: Niccolo worked at NAIS s.r.l.", 0.88),),
         keyword_rows=(),
         intent_rows=(
             _row(2, "experience: should not be queried for pizza questions", 0.99),
@@ -551,7 +560,9 @@ def test_postgres_retriever_can_read_real_schema(db_connection: object) -> None:
         provider=provider,
     )
 
-    response = asyncio.run(retriever.retrieve(RetrievalRequest(question="NAIS", top_k=1)))
+    response = asyncio.run(
+        retriever.retrieve(RetrievalRequest(question="NAIS", top_k=1))
+    )
 
     assert len(response.results) == 1
     assert response.results[0].chunk_text == "experience: Niccolo worked at NAIS s.r.l."
@@ -662,7 +673,9 @@ def test_postgres_retriever_retrieves_workplace_aggregate_for_natural_question(
     )
 
     response = asyncio.run(
-        retriever.retrieve(RetrievalRequest(question="Where did Niccolo work?", top_k=4))
+        retriever.retrieve(
+            RetrievalRequest(question="Where did Niccolo work?", top_k=4)
+        )
     )
 
     retrieved_text = "\n".join(result.chunk_text for result in response.results)
@@ -673,12 +686,18 @@ def test_postgres_retriever_retrieves_workplace_aggregate_for_natural_question(
     from portfolio_rag_assistant.retrieval.postgres import _rank_candidates
 
     without_intent = _rank_candidates(
-        vector_candidates=retriever._search_vectors(query_embedding=(1.0, 0.0), limit=len(chunk_rows)),
-        keyword_candidates=retriever._search_keywords(question="Where did Niccolo work?", limit=len(chunk_rows)),
+        vector_candidates=retriever._search_vectors(
+            query_embedding=(1.0, 0.0), limit=len(chunk_rows)
+        ),
+        keyword_candidates=retriever._search_keywords(
+            question="Where did Niccolo work?", limit=len(chunk_rows)
+        ),
         intent_candidates=(),
         top_k=4,
     )
-    assert all("professional workplaces" not in result.chunk_text for result in without_intent)
+    assert all(
+        "professional workplaces" not in result.chunk_text for result in without_intent
+    )
 
 
 def _row(
@@ -760,10 +779,7 @@ class FakeEmbeddingProvider:
             anchor_embedding = self._semantic_anchor_embedding
             if anchor_embedding is None:
                 anchor_embedding = tuple(-value for value in self._embeddings[0])
-            embeddings = tuple(
-                anchor_embedding
-                for _input in request.inputs
-            )
+            embeddings = tuple(anchor_embedding for _input in request.inputs)
         return EmbeddingResponse(model=request.model, embeddings=embeddings)
 
 

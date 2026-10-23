@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -56,12 +55,8 @@ def test_compose_uses_pinned_images_and_private_runtime_network() -> None:
     services = _compose()["services"]
 
     assert services["nginx"]["image"].startswith("nginx:1.27.5-alpine@sha256:")
-    assert services["nginx-tls"]["image"].startswith(
-        "nginx:1.27.5-alpine@sha256:"
-    )
-    assert services["certbot"]["image"].startswith(
-        "certbot/certbot:latest@sha256:"
-    )
+    assert services["nginx-tls"]["image"].startswith("nginx:1.27.5-alpine@sha256:")
+    assert services["certbot"]["image"].startswith("certbot/certbot:latest@sha256:")
     assert services["db"]["image"].startswith("pgvector/pgvector:0.8.2-pg17@sha256:")
     assert services["ollama"]["image"].startswith("ollama/ollama:latest@sha256:")
     assert services["llama-cpp-chat"]["image"].startswith(
@@ -126,6 +121,8 @@ def test_compose_api_uses_capability_specific_config_without_database_url() -> N
     assert environment["CHAT_BACKEND"] == "${CHAT_BACKEND}"
     assert environment["CHAT_BASE_URL"] == "${CHAT_BASE_URL}"
     assert environment["CHAT_TIMEOUT_SECONDS"] == "${CHAT_TIMEOUT_SECONDS:-30}"
+    assert environment["CHAT_MAX_TOKENS"] == "${CHAT_MAX_TOKENS:-384}"
+    assert environment["CHAT_FALLBACK_MAX_TOKENS"] == "${CHAT_FALLBACK_MAX_TOKENS:-384}"
     assert environment["EMBEDDING_BACKEND"] == "${EMBEDDING_BACKEND}"
     assert environment["EMBEDDING_BASE_URL"] == "${EMBEDDING_BASE_URL}"
     assert environment["INTENT_PROFILES_PATH"] == "${INTENT_PROFILES_PATH}"
@@ -152,6 +149,7 @@ def test_compose_public_bootstrap_edge_is_profile_gated_and_http_only() -> None:
     assert nginx["volumes"] == [
         "./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro",
         "./deploy/nginx/private-services:/etc/nginx/private-services:ro",
+        "./deploy/nginx/snippets:/etc/nginx/snippets:ro",
         "acme-challenges:/var/www/certbot:ro",
     ]
     assert nginx["networks"] == ["runtime"]
@@ -171,6 +169,7 @@ def test_compose_public_tls_edge_is_profile_gated_and_owns_443() -> None:
     assert nginx_tls["volumes"] == [
         "./deploy/nginx/nginx-tls.conf:/etc/nginx/nginx.conf:ro",
         "./deploy/nginx/private-services:/etc/nginx/private-services:ro",
+        "./deploy/nginx/snippets:/etc/nginx/snippets:ro",
         "acme-challenges:/var/www/certbot:ro",
         "letsencrypt-certs:/etc/letsencrypt:ro",
     ]
@@ -244,9 +243,10 @@ def test_llama_cpp_profile_has_separate_chat_and_embedding_servers() -> None:
     chat_command = services["llama-cpp-chat"]["command"]
     embedding_command = services["llama-cpp-embeddings"]["command"]
 
-    assert services["llama-cpp-chat"]["volumes"] == services[
-        "llama-cpp-embeddings"
-    ]["volumes"]
+    assert (
+        services["llama-cpp-chat"]["volumes"]
+        == services["llama-cpp-embeddings"]["volumes"]
+    )
     assert "${LLAMA_CPP_CHAT_MODEL_PATH}" in chat_command
     assert "--embedding" not in chat_command
     assert "${LLAMA_CPP_EMBEDDING_MODEL_PATH}" in embedding_command
@@ -356,7 +356,7 @@ def test_env_example_contains_placeholders_not_real_secrets() -> None:
     assert values["PUBLIC_SERVER_NAME"] == "vps.madnick.ovh"
     assert values["LETSENCRYPT_EMAIL"] == "replace-with-letsencrypt-email"
     assert values["POSTGRES_PASSWORD"] == "replace-with-local-password"
-    assert values["CHAT_API_KEY"] == "replace-with-chat-provider-token"
+    assert values["CHAT_API_KEY"] == ""
     assert values["EMBEDDING_API_KEY"] == "replace-with-embedding-provider-token"
     assert values["CHAT_BASE_URL"] == "https://example.invalid/v1"
     assert values["EMBEDDING_BASE_URL"] == "https://example.invalid/v1"
@@ -456,8 +456,14 @@ def test_public_tls_edge_uses_real_certificate_volume_and_redirects_http() -> No
     nginx_tls = _nginx_config("nginx-tls.conf")
 
     assert "listen 443 ssl;" in nginx_tls
-    assert "ssl_certificate /etc/letsencrypt/live/portfolio-rag-assistant/fullchain.pem;" in nginx_tls
-    assert "ssl_certificate_key /etc/letsencrypt/live/portfolio-rag-assistant/privkey.pem;" in nginx_tls
+    assert (
+        "ssl_certificate /etc/letsencrypt/live/portfolio-rag-assistant/fullchain.pem;"
+        in nginx_tls
+    )
+    assert (
+        "ssl_certificate_key /etc/letsencrypt/live/portfolio-rag-assistant/privkey.pem;"
+        in nginx_tls
+    )
     redirect_lines = [
         line.strip()
         for line in nginx_tls.splitlines()
@@ -472,9 +478,7 @@ def test_public_tls_edge_uses_real_certificate_volume_and_redirects_http() -> No
 def test_public_edge_privacy_contract_bounds_operational_metadata() -> None:
     agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
     architecture = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
-    deployment = (ROOT / "docs" / "public-deployment.md").read_text(
-        encoding="utf-8"
-    )
+    deployment = (ROOT / "docs" / "public-deployment.md").read_text(encoding="utf-8")
 
     for document in (agents, architecture, deployment):
         normalized_document = " ".join(document.split())
@@ -497,7 +501,7 @@ def test_public_edge_logging_is_redacted() -> None:
 
     for log_format in log_formats:
         assert "$request_method" in log_format
-        assert "$uri" in log_format
+        assert "$assistant_log_path" in log_format
         assert "$status" in log_format
         assert "$assistant_cors_origin" in log_format
 
@@ -507,9 +511,26 @@ def test_public_edge_logging_is_redacted() -> None:
             "$http_cookie",
             "$request_body",
             "$request_uri",
+            "$uri",
             "$args",
         ):
             assert forbidden_field not in log_format
+
+
+def test_thingsboard_log_fields_stay_within_the_privacy_allowlist() -> None:
+    template = (ROOT / "deploy/nginx/thingsboard.conf.template").read_text()
+    log_format = re.search(
+        r"log_format thingsboard_redacted(.*?);", template, re.DOTALL
+    )
+    assert log_format is not None
+    assert set(re.findall(r"\$([a-z][a-z0-9_]*)", log_format.group(1))) == {
+        "time_iso8601",
+        "request_method",
+        "thingsboard_route",
+        "status",
+        "body_bytes_sent",
+        "request_time",
+    }
 
 
 def test_public_edge_does_not_forward_visitor_identity_headers() -> None:
@@ -519,9 +540,7 @@ def test_public_edge_does_not_forward_visitor_identity_headers() -> None:
 
 
 def test_public_edge_rate_limit_and_bounds_are_configured() -> None:
-    deployment = (ROOT / "docs" / "public-deployment.md").read_text(
-        encoding="utf-8"
-    )
+    deployment = (ROOT / "docs" / "public-deployment.md").read_text(encoding="utf-8")
 
     for config in (_nginx_config(), _nginx_config("nginx-tls.conf")):
         assert (
@@ -589,7 +608,11 @@ def _load_env_example() -> dict[str, str]:
 
 
 def _nginx_config(filename: str = "nginx.conf") -> str:
-    return (ROOT / "deploy" / "nginx" / filename).read_text(encoding="utf-8")
+    config = (ROOT / "deploy" / "nginx" / filename).read_text(encoding="utf-8")
+    return config.replace(
+        "include /etc/nginx/snippets/assistant-site.conf;",
+        (ROOT / "deploy/nginx/snippets/assistant-site.conf").read_text(encoding="utf-8"),
+    )
 
 
 def _nginx_map(name: str, filename: str = "nginx.conf") -> str:

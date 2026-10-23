@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
+SCRIPT_DIR=$(CDPATH='' cd "$(dirname "$0")" && pwd)
 . "$SCRIPT_DIR/_common.sh"
 
 DRY_RUN=false
@@ -19,7 +19,6 @@ configured_value LETSENCRYPT_EMAIL >/dev/null
 if [ "$DRY_RUN" = true ]; then
     compose_profile public-tls run --rm certbot renew \
         --dry-run \
-        --cert-name portfolio-rag-assistant \
         --webroot \
         --webroot-path /var/www/certbot
     info "certificate renewal dry run passed"
@@ -35,19 +34,23 @@ cleanup_marker() {
 }
 trap cleanup_marker EXIT
 
+RENEW_STATUS=0
 compose_profile public-tls run --rm \
     --volume "$MARKER_DIR:$MARKER_MOUNT" \
     certbot renew \
-        --cert-name portfolio-rag-assistant \
         --webroot \
         --webroot-path /var/www/certbot \
-        --deploy-hook "touch $MARKER_MOUNT/$MARKER_FILE"
+        --deploy-hook "touch $MARKER_MOUNT/$MARKER_FILE" || RENEW_STATUS=$?
 
 if [ ! -f "$MARKER_DIR/$MARKER_FILE" ]; then
     info "no certificates renewed; nginx reload skipped"
-    exit 0
+else
+    compose_profile public-tls exec -T nginx-tls nginx -t
+    compose_profile public-tls exec -T nginx-tls nginx -s reload
+    info "certificate renewed and nginx reloaded"
 fi
 
-compose_profile public-tls exec -T nginx-tls nginx -t
-compose_profile public-tls exec -T nginx-tls nginx -s reload
-info "certificate renewed and nginx reloaded"
+if [ "$RENEW_STATUS" -ne 0 ]; then
+    printf 'error: certificate renewal failed (exit %s); review Certbot diagnostics above\n' "$RENEW_STATUS" >&2
+    exit "$RENEW_STATUS"
+fi

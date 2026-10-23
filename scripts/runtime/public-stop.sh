@@ -29,4 +29,5 @@ compose_profile public stop nginx
 "$SCRIPT_DIR/api-stop.sh"
 stop_chat_backend
 stop_embedding_backend
+chat_fallback_phase stop
 "$SCRIPT_DIR/postgres-stop.sh"

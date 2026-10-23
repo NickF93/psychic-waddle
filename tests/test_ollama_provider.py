@@ -50,6 +50,8 @@ def test_ollama_chat_sends_native_payload_and_reads_response() -> None:
             200,
             json={
                 "model": "llama3.2",
+                "done": True,
+                "done_reason": "stop",
                 "message": {"role": "assistant", "content": "local answer"},
                 "prompt_eval_count": 7,
                 "eval_count": 11,
@@ -179,7 +181,7 @@ def test_ollama_provider_maps_http_errors() -> None:
         transport=httpx.MockTransport(lambda request: httpx.Response(404, text="nope")),
     )
 
-    with pytest.raises(LLMProviderRequestError, match="HTTP 404: nope"):
+    with pytest.raises(LLMProviderRequestError, match="HTTP 404") as failure:
         run_async(
             provider.chat(
                 ChatRequest(
@@ -188,6 +190,8 @@ def test_ollama_provider_maps_http_errors() -> None:
                 )
             )
         )
+    assert failure.value.status_code == 404
+    assert "nope" not in str(failure.value)
 
 
 def test_ollama_provider_maps_transport_errors() -> None:

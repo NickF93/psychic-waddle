@@ -1,0 +1,32 @@
+{
+  "openai": {
+    "paths": {"temperature": "temperature", "top_p": "top_p", "max_tokens": "max_tokens"},
+    "reasoning": {},
+    "efforts": []
+  },
+  "openai-effort": {
+    "paths": {"temperature": "temperature", "top_p": "top_p", "max_tokens": "max_tokens", "reasoning_effort": "reasoning_effort"},
+    "reasoning": {"on": {}, "off": {"reasoning_effort": "none"}},
+    "efforts": ["minimal", "low", "medium", "high", "xhigh", "max"]
+  },
+  "openai-reasoning": {
+    "paths": {"temperature": "temperature", "top_p": "top_p", "max_tokens": "max_tokens", "reasoning_effort": "reasoning.effort"},
+    "reasoning": {"on": {"reasoning.enabled": true}, "off": {"reasoning.enabled": false}},
+    "efforts": ["minimal", "low", "medium", "high", "xhigh", "max"]
+  },
+  "ollama": {
+    "paths": {"temperature": "options.temperature", "top_p": "options.top_p", "max_tokens": "options.num_predict", "reasoning_effort": "think"},
+    "reasoning": {"on": {"think": true}, "off": {"think": false}},
+    "efforts": ["low", "medium", "high"]
+  },
+  "portfolio-primary": {
+    "paths": {"max_tokens": "max_tokens", "reasoning_effort": "reasoning.effort"},
+    "reasoning": {"on": {"reasoning.enabled": true}},
+    "efforts": ["low", "medium", "high", "xhigh", "max"]
+  },
+  "portfolio-local": {
+    "paths": {"temperature": "options.temperature", "top_p": "options.top_p", "max_tokens": "options.num_predict"},
+    "reasoning": {},
+    "efforts": []
+  }
+}

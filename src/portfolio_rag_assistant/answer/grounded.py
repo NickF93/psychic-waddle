@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
+from contextlib import aclosing
+
+from portfolio_rag_assistant.answer.delivery import (
+    GenerationTarget,
+    ProvisionalText,
+)
+from portfolio_rag_assistant.provider.budget import InputBudget
+
+from portfolio_rag_assistant.answer.strategy import GenerationStrategy, GeneratedText
+
 from portfolio_rag_assistant.answer.contract import (
     AnswerGenerationConfigurationError,
-    AnswerGenerationProviderError,
     AnswerGenerationRequest,
     AnswerGenerationResponse,
     AnswerLanguage,
@@ -21,8 +30,6 @@ from portfolio_rag_assistant.policy import (
 from portfolio_rag_assistant.provider import (
     ChatProvider,
     ChatMessage,
-    ChatRequest,
-    LLMProviderError,
 )
 from portfolio_rag_assistant.retrieval import RetrievedContext
 
@@ -37,9 +44,19 @@ INSUFFICIENT_APPROVED_CONTEXT
 Do not mention retrieval scores, ranking, thresholds, or internal diagnostics.
 Do not add citations or source labels. The application attaches sources
 deterministically.
+When comparing works or projects, give each item its own short bullet. Preserve
+each item's individual submission, review, acceptance and release status.
+Never transfer or generalize a status from one item to another.
 For fit or suitability questions, summarize approved evidence only. Do not give
 a yes/no hiring verdict, hiring recommendation, or prediction.
 Answer in the requested language.
+Use Markdown paragraphs and proper newline-separated bullets for lists.
+Do not flatten a list into one line separated by hyphens.
+Keep the complete answer under 120 words. Summarize only facts that directly
+answer the question; do not repeat the full context.
+For experience or employer questions, include each relevant employer in the
+approved context. Keep current and past roles distinct and never transfer dates
+or responsibilities between roles. Use one short bullet per employer.
 """
 
 _LANGUAGE_NAMES: dict[AnswerLanguage, str] = {
@@ -73,6 +90,15 @@ class GroundedAnswerGenerator:
         chat_model: str,
         *,
         max_tokens: int = 384,
+        primary_timeout: float = 15.0,
+        fallback_provider: ChatProvider | None = None,
+        fallback_model: str | None = None,
+        fallback_timeout: float = 180.0,
+        fallback_max_tokens: int = 384,
+        generation_options: dict | None = None,
+        fallback_generation_options: dict | None = None,
+        input_budget: InputBudget | None = None,
+        fallback_input_budget: InputBudget | None = None,
     ) -> None:
         if not isinstance(provider, ChatProvider):
             raise AnswerGenerationConfigurationError(
@@ -80,9 +106,35 @@ class GroundedAnswerGenerator:
             )
         _require_non_empty_text(chat_model, "chat_model")
         _require_positive_int(max_tokens, "max_tokens")
-        self._provider = provider
-        self._chat_model = chat_model
-        self._max_tokens = max_tokens
+        self._targets = (
+            GenerationTarget(
+                provider,
+                chat_model,
+                primary_timeout,
+                "primary",
+                max_tokens,
+                generation_options or {},
+                input_budget or InputBudget(),
+            ),
+        )
+        if (fallback_provider is None) != (fallback_model is None):
+            raise AnswerGenerationConfigurationError(
+                "fallback provider and model must be configured together"
+            )
+        if fallback_provider is not None:
+            self._targets += (
+                GenerationTarget(
+                    fallback_provider,
+                    fallback_model,
+                    fallback_timeout,
+                    "fallback",
+                    fallback_max_tokens,
+                    fallback_generation_options or {},
+                    fallback_input_budget or InputBudget(),
+                ),
+            )
+
+        self._strategy = GenerationStrategy(self._targets)
 
     async def generate(
         self,
@@ -101,38 +153,42 @@ class GroundedAnswerGenerator:
                 status=NEEDS_CLARIFICATION,
             )
 
-        sources = _source_references_from_context(request.decision.approved_context)
-        chat_request = ChatRequest(
-            model=self._chat_model,
-            messages=(
-                ChatMessage(role="system", content=_SYSTEM_PROMPT),
-                ChatMessage(role="user", content=_user_prompt(request)),
-            ),
-            temperature=0.0,
-            max_tokens=self._max_tokens,
+        response = await self._strategy.generate(self._messages(request))
+        return self._completed(request, response.message.content.strip())
+
+    @staticmethod
+    def _messages(request):
+        return (
+            ChatMessage(role="system", content=_SYSTEM_PROMPT),
+            ChatMessage(role="user", content=_user_prompt(request)),
         )
 
-        try:
-            chat_response = await self._provider.chat(chat_request)
-        except LLMProviderError as error:
-            raise AnswerGenerationProviderError("provider chat failed") from error
-
-        answer_text = chat_response.message.content.strip()
-        if is_insufficient_context_answer(answer_text):
+    @staticmethod
+    def _completed(request, text):
+        if is_insufficient_context_answer(text):
             return AnswerGenerationResponse(
-                answer_text=_FALLBACK_TEXT[request.language],
-                status=NOT_ANSWERABLE,
+                answer_text=_FALLBACK_TEXT[request.language], status=NOT_ANSWERABLE
             )
-
+        sources = _source_references_from_context(request.decision.approved_context)
         return AnswerGenerationResponse(
-            answer_text=_with_source_note(
-                answer_text,
-                sources,
-                request.language,
-            ),
+            answer_text=_with_source_note(text, sources, request.language),
             status=ANSWERABLE,
             sources=sources,
         )
+
+    async def stream(self, request: AnswerGenerationRequest):
+        """Apply grounding policy to delivery events and attach final sources."""
+        if request.decision.status != ANSWERABLE:
+            yield await self.generate(request)
+            return
+        async with aclosing(
+            self._strategy.stream(self._messages(request), gate_factory=ProvisionalText)
+        ) as stream:
+            async for item in stream:
+                if isinstance(item, GeneratedText):
+                    yield self._completed(request, item.text)
+                else:
+                    yield item
 
 
 def _user_prompt(request: AnswerGenerationRequest) -> str:
