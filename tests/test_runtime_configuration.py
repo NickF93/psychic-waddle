@@ -367,6 +367,33 @@ def test_env_example_contains_placeholders_not_real_secrets() -> None:
     assert not values["EMBEDDING_API_KEY"].startswith("sk-")
 
 
+@pytest.mark.parametrize("stream", [False, True])
+def test_example_primary_controls_encode_for_json_and_streaming(stream):
+    from portfolio_rag_assistant.config import (
+        load_chat_provider_settings,
+    )
+    from portfolio_rag_assistant.provider.contract import ChatMessage, ChatRequest
+    from portfolio_rag_assistant.provider.parameters import ParameterProfile, chat_payload
+
+    settings = _load_env_example()
+    primary = load_chat_provider_settings(settings)
+    body = chat_payload(
+        ChatRequest(
+            model=primary.model,
+            messages=(ChatMessage("user", "approved public information"),),
+            max_tokens=primary.max_tokens,
+            reasoning_mode=primary.reasoning_mode,
+            reasoning_effort=primary.reasoning_effort,
+        ),
+        stream=stream,
+        profile=ParameterProfile.load(primary.profile_name, primary.profiles_path),
+    )
+    assert body["reasoning"] == {"enabled": False}
+    assert body["max_tokens"] == 4096
+    assert primary.input_budget.context_tokens == 256000
+    assert primary.input_budget.max_bytes == 65536
+
+
 def test_runtime_docs_validate_local_knowledge_without_dependencies() -> None:
     runtime_docs = (ROOT / "docs" / "runtime.md").read_text(encoding="utf-8")
 
