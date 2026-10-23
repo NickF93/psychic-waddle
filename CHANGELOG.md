@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.4.0
+
+- Refresh reviewed portfolio facts and keep deterministic evidence approval and retrieval local.
+- Support Ollama-only, OpenAI-compatible-only and explicit external-to-local fallback generation through separate strategy, protocol and transport responsibilities.
+- Normalize per-target reasoning, effort, output limits, temperature and top-p with capability validation and shared JSON/stream mapping.
+- Enforce input budgets and complete-response semantics, retain structured provider errors and expose sanitized timing/fallback diagnostics.
+- Stream approved answers, buffer non-rendering Markdown prefixes and allow one fallback only before visible answer text.
+- Serve ThingsBoard HTTPS through the existing proxy with renewal and WebSockets while retaining the exact RAG routes and existing port 8080 access.
+
+See the [complete release history and recovery notes](docs/release-v0.4.0.md).
+
 ## v0.3.0
 
 Operational release of the portfolio RAG assistant following v0.2.2.
