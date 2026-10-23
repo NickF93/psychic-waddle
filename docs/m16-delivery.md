@@ -36,7 +36,7 @@ request. JSON generation bounds the complete provider attempt. The configuration
 default for the primary remains 30 seconds; the deployment explicitly selects 15.
 `CHAT_MAX_TOKENS` and `CHAT_FALLBACK_MAX_TOKENS` independently bound generation
 output, including any provider reasoning tokens. Both default to 384. The free
-external deployment uses 4,096 with reasoning explicitly on at low effort; the
+external deployment uses 4,096 with reasoning explicitly disabled; the
 local fallback retains 384. Answers are instructed to stay under 120 words.
 Human-readable logs report provider role, sanitized failure reason and durations,
 never questions, context, answers, credentials or upstream error bodies.
@@ -69,13 +69,22 @@ private inference gateway.
 
 ## Qualification and deployment
 
-The accepted configuration uses anonymous OpenAI-compatible generation at
+The current configuration uses anonymous OpenAI-compatible generation at
 `https://ai-gateway.kilo.ai/api/v1` with the explicitly selected
-`minimax/minimax-m3.1-flash:free`. Its catalog advertises zero input/output prices;
-there is no credential and no substitution to paid models. Provider/model
-selection lives in server configuration, not application branches. The earlier
-Liquid candidate was rejected after live truncation and incomplete employer
-coverage. Other free candidates returned capacity/rate failures.
+`cohere/north-mini-code:free`. On 24 October its live catalog lists zero
+input/output prices, a 256,000-token context and no published expiration date.
+This is not an availability guarantee. No credential or automatic model router
+is configured; paid models are never substituted.
+
+The initial `minimax/minimax-m3.1-flash:free` selection was removed from the live
+catalog after its launch promotion ended. Requests returned HTTP 404 and correctly
+used the local fallback. Hotfix v0.4.1 explicitly replaces that target after real
+RAG streaming qualification. North uses the existing `openai-reasoning` profile,
+`CHAT_REASONING_MODE=off`, blank effort and a 4,096-token generation ceiling.
+Its context declaration is 256,000 tokens; the 65,536-byte input limit remains.
+Dots3-Note Preview also passed the same qualification but was not selected; its
+catalog lists an expiration of 31 December 2026. Provider selection remains
+operator configuration, not branching in the application or adapters.
 
 Ollama `qwen2.5:3b-instruct` remains the explicit local fallback. Local embeddings,
 approved knowledge and deterministic evidence policy remain local. The owner
@@ -96,10 +105,11 @@ capabilities do not assume reasoning support; explicit effort/nested profiles
 demonstrate the different protocols. No endpoint/model-specific branching exists
 in the adapters or grounding layer.
 
-The configured primary profile supports mandatory reasoning at low effort and
-omits unsupported sampling controls. The qualified ceiling is 4,096 tokens after
-six sourced-answer checks at each of 2,048 and 4,096. The local profile keeps 384
-output tokens, temperature 0 and its observed 4,096-token context.
+The original MiniMax target used mandatory reasoning at low effort; the current
+North target uses the existing generic mapping with reasoning disabled and no
+effort value. Sampling controls remain unset. The 4,096-token output ceiling is
+retained and was exercised in the replacement qualification. The local profile
+keeps 384 output tokens, temperature 0 and its observed 4,096-token context.
 Admission counts every message, reserves 256 framing tokens and the full output
 ceiling, and independently checks the selected fallback. The external profile
 uses conservative UTF-8 size accounting (not exact token usage). Local admission
