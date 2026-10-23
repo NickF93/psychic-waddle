@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.4.1
+
+- Restore portfolio external generation after the free MiniMax launch endpoint was removed.
+- Qualify anonymous North Mini Code with explicit reasoning-off configuration through the existing generic OpenAI-compatible mapping.
+- Preserve the 4,096-token output ceiling, approved local RAG, sourced streaming and explicit local Ollama fallback; declare the replacement target's 256,000-token context.
+- Reconcile example settings and current deployment documentation, with JSON/stream configuration regression coverage.
+
+See the [hotfix qualification and recovery notes](docs/release-v0.4.1.md).
+
 ## v0.4.0
 
 - Refresh reviewed portfolio facts and keep deterministic evidence approval and retrieval local.
