@@ -75,6 +75,19 @@ Firmware using those endpoints needs no update. Do not redirect `:8080`.
 
 ## Certificate maintenance and rollback
 
+Both edge profiles use the official NGINX 1.30.6 Alpine image pinned by digest in
+`compose.yaml`. The native Docker proxy fixture reads that same pin. For an
+image-only security update, pre-pull the approved image and validate the existing
+mounts and networks with candidate `nginx -t` before replacing only `nginx-tls`
+using `up --no-deps --no-build --wait`. Preserve the prior image and deployment
+configuration for rollback. Do not use whole-stack upgrade scripts for this step.
+
+An operator-rendered deployment model and the persistent certificate-renewal
+Compose invocation must resolve to the same approved edge image. Update their
+existing image overrides together; preserve all services and profiles, including
+Certbot, when rendering. Recheck the effective models rather than assuming a
+source image change reaches a previously rendered deployment.
+
 Reuse a currently valid matching certificate; do not issue a duplicate just to
 enable this site. The selected nklella certificate covers `vps.madnick.ovh`.
 Reuse the existing webroot Certbot renewal scripts and certificate volumes.
