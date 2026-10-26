@@ -54,8 +54,8 @@ def test_requirements_lock_pins_runtime_dependencies() -> None:
 def test_compose_uses_pinned_images_and_private_runtime_network() -> None:
     services = _compose()["services"]
 
-    assert services["nginx"]["image"].startswith("nginx:1.27.5-alpine@sha256:")
-    assert services["nginx-tls"]["image"].startswith("nginx:1.27.5-alpine@sha256:")
+    assert services["nginx"]["image"].startswith("nginx:1.30.6-alpine@sha256:")
+    assert services["nginx-tls"]["image"] == services["nginx"]["image"]
     assert services["certbot"]["image"].startswith("certbot/certbot:latest@sha256:")
     assert services["db"]["image"].startswith("pgvector/pgvector:0.8.2-pg17@sha256:")
     assert services["ollama"]["image"].startswith("ollama/ollama:latest@sha256:")
