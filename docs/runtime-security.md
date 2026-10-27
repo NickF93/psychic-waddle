@@ -29,6 +29,9 @@ for this maintenance, not a general certificate-brand filter:
 ```sh
 docker compose --profile public-tls run --rm --no-deps -T --entrypoint python certbot - <<'PY'
 import hashlib
+import os
+from pathlib import Path
+import re
 import ssl
 import certifi
 import pip._vendor.certifi as pip_certifi
@@ -40,6 +43,20 @@ blocked = {
 for name, path in [("OS", None), ("certifi", certifi.where()), ("pip", pip_certifi.where())]:
     context = ssl.create_default_context(cafile=path)
     roots = {hashlib.sha256(c).hexdigest().upper() for c in context.get_ca_certs(binary_form=True)}
+    if name == "OS":
+        # OpenSSL loads hashed-directory anchors lazily; inspect those files too.
+        for directory in (ssl.get_default_verify_paths().capath or "").split(os.pathsep):
+            if not directory:
+                continue
+            for certificate in Path(directory).glob("*"):
+                if not certificate.is_file():
+                    continue
+                pem = certificate.read_text(encoding="ascii", errors="ignore")
+                for block in re.findall(
+                    r"-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----", pem, re.S
+                ):
+                    der = ssl.PEM_cert_to_DER_cert(block)
+                    roots.add(hashlib.sha256(der).hexdigest().upper())
     assert roots and not blocked.intersection(roots), name
     print(name, len(roots), "verified")
 PY

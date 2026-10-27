@@ -219,7 +219,7 @@ PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=true \
 scripts/runtime/public-smoke.sh
 ```
 
-`public-cleanup.sh` removes runtime containers and the local API image only. It
+`public-cleanup.sh` removes runtime containers and the local API and renewal images. It
 does not delete PostgreSQL data, Ollama model data, llama.cpp model files,
 Let's Encrypt certificates, ACME challenge data, or Let's Encrypt work data.
 
