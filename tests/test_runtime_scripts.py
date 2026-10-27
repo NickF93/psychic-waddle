@@ -199,7 +199,7 @@ def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
     assert "require_backend CHAT_BACKEND ollama" in _script("ollama-chat-setup.sh")
     assert "configured_value CHAT_MODEL" in _script("ollama-chat-setup.sh")
     assert "require_ollama_keep_alive" in _script("ollama-chat-setup.sh")
-    assert "compose_profile_up_wait ollama ollama" in _script("ollama-chat-setup.sh")
+    assert "compose_profile_up_wait ollama --build ollama" in _script("ollama-chat-setup.sh")
     assert (
         'compose_profile ollama exec -T ollama ollama pull "$CHAT_MODEL_NAME"'
         in _script("ollama-chat-setup.sh")
@@ -219,7 +219,7 @@ def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
         "ollama-embeddings-setup.sh"
     )
     assert "require_ollama_keep_alive" in _script("ollama-embeddings-setup.sh")
-    assert "compose_profile_up_wait ollama ollama" in _script(
+    assert "compose_profile_up_wait ollama --build ollama" in _script(
         "ollama-embeddings-setup.sh"
     )
     assert (
@@ -380,11 +380,15 @@ def test_timer_preserves_selected_compose_file_and_profiles(tmp_path: Path) -> N
     ("entrypoint", "certbot_exit"),
     [("public-build.sh", 0), ("public-build.sh", 32), ("public-setup.sh", 32)],
 )
+@pytest.mark.parametrize("use_ollama", [True, False])
 def test_public_build_rebuilds_renewal_and_propagates_failure(
-    tmp_path: Path, entrypoint: str, certbot_exit: int,
+    tmp_path: Path, entrypoint: str, certbot_exit: int, use_ollama: bool,
 ) -> None:
     env_file = tmp_path / ".env"
-    env_file.write_text((ROOT / ".env.example").read_text(encoding="utf-8"), encoding="utf-8")
+    configuration = (ROOT / ".env.example").read_text(encoding="utf-8")
+    if not use_ollama:
+        configuration = configuration.replace("CHAT_FALLBACK_BACKEND=ollama", "CHAT_FALLBACK_BACKEND=")
+    env_file.write_text(configuration, encoding="utf-8")
     docker = tmp_path / "docker"
     docker.write_text(
         '#!/bin/sh\nprintf "%s\\n" "$*" >> "$DOCKER_LOG"\n'
@@ -404,6 +408,8 @@ def test_public_build_rebuilds_renewal_and_propagates_failure(
     api = next(i for i, call in enumerate(calls) if call.endswith("build api"))
     renewal = next(i for i, call in enumerate(calls) if call.endswith("--profile public-tls build certbot"))
     assert api < renewal
+    if certbot_exit == 0:
+        assert any(call.endswith("--profile ollama build ollama") for call in calls) == use_ollama
 
 
 def test_letsencrypt_setup_rejects_non_public_http_config(tmp_path: Path) -> None:

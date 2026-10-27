@@ -1,10 +1,21 @@
 # Runtime security maintenance
 
 The security baseline uses Python 3.12.16, certifi 2026.10.23, pip 26.2.2,
-Psycopg/binary 3.3.6, Ollama 0.40.11 and PostgreSQL 17.11 with pgvector 0.8.7.
+Psycopg/binary 3.3.6 and PostgreSQL 17.11 with pgvector 0.8.7.
 Image and dependency pins are owned by the Dockerfile, installer/application
 constraints and Compose configuration, respectively. Inspect actual runtime
 contents before accepting an image: tags and build dates are insufficient.
+
+The inspected Ollama 0.40.11 and 0.40.3 images change existing nomic embeddings
+despite unchanged model manifests. They fail the preservation gate. The narrow
+`deploy/ollama.Dockerfile` instead rebuilds the unmodified vendor 0.24.0 source
+with Go 1.26.10, using the vendor's Go build command and retaining its published
+runner libraries, application interfaces and entrypoint. It refreshes supported
+Ubuntu packages and CA material in the original vendor image. Source, builder
+and vendor inputs are immutable and checksummed. This is a locally built runtime
+refresh, not a new vendor-published application release or a source fork.
+`GOFLAGS` can bound build concurrency where required. Normal public builds
+rebuild this image only when Ollama is selected for chat, embeddings or fallback.
 
 The published Certbot 5.8.0 image retains affected trust material. The small
 `deploy/certbot.Dockerfile` refreshes its Python patch level and trust, retaining
@@ -73,7 +84,11 @@ The incident guidance is maintained by the
    recorded/actual collation versions: a logical restore rebuilds indexes and
    cannot establish that reusing the physical volume is safe. Keep private
    configuration outside Git.
-2. Pull/build candidates first. Inspect OS, OpenSSL, certifi, pip-vendored and
+2. Pull/build candidates first. Compare actual embeddings with existing stored
+   vectors using unchanged model manifests before replacing the live inference
+   service. An equal dimension does not establish embedding compatibility. Do
+   not regenerate vectors or change calibration to accept an incompatible
+   runtime. Inspect OS, OpenSSL, certifi, pip-vendored and
    selected client trust sources. Reject affected certificates by verified
    fingerprint, preserving unrelated and operator-owned trust anchors. Confirm
    patched bundled libpq independently of the server's major version.

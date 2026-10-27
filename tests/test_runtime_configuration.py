@@ -66,7 +66,7 @@ def test_compose_uses_pinned_images_and_private_runtime_network() -> None:
     assert services["nginx-tls"]["image"] == services["nginx"]["image"]
     assert services["certbot"]["build"]["dockerfile"] == "deploy/certbot.Dockerfile"
     assert services["db"]["image"].startswith("pgvector/pgvector:0.8.7-pg17-bookworm@sha256:")
-    assert services["ollama"]["image"].startswith("ollama/ollama:0.40.11@sha256:")
+    assert services["ollama"]["build"]["dockerfile"] == "deploy/ollama.Dockerfile"
     assert services["llama-cpp-chat"]["image"].startswith(
         "ghcr.io/ggml-org/llama.cpp:server@sha256:"
     )
