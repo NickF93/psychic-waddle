@@ -11,7 +11,9 @@ The published Certbot 5.8.0 image retains affected trust material. The small
 the vendor's application, Alpine ABI, entrypoint and paths. Its existing
 cryptography dependency is patched to 50.0.2 for bundled OpenSSL 4.0.3; the
 remaining vendor dependencies are preserved.
-Build it before renewal or first certificate setup:
+Its dependency constraints are owned by `deploy/certbot.lock`, independently of
+the API dependency lock. Normal `public-build.sh`/upgrade builds both images;
+for renewal-only maintenance, build it before renewal or first certificate setup:
 
 ```sh
 docker compose --profile public-tls build certbot
@@ -19,6 +21,32 @@ docker compose --profile public-tls build certbot
 
 This is a locally built refresh, not an unmodified vendor image. Its OS bundle,
 certifi and pip bundle must pass the same fingerprint acceptance checks.
+
+Repeat the fingerprint check on each accepted Python image (select `api` or
+`certbot` as the service). These are the two affected root identities verified
+for this maintenance, not a general certificate-brand filter:
+
+```sh
+docker compose --profile public-tls run --rm --no-deps -T --entrypoint python certbot - <<'PY'
+import hashlib
+import ssl
+import certifi
+import pip._vendor.certifi as pip_certifi
+
+blocked = {
+    "86A1ECBA089C4A8D3BBE2734C612BA341D813E043CF9E8A862CD5C57A36BBE6B",
+    "D7A7A0FB5D7E2731D771E9484EBCDEF71D5F0C3E0A2948782BC83EE0EA699EF4",
+}
+for name, path in [("OS", None), ("certifi", certifi.where()), ("pip", pip_certifi.where())]:
+    context = ssl.create_default_context(cafile=path)
+    roots = {hashlib.sha256(c).hexdigest().upper() for c in context.get_ca_certs(binary_form=True)}
+    assert roots and not blocked.intersection(roots), name
+    print(name, len(roots), "verified")
+PY
+```
+
+The incident guidance is maintained by the
+[Python project](https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576/).
 
 ## Preserving an existing deployment
 
@@ -64,6 +92,11 @@ it against actual running services: historical files may retain older image or
 proxy settings. Persist the selected file in the operator environment and
 renewal service environment. Historical files are recovery evidence, not active
 deployment alternatives.
+
+When installing the existing renewal timer, export the selected `COMPOSE_FILE`
+and `COMPOSE_PROFILES`; `public-certbot-install-timer.sh` persists them in the
+service. Reconcile an existing timer using its standard systemd environment
+drop-in and reload systemd, preserving its schedule and existing `ENV_FILE`.
 
 Use targeted Compose operations with explicit service names and `--no-deps`
 where dependencies are already accepted. The broad `public-upgrade.sh` wrapper

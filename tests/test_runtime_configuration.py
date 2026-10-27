@@ -44,7 +44,7 @@ def test_installer_is_hash_pinned_separately_from_application_dependencies() -> 
     installer = (ROOT / "installer.lock").read_text(encoding="utf-8")
 
     assert re.search(r"^pip==26\.2\.2 \\\n\s+--hash=sha256:[0-9a-f]{64}$", installer, re.MULTILINE)
-    assert "certifi==2026.10.23" in (ROOT / "requirements.lock").read_text()
+    assert "certifi==2026.10.23" in (ROOT / "requirements.lock").read_text(encoding="utf-8")
 
 
 def test_requirements_lock_pins_runtime_dependencies() -> None:

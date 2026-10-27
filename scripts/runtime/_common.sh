@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-ROOT_DIR=$(CDPATH= cd "$SCRIPT_DIR/../.." && pwd)
+ROOT_DIR=$(CDPATH='' cd "$SCRIPT_DIR/../.." && pwd)
 ENV_FILE=${ENV_FILE:-"$ROOT_DIR/.env"}
 COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-portfolio-rag-assistant}
 RUNTIME_WAIT_TIMEOUT_SECONDS=${RUNTIME_WAIT_TIMEOUT_SECONDS:-120}

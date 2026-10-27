@@ -93,6 +93,7 @@ def tls_endpoint(tmp_path, monkeypatch):
     # Use the library's documented trust override, retaining its real transport.
     monkeypatch.setenv("SSL_CERT_FILE", str(certificate))
     monkeypatch.setenv("NO_PROXY", "localhost,127.0.0.1")
+    monkeypatch.setenv("no_proxy", "localhost,127.0.0.1")
     monkeypatch.delenv("SSL_CERT_DIR", raising=False)
     worker.start()
     try:

@@ -9,14 +9,13 @@ RUN apk add --no-cache libffi libssl3 openssl ca-certificates binutils
 COPY --from=vendor /opt/certbot /opt/certbot
 COPY --from=vendor /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
 COPY --from=vendor /usr/local/bin/certbot /usr/local/bin/certbot
-COPY installer.lock requirements.lock /tmp/constraints/
-COPY deploy/certbot.lock /tmp/constraints/
+COPY installer.lock deploy/certbot.lock /tmp/constraints/
 RUN python -m pip install --no-cache-dir --require-hashes -r /tmp/constraints/installer.lock \
     && python -m pip install --no-cache-dir --only-binary=:all: \
-        --constraint /tmp/constraints/requirements.lock \
         --constraint /tmp/constraints/certbot.lock certifi cryptography \
     && python -m pip check \
-    && certbot --version
+    && certbot --version \
+    && rm -rf /tmp/constraints
 
 WORKDIR /opt/certbot
 ENTRYPOINT ["certbot"]
