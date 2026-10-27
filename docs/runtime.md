@@ -47,7 +47,7 @@ Runtime build inputs are pinned:
 The default Compose stack contains:
 
 - `api`: FastAPI public chat API.
-- `db`: PostgreSQL 17 with `pgvector`.
+- `db`: PostgreSQL 17.11 with pgvector 0.8.7 on Bookworm.
 - `postgres-data`: named PostgreSQL data volume.
 - `runtime`: private bridge network.
 
@@ -64,6 +64,10 @@ defined in Milestone 7.
 
 Use `.env.example` only as a placeholder template. Real values belong in an
 untracked local `.env` file.
+
+For an existing database, replacing the image does not update the installed
+extension's SQL objects. Follow the preserving upgrade and acceptance procedure
+in [Runtime security maintenance](runtime-security.md).
 
 ## Runtime Scripts
 
