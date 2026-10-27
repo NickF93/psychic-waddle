@@ -38,14 +38,16 @@ Runtime build inputs are pinned:
 - the Python build backend is pinned exactly in `pyproject.toml`;
 - PostgreSQL, Ollama, and llama.cpp images are pinned by digest;
 - Python dependencies are constrained by `requirements.lock`;
-- Docker builds do not upgrade `pip` at build time.
+- `installer.lock` pins the corrected pip installer and its wheel hash before
+  application dependencies are installed; pip's vendored CA bundle is a separate
+  trust source from the operating system and application certifi.
 
 ## Compose Stack
 
 The default Compose stack contains:
 
 - `api`: FastAPI public chat API.
-- `db`: PostgreSQL 17 with `pgvector`.
+- `db`: PostgreSQL 17.11 with pgvector 0.8.7 on Bookworm.
 - `postgres-data`: named PostgreSQL data volume.
 - `runtime`: private bridge network.
 
@@ -62,6 +64,10 @@ defined in Milestone 7.
 
 Use `.env.example` only as a placeholder template. Real values belong in an
 untracked local `.env` file.
+
+For an existing database, replacing the image does not update the installed
+extension's SQL objects. Follow the preserving upgrade and acceptance procedure
+in [Runtime security maintenance](runtime-security.md).
 
 ## Runtime Scripts
 
@@ -179,6 +185,9 @@ runs migrations, refreshes committed `knowledge/profile.json` by default,
 restarts the public edge, and runs smoke checks without deleting data, model, or
 certificate volumes.
 
+For image-only maintenance, use [Runtime security maintenance](runtime-security.md)
+instead; it preserves knowledge and includes extension and collation checks.
+
 `public-load-knowledge.sh` validates, ingests, and indexes the committed
 knowledge file. It is safe to run after reviewed knowledge changes.
 
@@ -210,7 +219,7 @@ PUBLIC_SMOKE_CHECK_QUESTION_COLLECTION=true \
 scripts/runtime/public-smoke.sh
 ```
 
-`public-cleanup.sh` removes runtime containers and the local API image only. It
+`public-cleanup.sh` removes runtime containers and the local API and renewal images. It
 does not delete PostgreSQL data, Ollama model data, llama.cpp model files,
 Let's Encrypt certificates, ACME challenge data, or Let's Encrypt work data.
 

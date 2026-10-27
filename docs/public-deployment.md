@@ -273,13 +273,13 @@ provider setup, or API build behavior.
 
 | Script | Purpose |
 | --- | --- |
-| `public-build.sh` | validate public Nginx/Compose config and build the API image |
+| `public-build.sh` | validate public Nginx/Compose config; build API, renewal and selected Ollama images |
 | `public-setup.sh` | setup API, PostgreSQL, migration, configured local providers, and Nginx validation |
 | `public-setup.sh --issue-certificate` | run setup plus the explicit first Let's Encrypt issuance path |
 | `public-start.sh` | start configured local providers, PostgreSQL, API, stop bootstrap Nginx if present, and start `nginx-tls` |
 | `public-stop.sh` | stop public edge, API, configured local providers, and PostgreSQL without deleting data |
 | `public-down.sh` | remove runtime containers without deleting volumes |
-| `public-cleanup.sh` | remove runtime containers and the local API image only |
+| `public-cleanup.sh` | remove runtime containers and the local API and renewal images |
 | `public-deploy.sh` | lower-level update wrapper: build, migrate, start HTTPS runtime, and smoke-test |
 | `public-validate-env.sh` | validate the explicit public runtime `.env` contract |
 | `public-load-knowledge.sh` | validate, ingest, and index committed `knowledge/profile.json` |

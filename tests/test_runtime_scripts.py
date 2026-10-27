@@ -6,6 +6,7 @@ import stat
 import subprocess
 from pathlib import Path
 
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts" / "runtime"
@@ -198,7 +199,7 @@ def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
     assert "require_backend CHAT_BACKEND ollama" in _script("ollama-chat-setup.sh")
     assert "configured_value CHAT_MODEL" in _script("ollama-chat-setup.sh")
     assert "require_ollama_keep_alive" in _script("ollama-chat-setup.sh")
-    assert "compose_profile_up_wait ollama ollama" in _script("ollama-chat-setup.sh")
+    assert "compose_profile_up_wait ollama --build ollama" in _script("ollama-chat-setup.sh")
     assert (
         'compose_profile ollama exec -T ollama ollama pull "$CHAT_MODEL_NAME"'
         in _script("ollama-chat-setup.sh")
@@ -218,7 +219,7 @@ def test_ollama_scripts_use_profile_and_explicit_model_pull() -> None:
         "ollama-embeddings-setup.sh"
     )
     assert "require_ollama_keep_alive" in _script("ollama-embeddings-setup.sh")
-    assert "compose_profile_up_wait ollama ollama" in _script(
+    assert "compose_profile_up_wait ollama --build ollama" in _script(
         "ollama-embeddings-setup.sh"
     )
     assert (
@@ -347,6 +348,68 @@ def test_public_certbot_timer_dry_run_does_not_require_systemctl(tmp_path: Path)
     assert "ExecStart=" in result.stdout
     assert "letsencrypt-renew.sh" in result.stdout
     assert "portfolio-rag-assistant-letsencrypt-renew.timer" in result.stdout
+
+
+def test_timer_preserves_selected_compose_file_and_profiles(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "PUBLIC_SERVER_NAME=fixture.example\nLETSENCRYPT_EMAIL=ops@example.invalid\n",
+        encoding="utf-8",
+    )
+    env = dict(os.environ, ENV_FILE=str(env_file))
+    env["COMPOSE_FILE"] = '/operator/release 100%/a"b\\c.json'
+    env["COMPOSE_PROFILES"] = "public-tls,ollama"
+    result = subprocess.run(
+        (str(SCRIPTS / "public-certbot-install-timer.sh"), "--dry-run"),
+        cwd=ROOT, env=env, text=True, capture_output=True, check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert 'Environment="COMPOSE_FILE=/operator/release 100%%/a\\"b\\\\c.json"' in result.stdout
+    assert 'Environment="COMPOSE_PROFILES=public-tls,ollama"' in result.stdout
+    env["COMPOSE_FILE"] += "\nEnvironment=OTHER=value"
+    result = subprocess.run(
+        (str(SCRIPTS / "public-certbot-install-timer.sh"), "--dry-run"),
+        cwd=ROOT, env=env, text=True, capture_output=True, check=False,
+    )
+    assert result.returncode != 0
+    assert "must not contain newlines" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("entrypoint", "certbot_exit"),
+    [("public-build.sh", 0), ("public-build.sh", 32), ("public-setup.sh", 32)],
+)
+@pytest.mark.parametrize("use_ollama", [True, False])
+def test_public_build_rebuilds_renewal_and_propagates_failure(
+    tmp_path: Path, entrypoint: str, certbot_exit: int, use_ollama: bool,
+) -> None:
+    env_file = tmp_path / ".env"
+    configuration = (ROOT / ".env.example").read_text(encoding="utf-8")
+    if not use_ollama:
+        configuration = configuration.replace("CHAT_FALLBACK_BACKEND=ollama", "CHAT_FALLBACK_BACKEND=")
+    env_file.write_text(configuration, encoding="utf-8")
+    docker = tmp_path / "docker"
+    docker.write_text(
+        '#!/bin/sh\nprintf "%s\\n" "$*" >> "$DOCKER_LOG"\n'
+        'case "$*" in *"build certbot") exit "$CERTBOT_EXIT" ;; esac\n',
+        encoding="utf-8",
+    )
+    docker.chmod(0o755)
+    log = tmp_path / "docker.log"
+    env = dict(os.environ, ENV_FILE=str(env_file), DOCKER_LOG=str(log),
+               CERTBOT_EXIT=str(certbot_exit), PATH=str(tmp_path) + os.pathsep + os.environ["PATH"])
+    result = subprocess.run(
+        (str(SCRIPTS / entrypoint),), cwd=ROOT,
+        env=env, text=True, capture_output=True, check=False,
+    )
+    assert result.returncode == certbot_exit, result.stderr
+    calls = log.read_text(encoding="utf-8").splitlines()
+    api = next(i for i, call in enumerate(calls) if call.endswith("build api"))
+    renewal = next(i for i, call in enumerate(calls) if call.endswith("--profile public-tls build certbot"))
+    assert api < renewal
+    if certbot_exit == 0:
+        assert any(call.endswith("--profile ollama build ollama") for call in calls) == use_ollama
 
 
 def test_letsencrypt_setup_rejects_non_public_http_config(tmp_path: Path) -> None:
