@@ -376,9 +376,12 @@ def test_timer_preserves_selected_compose_file_and_profiles(tmp_path: Path) -> N
     assert "must not contain newlines" in result.stderr
 
 
-@pytest.mark.parametrize("certbot_exit", [0, 32])
+@pytest.mark.parametrize(
+    ("entrypoint", "certbot_exit"),
+    [("public-build.sh", 0), ("public-build.sh", 32), ("public-setup.sh", 32)],
+)
 def test_public_build_rebuilds_renewal_and_propagates_failure(
-    tmp_path: Path, certbot_exit: int,
+    tmp_path: Path, entrypoint: str, certbot_exit: int,
 ) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text((ROOT / ".env.example").read_text(encoding="utf-8"), encoding="utf-8")
@@ -393,7 +396,7 @@ def test_public_build_rebuilds_renewal_and_propagates_failure(
     env = dict(os.environ, ENV_FILE=str(env_file), DOCKER_LOG=str(log),
                CERTBOT_EXIT=str(certbot_exit), PATH=str(tmp_path) + os.pathsep + os.environ["PATH"])
     result = subprocess.run(
-        (str(SCRIPTS / "public-build.sh"),), cwd=ROOT,
+        (str(SCRIPTS / entrypoint),), cwd=ROOT,
         env=env, text=True, capture_output=True, check=False,
     )
     assert result.returncode == certbot_exit, result.stderr

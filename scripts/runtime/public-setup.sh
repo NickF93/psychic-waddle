@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
+SCRIPT_DIR=$(CDPATH='' cd "$(dirname "$0")" && pwd)
 . "$SCRIPT_DIR/_common.sh"
 
 ISSUE_CERTIFICATE=false
@@ -33,8 +33,8 @@ setup_embedding_backend() {
     esac
 }
 
-"$SCRIPT_DIR/nginx-validate.sh"
-"$SCRIPT_DIR/api-setup.sh"
+compose_config
+"$SCRIPT_DIR/public-build.sh"
 "$SCRIPT_DIR/postgres-setup.sh"
 "$SCRIPT_DIR/public-migrate.sh"
 setup_chat_backend
