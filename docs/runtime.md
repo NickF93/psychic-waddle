@@ -38,7 +38,9 @@ Runtime build inputs are pinned:
 - the Python build backend is pinned exactly in `pyproject.toml`;
 - PostgreSQL, Ollama, and llama.cpp images are pinned by digest;
 - Python dependencies are constrained by `requirements.lock`;
-- Docker builds do not upgrade `pip` at build time.
+- `installer.lock` pins the corrected pip installer and its wheel hash before
+  application dependencies are installed; pip's vendored CA bundle is a separate
+  trust source from the operating system and application certifi.
 
 ## Compose Stack
 

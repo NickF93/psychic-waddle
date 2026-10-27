@@ -28,7 +28,8 @@ def test_build_system_dependencies_are_exactly_pinned() -> None:
 def test_dockerfile_uses_pinned_base_and_locked_dependencies() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
-    assert "FROM python:3.12-slim@sha256:" in dockerfile
+    assert "FROM python:3.12.16-slim-trixie@sha256:" in dockerfile
+    assert "pip install --require-hashes -r installer.lock" in dockerfile
     assert "requirements.lock" in dockerfile
     assert "pip install --constraint requirements.lock ." in dockerfile
     assert "COPY config ./config" in dockerfile
@@ -37,6 +38,13 @@ def test_dockerfile_uses_pinned_base_and_locked_dependencies() -> None:
     assert "EXPOSE 8000" in dockerfile
     assert "portfolio_rag_assistant.api.main:app" in dockerfile
     assert ".env" not in dockerfile
+
+
+def test_installer_is_hash_pinned_separately_from_application_dependencies() -> None:
+    installer = (ROOT / "installer.lock").read_text(encoding="utf-8")
+
+    assert re.search(r"^pip==26\.2\.2 \\\n\s+--hash=sha256:[0-9a-f]{64}$", installer, re.MULTILINE)
+    assert "certifi==2026.10.23" in (ROOT / "requirements.lock").read_text()
 
 
 def test_requirements_lock_pins_runtime_dependencies() -> None:
