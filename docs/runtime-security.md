@@ -8,7 +8,9 @@ contents before accepting an image: tags and build dates are insufficient.
 
 The published Certbot 5.8.0 image retains affected trust material. The small
 `deploy/certbot.Dockerfile` refreshes its Python patch level and trust, retaining
-the vendor's application/dependency artifacts, Alpine ABI, entrypoint and paths.
+the vendor's application, Alpine ABI, entrypoint and paths. Its existing
+cryptography dependency is patched to 50.0.2 for bundled OpenSSL 4.0.3; the
+remaining vendor dependencies are preserved.
 Build it before renewal or first certificate setup:
 
 ```sh
