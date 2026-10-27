@@ -183,3 +183,7 @@ def test_provider_rejects_invalid_tls_without_exposing_credentials(
     )
     assert "fixture-private-key" not in str(error.value)
     assert "https://" not in str(error.value)
+    cause = error.value
+    while cause is not None and not isinstance(cause, ssl.SSLCertVerificationError):
+        cause = cause.__cause__ or cause.__context__
+    assert isinstance(cause, ssl.SSLCertVerificationError)

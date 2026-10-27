@@ -185,6 +185,9 @@ runs migrations, refreshes committed `knowledge/profile.json` by default,
 restarts the public edge, and runs smoke checks without deleting data, model, or
 certificate volumes.
 
+For image-only maintenance, use [Runtime security maintenance](runtime-security.md)
+instead; it preserves knowledge and includes extension and collation checks.
+
 `public-load-knowledge.sh` validates, ingests, and indexes the committed
 knowledge file. It is safe to run after reviewed knowledge changes.
 

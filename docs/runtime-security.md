@@ -6,11 +6,26 @@ Image and dependency pins are owned by the Dockerfile, installer/application
 constraints and Compose configuration, respectively. Inspect actual runtime
 contents before accepting an image: tags and build dates are insufficient.
 
+The published Certbot 5.8.0 image retains affected trust material. The small
+`deploy/certbot.Dockerfile` refreshes its Python patch level and trust, retaining
+the vendor's application/dependency artifacts, Alpine ABI, entrypoint and paths.
+Build it before renewal or first certificate setup:
+
+```sh
+docker compose --profile public-tls build certbot
+```
+
+This is a locally built refresh, not an unmodified vendor image. Its OS bundle,
+certifi and pip bundle must pass the same fingerprint acceptance checks.
+
 ## Preserving an existing deployment
 
 1. Record running image IDs, service configuration, selected providers, model
    manifests, database ownership/encoding/collation, migration checksums and
-   data/embedding counts and hashes. Keep private configuration outside Git.
+   data/embedding counts and hashes. Compare the old/new libc and the database's
+   recorded/actual collation versions: a logical restore rebuilds indexes and
+   cannot establish that reusing the physical volume is safe. Keep private
+   configuration outside Git.
 2. Pull/build candidates first. Inspect OS, OpenSSL, certifi, pip-vendored and
    selected client trust sources. Reject affected certificates by verified
    fingerprint, preserving unrelated and operator-owned trust anchors. Confirm
