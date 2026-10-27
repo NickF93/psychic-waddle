@@ -165,7 +165,8 @@ class ThingsBoardProxy(unittest.TestCase):
         for attempt in range(50):
             try:
                 status, _, _ = cls.request("/api/assistant/health")
-                if status == 200:
+                board_status, _, _ = cls.request("/dashboards")
+                if status == 200 and board_status == 200:
                     break
             except (OSError, http.client.HTTPException):
                 pass
