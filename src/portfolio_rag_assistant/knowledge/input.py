@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal, cast
+from typing import Literal, TypeAlias, cast
 
-type KnowledgeCategory = Literal[
+KnowledgeCategory: TypeAlias = Literal[  # noqa: UP040 - Preserve public Literal runtime introspection.
     "experience",
     "education",
     "projects",
