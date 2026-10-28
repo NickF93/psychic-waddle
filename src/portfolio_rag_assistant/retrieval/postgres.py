@@ -18,12 +18,12 @@ from portfolio_rag_assistant.provider import (
     LLMProviderError,
 )
 from portfolio_rag_assistant.retrieval.contract import (
-    RetrievedContext,
     RetrievalConfigurationError,
     RetrievalRequest,
     RetrievalResponse,
     RetrievalScore,
     RetrievalStoreError,
+    RetrievedContext,
 )
 
 _RRF_RANK_CONSTANT = 60.0

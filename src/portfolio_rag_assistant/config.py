@@ -8,20 +8,20 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Literal, cast
 from urllib.parse import urlparse
-from portfolio_rag_assistant.provider.parameters import (
-    ParameterProfile,
-    DEFAULT_PROFILES,
-)
-from portfolio_rag_assistant.provider.budget import InputBudget
-from portfolio_rag_assistant.provider.contract import ChatRequest, ChatMessage
 
 from portfolio_rag_assistant.provider import (
     ChatProvider,
     EmbeddingProvider,
-    LLMProviderConfigurationError,
     LlamaCppProvider,
+    LLMProviderConfigurationError,
     OllamaProvider,
     OpenAICompatibleProvider,
+)
+from portfolio_rag_assistant.provider.budget import InputBudget
+from portfolio_rag_assistant.provider.contract import ChatMessage, ChatRequest
+from portfolio_rag_assistant.provider.parameters import (
+    DEFAULT_PROFILES,
+    ParameterProfile,
 )
 from portfolio_rag_assistant.retrieval import RetrievalConfigurationError
 
@@ -56,13 +56,13 @@ class ChatProviderSettings:
 
     @property
     def request_options(self):
-        return dict(
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            reasoning_mode=self.reasoning_mode,
-            reasoning_effort=self.reasoning_effort,
-        )
+        return {
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "reasoning_mode": self.reasoning_mode,
+            "reasoning_effort": self.reasoning_effort,
+        }
 
     @property
     def parameter_profile(self):

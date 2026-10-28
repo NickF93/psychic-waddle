@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from intent_catalog_helpers import tracked_intent_catalog
+
 from portfolio_rag_assistant.intent import SemanticIntentResolver
 from portfolio_rag_assistant.provider import (
     ChatRequest,

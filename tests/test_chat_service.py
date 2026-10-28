@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from intent_catalog_helpers import tracked_intent_catalog
 
 from portfolio_rag_assistant.answer import (
     AnswerGenerationRequest,
@@ -11,12 +12,11 @@ from portfolio_rag_assistant.answer import (
 )
 from portfolio_rag_assistant.api import (
     ChatRequestBody,
-    ChatSourceBody,
     ChatServiceError,
+    ChatSourceBody,
     PublicChatService,
 )
 from portfolio_rag_assistant.config import RetrievalSettings
-from intent_catalog_helpers import tracked_intent_catalog
 from portfolio_rag_assistant.policy import (
     ANSWERABLE,
     NEEDS_CLARIFICATION,
@@ -31,11 +31,11 @@ from portfolio_rag_assistant.questions import (
     QuestionCollectionResult,
 )
 from portfolio_rag_assistant.retrieval import (
-    RetrievedContext,
     RetrievalRequest,
     RetrievalResponse,
     RetrievalScore,
     RetrievalStoreError,
+    RetrievedContext,
 )
 
 

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Literal, Protocol, runtime_checkable
 
 ChatRole = Literal["system", "user", "assistant"]
@@ -118,7 +118,7 @@ class ChatResponse:
     def __post_init__(self) -> None:
         _require_non_empty_text(self.model, "model")
         if not isinstance(self.message, ChatMessage):
-            raise ValueError("message must be a ChatMessage")
+            raise ValueError("message must be a ChatMessage")  # noqa: TRY004 - Preserve the public ValueError validation contract.
         if self.message.role != "assistant":
             raise ValueError("message role must be assistant")
         if self.usage is not None and not isinstance(self.usage, TokenUsage):
@@ -153,7 +153,7 @@ class EmbeddingResponse:
             _require_non_empty_sequence(vector, f"embeddings[{index}]")
             for value in vector:
                 if not isinstance(value, float):
-                    raise ValueError("embedding values must be floats")
+                    raise ValueError("embedding values must be floats")  # noqa: TRY004 - Preserve the public ValueError validation contract.
 
 
 @runtime_checkable

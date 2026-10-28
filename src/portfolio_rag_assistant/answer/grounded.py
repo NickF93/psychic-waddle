@@ -4,14 +4,6 @@ from __future__ import annotations
 
 from contextlib import aclosing
 
-from portfolio_rag_assistant.answer.delivery import (
-    GenerationTarget,
-    ProvisionalText,
-)
-from portfolio_rag_assistant.provider.budget import InputBudget
-
-from portfolio_rag_assistant.answer.strategy import GenerationStrategy, GeneratedText
-
 from portfolio_rag_assistant.answer.contract import (
     AnswerGenerationConfigurationError,
     AnswerGenerationRequest,
@@ -19,18 +11,24 @@ from portfolio_rag_assistant.answer.contract import (
     AnswerLanguage,
     AnswerSourceReference,
 )
+from portfolio_rag_assistant.answer.delivery import (
+    GenerationTarget,
+    ProvisionalText,
+)
 from portfolio_rag_assistant.answer.insufficiency import (
     is_insufficient_context_answer,
 )
+from portfolio_rag_assistant.answer.strategy import GeneratedText, GenerationStrategy
 from portfolio_rag_assistant.policy import (
     ANSWERABLE,
     NEEDS_CLARIFICATION,
     NOT_ANSWERABLE,
 )
 from portfolio_rag_assistant.provider import (
-    ChatProvider,
     ChatMessage,
+    ChatProvider,
 )
+from portfolio_rag_assistant.provider.budget import InputBudget
 from portfolio_rag_assistant.retrieval import RetrievedContext
 
 _SYSTEM_PROMPT = """\

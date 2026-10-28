@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
+SCRIPT_DIR=$(CDPATH='' cd "$(dirname "$0")" && pwd)
 . "$SCRIPT_DIR/_common.sh"
 
 DRY_RUN=false
@@ -73,6 +73,22 @@ Environment=COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT_NAME
 Environment=RUNTIME_WAIT_TIMEOUT_SECONDS=$RUNTIME_WAIT_TIMEOUT_SECONDS
 ExecStart=$ROOT_DIR/scripts/runtime/letsencrypt-renew.sh
 SERVICE
+
+unit_environment() {
+    case "$2" in
+        *'
+'*) fail "unit environment values must not contain newlines" ;;
+    esac
+    UNIT_VALUE=$(printf '%s' "$2" | sed 's/\\/\\\\/g; s/"/\\"/g; s/%/%%/g')
+    printf 'Environment="%s=%s"\n' "$1" "$UNIT_VALUE"
+}
+
+if [ -n "${COMPOSE_FILE:-}" ]; then
+    unit_environment COMPOSE_FILE "$COMPOSE_FILE" >> "$SERVICE_FILE"
+fi
+if [ -n "${COMPOSE_PROFILES:-}" ]; then
+    unit_environment COMPOSE_PROFILES "$COMPOSE_PROFILES" >> "$SERVICE_FILE"
+fi
 
 cat > "$TIMER_FILE" <<TIMER
 [Unit]

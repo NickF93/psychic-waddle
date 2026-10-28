@@ -70,10 +70,27 @@ duration. Device tokens occur in paths and WebSocket credentials can occur in
 queries: never log raw URLs, query strings, credentials, bodies or telemetry.
 Do not enable verbose proxy error logs or browser traces containing credentials.
 
-Existing HTTP `:8080`, MQTT and other telemetry listeners remain unchanged.
-Firmware using those endpoints needs no update. Do not redirect `:8080`.
+The security remediation programme migrated reachable Linux senders and the
+thermometer to verified HTTPS. The ThingsBoard-owned deployment now publishes no
+native transport ports: TCP 8080, 1883, 7070 and UDP 5683–5688 are retired. Keep
+`MyTB2:9090` private on `tb_default` through the vendor `HTTP_BIND_PORT=9090`
+setting. Offline Camper and Raspberry Pi clients must adopt HTTPS before returning.
+Do not reopen or redirect token-bearing legacy HTTP endpoints.
 
 ## Certificate maintenance and rollback
+
+Both edge profiles use the official NGINX 1.30.6 Alpine image pinned by digest in
+`compose.yaml`. The native Docker proxy fixture reads that same pin. For an
+image-only security update, pre-pull the approved image and validate the existing
+mounts and networks with candidate `nginx -t` before replacing only `nginx-tls`
+using `up --no-deps --no-build --wait`. Preserve the prior image and deployment
+configuration for rollback. Do not use whole-stack upgrade scripts for this step.
+
+An operator-rendered deployment model and the persistent certificate-renewal
+Compose invocation must resolve to the same approved edge image. Update their
+existing image overrides together; preserve all services and profiles, including
+Certbot, when rendering. Recheck the effective models rather than assuming a
+source image change reaches a previously rendered deployment.
 
 Reuse a currently valid matching certificate; do not issue a duplicate just to
 enable this site. The selected nklella certificate covers `vps.madnick.ovh`.
@@ -90,10 +107,13 @@ Keep credentials and private keys outside Git and logs.
 
 Rollback restores the prior proxy mount/configuration and Compose invocation,
 then recreates only `nginx-tls`. Preserve the prior private Ollama include,
-certificate volumes, application images, network identities and telemetry ports.
+certificate volumes, application images and network identities. Keep the native
+ThingsBoard publications closed; proxy rollback does not authorize reopening them.
 Do not delete certificates, volumes, existing dashboards or real device records.
 
 Acceptance requires actual login/dashboard interactions, authenticated WebSocket
-updates and a disposable telemetry device through HTTPS and unchanged `:8080`.
-Clean up exact fixture IDs through supported APIs, and check portfolio streaming,
-RAG access controls, certificate trust and renewal before marking the PR ready.
+updates through HTTPS, independently advancing stored timestamps from existing
+real senders, and continued absence of retired publications. Use disposable
+fixtures for negative cases; never inject fake measurements into genuine histories.
+Check the exact RAG health/readiness routes, access controls, certificate trust
+and existing renewal configuration. Do not initiate unrelated model inference.

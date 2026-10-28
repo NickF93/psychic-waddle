@@ -1,0 +1,3 @@
+# Refresh the vendor wheel's separately bundled OpenSSL to 4.0.3.
+cryptography==50.0.2
+certifi==2026.10.23

@@ -3,28 +3,25 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Awaitable
-from typing import TypeVar
 
 import httpx
 import pytest
 
 from portfolio_rag_assistant.provider import (
-    ChatProvider,
     ChatMessage,
+    ChatProvider,
     ChatRequest,
     EmbeddingProvider,
     EmbeddingRequest,
+    LlamaCppProvider,
     LLMProviderRequestError,
     LLMProviderResponseError,
     LLMProviderTransportError,
-    LlamaCppProvider,
     OpenAICompatibleProvider,
 )
 
-T = TypeVar("T")
 
-
-def run_async(awaitable: Awaitable[T]) -> T:
+def run_async[T](awaitable: Awaitable[T]) -> T:
     return asyncio.run(awaitable)
 
 

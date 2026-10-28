@@ -25,7 +25,7 @@ from portfolio_rag_assistant.provider import (
     EmbeddingResponse,
     LLMProviderTransportError,
 )
-from portfolio_rag_assistant.retrieval import RetrievedContext, RetrievalScore
+from portfolio_rag_assistant.retrieval import RetrievalScore, RetrievedContext
 
 
 def test_grounded_generator_calls_chat_for_answerable_decision() -> None:

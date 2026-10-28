@@ -78,7 +78,7 @@ class RetrievedContext:
         _require_non_empty_text(self.source_uri, "source_uri")
         _require_non_empty_text(self.source_title, "source_title")
         if not isinstance(self.score, RetrievalScore):
-            raise ValueError("score must be a RetrievalScore")
+            raise ValueError("score must be a RetrievalScore")  # noqa: TRY004 - Preserve the public ValueError validation contract.
         if self.source_locator is not None:
             _require_non_empty_text(self.source_locator, "source_locator")
         if self.public_visible is not True:
@@ -97,7 +97,7 @@ class RetrievalResponse:
         _require_non_empty_text(self.question, "question")
         _require_tuple_of_type(self.results, RetrievedContext, "results")
         if not isinstance(self.intent_resolution, IntentResolution):
-            raise ValueError("intent_resolution must be an IntentResolution")
+            raise ValueError("intent_resolution must be an IntentResolution")  # noqa: TRY004 - Preserve the public ValueError validation contract.
 
 
 @runtime_checkable
@@ -136,6 +136,6 @@ def _require_tuple_of_type(
     field_name: str,
 ) -> None:
     if not isinstance(values, tuple):
-        raise ValueError(f"{field_name} must be a tuple")
+        raise ValueError(f"{field_name} must be a tuple")  # noqa: TRY004 - Preserve the public ValueError validation contract.
     if not all(isinstance(value, item_type) for value in values):
         raise ValueError(f"{field_name} must contain only {item_type.__name__}")

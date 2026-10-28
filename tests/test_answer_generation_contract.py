@@ -16,7 +16,7 @@ from portfolio_rag_assistant.policy import (
     NOT_ANSWERABLE,
     AnswerPolicyDecision,
 )
-from portfolio_rag_assistant.retrieval import RetrievedContext, RetrievalScore
+from portfolio_rag_assistant.retrieval import RetrievalScore, RetrievedContext
 
 
 def test_fake_answer_generator_satisfies_contract() -> None:

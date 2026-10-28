@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal, TypeAlias, cast
 
-KnowledgeCategory: TypeAlias = Literal[
+KnowledgeCategory: TypeAlias = Literal[  # noqa: UP040 - Preserve public Literal runtime introspection.
     "experience",
     "education",
     "projects",

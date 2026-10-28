@@ -108,6 +108,28 @@ same change.
 - Never delete the source branch after merge.
 - Do not perform local direct merges into `main` or `develop`.
 
+## HOME project membership
+
+Every new Issue and PR in this repository must belong to the existing
+[HOME project](https://github.com/users/NickF93/projects/6/) (`NickF93/6`).
+Use `governed-git-flow metadata --project NickF93/6` to resolve its current
+Status and Size options. On both `issue create` and `pr create`, supply
+`--project NickF93/6 --status "<current-status>" --size "<reviewed-size>"`
+with actual option values chosen for the work; do not assume a default size.
+
+Verify both memberships and field values after creation. If creation partly
+succeeds, inspect the exact Issue/PR and repair its metadata with `issue update`
+or `pr update`; never repeat creation blindly. Use `issue move` and `pr move`
+with `--project NickF93/6` to maintain lifecycle status: Backlog for deferred
+work, Ready for accepted work awaiting implementation, In progress for active
+work/draft PRs, In review for ready PRs, and Done only after actual completion
+and any required authorized integration. Do not mark the governing Issue Done
+while a required PR remains unmerged.
+
+This requirement applies to the governed workflow. It does not configure
+GitHub-side automatic addition or import historical items. Milestones, dates,
+priority and reviewers remain optional unless assigned; never invent fields.
+
 ## Worktree Safety
 
 - Inspect the current branch and worktree before editing.

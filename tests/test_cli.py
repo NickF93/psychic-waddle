@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from io import StringIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from portfolio_rag_assistant import cli
 from portfolio_rag_assistant.provider import (
@@ -428,7 +428,7 @@ class FakeSmokeConnection:
     def __init__(self) -> None:
         self.entered = False
 
-    def __enter__(self) -> FakeSmokeConnection:
+    def __enter__(self) -> Self:
         self.entered = True
         return self
 
@@ -481,10 +481,10 @@ def _question_event(event_id: int, *, state: str = "pending") -> QuestionEvent:
 
 
 class FakeStoreContext:
-    def __init__(self, store: "FakeQuestionReviewStore") -> None:
+    def __init__(self, store: FakeQuestionReviewStore) -> None:
         self._store = store
 
-    def __enter__(self) -> "FakeQuestionReviewStore":
+    def __enter__(self) -> FakeQuestionReviewStore:
         return self._store
 
     def __exit__(self, exc_type, exc, traceback) -> None:

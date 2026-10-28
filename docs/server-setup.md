@@ -153,6 +153,9 @@ use the preserving upgrade path instead:
 RUNTIME_WAIT_TIMEOUT_SECONDS=600 scripts/runtime/public-upgrade.sh
 ```
 
+For image-only maintenance, follow [Runtime security maintenance](runtime-security.md)
+to preserve knowledge and validate extension and collation state.
+
 ## 4. Start PostgreSQL And Run Migrations
 
 Start PostgreSQL with `pgvector`:

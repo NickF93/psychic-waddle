@@ -15,7 +15,7 @@ from portfolio_rag_assistant.provider import (
     EmbeddingRequest,
     EmbeddingResponse,
 )
-from portfolio_rag_assistant.retrieval import RetrievedContext, RetrievalScore
+from portfolio_rag_assistant.retrieval import RetrievalScore, RetrievedContext
 
 
 def test_work_history_answer_is_generated_from_approved_context_only() -> None:

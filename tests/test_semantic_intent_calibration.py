@@ -6,8 +6,8 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
-
 from intent_catalog_helpers import TRACKED_INTENT_CATALOG, tracked_intent_catalog
+
 from portfolio_rag_assistant import cli
 from portfolio_rag_assistant.intent import (
     QuestionIntentProfileError,

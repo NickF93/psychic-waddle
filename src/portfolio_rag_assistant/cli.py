@@ -7,12 +7,12 @@ import asyncio
 import json
 import os
 import sys
-
-import httpx
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import TextIO
+
+import httpx
 
 from portfolio_rag_assistant.api.readiness import (
     DatabaseReadinessService,
@@ -33,8 +33,8 @@ from portfolio_rag_assistant.intent import (
     QuestionIntentProfileError,
     SemanticIntentCalibrationError,
     build_near_duplicate_review_report,
-    load_semantic_evaluation_cases,
     load_intent_catalog,
+    load_semantic_evaluation_cases,
     propose_semantic_thresholds,
     write_tmp_json_report,
 )
@@ -58,7 +58,6 @@ from portfolio_rag_assistant.provider import (
     LLMProviderError,
     OllamaProvider,
 )
-from portfolio_rag_assistant.runtime_catalog import export_catalog
 from portfolio_rag_assistant.questions import (
     QUESTION_REVIEW_CATEGORIES,
     QUESTION_REVIEW_STATES,
@@ -66,6 +65,7 @@ from portfolio_rag_assistant.questions import (
     QuestionReviewError,
     QuestionReviewStore,
 )
+from portfolio_rag_assistant.runtime_catalog import export_catalog
 
 
 class CommandError(RuntimeError):
@@ -121,9 +121,8 @@ def run(
                 return _run_runtime_smoke(environment, output)
             if args.runtime_command == "preload-ollama-model":
                 return _run_runtime_preload_ollama_model(args, output)
-        if args.command == "intent":
-            if args.intent_command == "calibrate-semantic":
-                return _run_intent_calibrate_semantic(args, environment, output)
+        if args.command == "intent" and args.intent_command == "calibrate-semantic":
+            return _run_intent_calibrate_semantic(args, environment, output)
         if args.command == "questions":
             if args.questions_command == "list":
                 return _run_questions_list(args, environment, output)

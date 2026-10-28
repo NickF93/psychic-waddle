@@ -119,7 +119,7 @@ def stable_chunk_index(fact: FactInput) -> int:
     """Return a deterministic positive integer identifier for a fact chunk."""
 
     digest = hashlib.blake2s(
-        f"{fact.category}\0{fact.fact_text}".encode("utf-8"),
+        f"{fact.category}\0{fact.fact_text}".encode(),
         digest_size=4,
     ).digest()
     return int.from_bytes(digest, byteorder="big", signed=False) & 0x7FFFFFFF

@@ -21,9 +21,9 @@ from portfolio_rag_assistant.questions.review import (
 )
 
 __all__ = [
-    "DisabledQuestionCollector",
     "QUESTION_REVIEW_CATEGORIES",
     "QUESTION_REVIEW_STATES",
+    "DisabledQuestionCollector",
     "PostgreSQLQuestionCollector",
     "QuestionCollectionError",
     "QuestionCollectionRequest",
