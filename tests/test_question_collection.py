@@ -123,7 +123,7 @@ class FakeCursor:
 
 
 class FakeTransaction(AbstractContextManager[object]):
-    def __init__(self, connection: "FakeConnection") -> None:
+    def __init__(self, connection: FakeConnection) -> None:
         self._connection = connection
 
     def __enter__(self) -> object:

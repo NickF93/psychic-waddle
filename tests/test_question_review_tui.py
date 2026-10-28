@@ -6,8 +6,7 @@ import pytest
 
 pytest.importorskip("textual")
 
-from portfolio_rag_assistant.questions import QuestionReviewError
-from portfolio_rag_assistant.questions import tui
+from portfolio_rag_assistant.questions import QuestionReviewError, tui
 
 
 def test_tui_event_id_parser_accepts_positive_integer_text() -> None:

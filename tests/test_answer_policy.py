@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-
 from intent_catalog_helpers import tracked_intent_catalog
+
 from portfolio_rag_assistant.intent import IntentResolution
 from portfolio_rag_assistant.policy import (
     ANSWERABLE,
@@ -14,7 +14,7 @@ from portfolio_rag_assistant.policy import (
     AnswerPolicyRequestError,
     DeterministicAnswerPolicy,
 )
-from portfolio_rag_assistant.retrieval import RetrievedContext, RetrievalScore
+from portfolio_rag_assistant.retrieval import RetrievalScore, RetrievedContext
 
 
 def test_policy_allows_relevant_source_backed_context() -> None:

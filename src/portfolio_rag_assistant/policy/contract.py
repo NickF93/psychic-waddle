@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from typing import Literal, Protocol, runtime_checkable
 
 from portfolio_rag_assistant.intent import (
-    IntentResolution,
     IntentCatalog,
+    IntentResolution,
     QuestionIntent,
 )
 from portfolio_rag_assistant.retrieval import RetrievedContext

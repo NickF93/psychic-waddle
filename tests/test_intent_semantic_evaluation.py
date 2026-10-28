@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from intent_catalog_helpers import TRACKED_INTENT_CATALOG
+
 from portfolio_rag_assistant.intent import load_intent_catalog
 from portfolio_rag_assistant.intent.profiles import _normalized_text
 

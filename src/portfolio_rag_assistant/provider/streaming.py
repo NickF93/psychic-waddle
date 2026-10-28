@@ -1,11 +1,10 @@
 """Bounded wire decoding for native and OpenAI-compatible chat streams."""
 
-from collections.abc import AsyncIterator
 import json
+from collections.abc import AsyncIterator
 
 import httpx
-from httpx_sse import aconnect_sse, SSEError
-from .parameters import ParameterProfile, chat_payload
+from httpx_sse import SSEError, aconnect_sse
 
 from portfolio_rag_assistant.provider.contract import (
     ChatRequest,
@@ -13,6 +12,8 @@ from portfolio_rag_assistant.provider.contract import (
     LLMProviderResponseError,
     LLMProviderTransportError,
 )
+
+from .parameters import ParameterProfile, chat_payload
 
 MAX_STREAM_BYTES = 1024 * 1024
 
@@ -81,69 +82,68 @@ async def stream_openai(
     try:
         async with httpx.AsyncClient(
             timeout=timeout, transport=_BoundedTransport(transport)
-        ) as client:
-            async with aconnect_sse(
-                client,
-                "POST",
-                f"{base_url}/chat/completions",
-                headers=_headers(api_key),
-                json={
-                    **chat_payload(
-                        request,
-                        stream=True,
-                        profile=profile or ParameterProfile.load("openai"),
-                    ),
-                    "n": 1,
-                },
-            ) as stream:
-                if not stream.response.is_success:
-                    raise LLMProviderRequestError(
-                        "provider rejected the request",
-                        status_code=stream.response.status_code,
+        ) as client, aconnect_sse(
+            client,
+            "POST",
+            f"{base_url}/chat/completions",
+            headers=_headers(api_key),
+            json={
+                **chat_payload(
+                    request,
+                    stream=True,
+                    profile=profile or ParameterProfile.load("openai"),
+                ),
+                "n": 1,
+            },
+        ) as stream:
+            if not stream.response.is_success:
+                raise LLMProviderRequestError(
+                    "provider rejected the request",
+                    status_code=stream.response.status_code,
+                )
+            async for event in stream.aiter_sse():
+                received += len(event.data.encode())
+                if received > MAX_STREAM_BYTES:
+                    raise LLMProviderResponseError(
+                        "provider stream exceeded its bound"
                     )
-                async for event in stream.aiter_sse():
-                    received += len(event.data.encode())
-                    if received > MAX_STREAM_BYTES:
+                if event.data == "[DONE]":
+                    if not finished:
                         raise LLMProviderResponseError(
-                            "provider stream exceeded its bound"
+                            "provider stream ended before completion"
                         )
-                    if event.data == "[DONE]":
-                        if not finished:
-                            raise LLMProviderResponseError(
-                                "provider stream ended before completion"
-                            )
-                        return
-                    payload = _object(event.data)
-                    choices = payload.get("choices")
-                    if not isinstance(choices, list) or len(choices) > 1:
+                    return
+                payload = _object(event.data)
+                choices = payload.get("choices")
+                if not isinstance(choices, list) or len(choices) > 1:
+                    raise LLMProviderResponseError(
+                        "provider stream choices are invalid"
+                    )
+                for choice in choices:
+                    if not isinstance(choice, dict) or not isinstance(
+                        choice.get("delta", {}), dict
+                    ):
                         raise LLMProviderResponseError(
-                            "provider stream choices are invalid"
+                            "provider stream delta is invalid"
                         )
-                    for choice in choices:
-                        if not isinstance(choice, dict) or not isinstance(
-                            choice.get("delta", {}), dict
-                        ):
+                    text = choice.get("delta", {}).get("content")
+                    if text is not None and not isinstance(text, str):
+                        raise LLMProviderResponseError(
+                            "provider stream content is invalid"
+                        )
+                    if text:
+                        if finished:
                             raise LLMProviderResponseError(
-                                "provider stream delta is invalid"
+                                "provider sent content after completion"
                             )
-                        text = choice.get("delta", {}).get("content")
-                        if text is not None and not isinstance(text, str):
+                        yield text
+                    reason = choice.get("finish_reason")
+                    if reason is not None:
+                        if reason != "stop":
                             raise LLMProviderResponseError(
-                                "provider stream content is invalid"
+                                "provider answer was not completed"
                             )
-                        if text:
-                            if finished:
-                                raise LLMProviderResponseError(
-                                    "provider sent content after completion"
-                                )
-                            yield text
-                        reason = choice.get("finish_reason")
-                        if reason is not None:
-                            if reason != "stop":
-                                raise LLMProviderResponseError(
-                                    "provider answer was not completed"
-                                )
-                            finished = True
+                        finished = True
     except (httpx.TransportError, SSEError) as error:
         raise LLMProviderTransportError("provider stream transport failed") from error
     raise LLMProviderResponseError("provider stream closed before completion")
@@ -163,49 +163,48 @@ async def stream_ollama(
     try:
         async with httpx.AsyncClient(
             timeout=timeout, transport=_BoundedTransport(transport)
-        ) as client:
-            async with client.stream(
-                "POST",
-                f"{base_url}/chat",
-                headers=_headers(api_key),
-                json=chat_payload(
-                    request,
-                    stream=True,
-                    profile=profile or ParameterProfile.load("ollama"),
-                ),
-            ) as response:
-                if not response.is_success:
-                    raise LLMProviderRequestError(
-                        "provider rejected the request",
-                        status_code=response.status_code,
+        ) as client, client.stream(
+            "POST",
+            f"{base_url}/chat",
+            headers=_headers(api_key),
+            json=chat_payload(
+                request,
+                stream=True,
+                profile=profile or ParameterProfile.load("ollama"),
+            ),
+        ) as response:
+            if not response.is_success:
+                raise LLMProviderRequestError(
+                    "provider rejected the request",
+                    status_code=response.status_code,
+                )
+            async for line in response.aiter_lines():
+                received += len(line.encode())
+                if received > MAX_STREAM_BYTES:
+                    raise LLMProviderResponseError(
+                        "provider stream exceeded its bound"
                     )
-                async for line in response.aiter_lines():
-                    received += len(line.encode())
-                    if received > MAX_STREAM_BYTES:
+                if not line.strip():
+                    continue
+                payload = _object(line)
+                message = payload.get("message", {})
+                if not isinstance(message, dict):
+                    raise LLMProviderResponseError(
+                        "provider stream message is invalid"
+                    )
+                text = message.get("content", "")
+                if not isinstance(text, str):
+                    raise LLMProviderResponseError(
+                        "provider stream content is invalid"
+                    )
+                if text:
+                    yield text
+                if payload.get("done") is True:
+                    if payload.get("done_reason", "stop") != "stop":
                         raise LLMProviderResponseError(
-                            "provider stream exceeded its bound"
+                            "provider answer was not completed"
                         )
-                    if not line.strip():
-                        continue
-                    payload = _object(line)
-                    message = payload.get("message", {})
-                    if not isinstance(message, dict):
-                        raise LLMProviderResponseError(
-                            "provider stream message is invalid"
-                        )
-                    text = message.get("content", "")
-                    if not isinstance(text, str):
-                        raise LLMProviderResponseError(
-                            "provider stream content is invalid"
-                        )
-                    if text:
-                        yield text
-                    if payload.get("done") is True:
-                        if payload.get("done_reason", "stop") != "stop":
-                            raise LLMProviderResponseError(
-                                "provider answer was not completed"
-                            )
-                        return
+                    return
     except httpx.TransportError as error:
         raise LLMProviderTransportError("provider stream transport failed") from error
     raise LLMProviderResponseError("provider stream closed before completion")

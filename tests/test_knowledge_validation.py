@@ -14,8 +14,8 @@ from portfolio_rag_assistant.knowledge import (
     SourceInput,
     validate_knowledge_batch,
     validate_knowledge_files,
+    validation,
 )
-from portfolio_rag_assistant.knowledge import validation
 
 
 def test_validate_knowledge_batch_accepts_valid_minimal_knowledge() -> None:

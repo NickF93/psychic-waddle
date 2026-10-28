@@ -5,9 +5,9 @@ import httpx
 import pytest
 
 from portfolio_rag_assistant.provider import ChatMessage, ChatRequest
-from portfolio_rag_assistant.provider.openai_compatible import OpenAICompatibleProvider
-from portfolio_rag_assistant.provider.ollama import OllamaProvider
 from portfolio_rag_assistant.provider.contract import LLMProviderError
+from portfolio_rag_assistant.provider.ollama import OllamaProvider
+from portfolio_rag_assistant.provider.openai_compatible import OpenAICompatibleProvider
 
 REQUEST = ChatRequest(
     model="configured-model", messages=(ChatMessage(role="user", content="Question"),)

@@ -3,20 +3,20 @@ from contextlib import aclosing
 
 import httpx
 import pytest
-
-from portfolio_rag_assistant.api import create_api_app, ChatRequestBody
-from portfolio_rag_assistant.api.service import ChatServiceError
-from portfolio_rag_assistant.answer import GroundedAnswerGenerator
-from portfolio_rag_assistant.policy import AnswerPolicyDecision
 from test_chat_service import (
-    _service,
-    _context,
-    _retrieval_response,
-    FakeRetriever,
     FakePolicy,
     FakeQuestionCollector,
+    FakeRetriever,
+    _context,
+    _retrieval_response,
+    _service,
 )
 from test_generation_delivery import Provider
+
+from portfolio_rag_assistant.answer import GroundedAnswerGenerator
+from portfolio_rag_assistant.api import ChatRequestBody, create_api_app
+from portfolio_rag_assistant.api.service import ChatServiceError
+from portfolio_rag_assistant.policy import AnswerPolicyDecision
 
 BODY = {"question": "Where did Niccolo work?", "language": "en"}
 

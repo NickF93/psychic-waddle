@@ -183,10 +183,7 @@ def test_runtime_compose_exec_calls_disable_tty_allocation() -> None:
             if " exec " not in stripped:
                 continue
             if not (
-                stripped.startswith("compose exec ")
-                or " compose exec " in stripped
-                or stripped.startswith("compose_profile ")
-                or " compose_profile " in stripped
+                stripped.startswith(("compose exec ", "compose_profile ")) or " compose exec " in stripped or " compose_profile " in stripped
             ):
                 continue
             if " exec -T " not in stripped:

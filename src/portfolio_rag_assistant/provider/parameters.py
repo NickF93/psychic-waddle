@@ -1,8 +1,8 @@
 """Validated configuration mapping for generation options, independent of I/O."""
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
-import json
 
 from .contract import ChatRequest, LLMProviderConfigurationError
 
@@ -60,7 +60,7 @@ class ParameterProfile:
                 raise ValueError()
             for mapping in (paths, *reasoning.values()):
                 if not isinstance(mapping, dict):
-                    raise ValueError()
+                    raise ValueError()  # noqa: TRY004 - Normalized below as a configuration error.
                 for key, value in mapping.items():
                     target = value if mapping is paths else key
                     if (

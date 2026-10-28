@@ -1,7 +1,6 @@
 """Retrieval authority contracts."""
 
 from portfolio_rag_assistant.retrieval.contract import (
-    RetrievedContext,
     RetrievalConfigurationError,
     RetrievalError,
     RetrievalRequest,
@@ -9,13 +8,13 @@ from portfolio_rag_assistant.retrieval.contract import (
     RetrievalResponse,
     RetrievalScore,
     RetrievalStoreError,
+    RetrievedContext,
     Retriever,
 )
 from portfolio_rag_assistant.retrieval.postgres import PostgreSQLRetriever
 
 __all__ = [
     "PostgreSQLRetriever",
-    "RetrievedContext",
     "RetrievalConfigurationError",
     "RetrievalError",
     "RetrievalRequest",
@@ -23,5 +22,6 @@ __all__ = [
     "RetrievalResponse",
     "RetrievalScore",
     "RetrievalStoreError",
+    "RetrievedContext",
     "Retriever",
 ]

@@ -2,24 +2,22 @@
 
 from __future__ import annotations
 
-import logging
 import asyncio
 import json
+import logging
 import math
 import time
-from portfolio_rag_assistant.provider.contract import LLMInputBudgetError
 from contextlib import aclosing
-
-from portfolio_rag_assistant.answer.contract import (
-    AnswerDelta,
-    AnswerGenerationResponse,
-    GenerationStatus,
-)
 
 from portfolio_rag_assistant.answer import (
     AnswerGenerationError,
     AnswerGenerationRequest,
     AnswerGenerator,
+)
+from portfolio_rag_assistant.answer.contract import (
+    AnswerDelta,
+    AnswerGenerationResponse,
+    GenerationStatus,
 )
 from portfolio_rag_assistant.api.schemas import (
     ChatNoticeBody,
@@ -29,11 +27,12 @@ from portfolio_rag_assistant.api.schemas import (
 )
 from portfolio_rag_assistant.config import RetrievalSettings
 from portfolio_rag_assistant.policy import (
+    NOT_ANSWERABLE,
     AnswerPolicy,
     AnswerPolicyError,
     AnswerPolicyRequest,
-    NOT_ANSWERABLE,
 )
+from portfolio_rag_assistant.provider.contract import LLMInputBudgetError
 from portfolio_rag_assistant.questions import (
     QuestionCollectionError,
     QuestionCollectionRequest,
@@ -149,7 +148,7 @@ class PublicChatService:
                 "Chat stream cancelled: elapsed=%.3fs", time.monotonic() - started
             )
             raise
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - Sanitize all failures after streaming headers.
             # Streaming headers are already sent: terminate every application
             # failure with a safe protocol event, never a raw dropped response.
             LOGGER.warning(

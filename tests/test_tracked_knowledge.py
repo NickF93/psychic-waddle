@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from portfolio_rag_assistant.knowledge.validation import validate_knowledge_files
 from intent_catalog_helpers import tracked_intent_catalog
 
+from portfolio_rag_assistant.knowledge.validation import validate_knowledge_files
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE_KNOWLEDGE = ROOT / "knowledge" / "profile.json"

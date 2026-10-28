@@ -1,17 +1,17 @@
 """Explicit generation targets and provisional answer filtering."""
 
-from dataclasses import dataclass, field
-from portfolio_rag_assistant.provider.budget import InputBudget
-from portfolio_rag_assistant.provider.contract import LLMInputBudgetError
 import math
+from dataclasses import dataclass, field
 
-from portfolio_rag_assistant.provider import ChatProvider
-from portfolio_rag_assistant.provider.contract import (
-    LLMProviderRequestError,
-    LLMProviderTransportError,
-    LLMProviderResponseError,
-)
 from portfolio_rag_assistant.answer.contract import AnswerGenerationConfigurationError
+from portfolio_rag_assistant.provider import ChatProvider
+from portfolio_rag_assistant.provider.budget import InputBudget
+from portfolio_rag_assistant.provider.contract import (
+    LLMInputBudgetError,
+    LLMProviderRequestError,
+    LLMProviderResponseError,
+    LLMProviderTransportError,
+)
 
 SENTINEL = "INSUFFICIENT_APPROVED_CONTEXT"
 

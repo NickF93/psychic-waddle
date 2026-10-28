@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from intent_catalog_helpers import TRACKED_INTENT_CATALOG, tracked_intent_catalog
+
 from portfolio_rag_assistant.intent import SemanticIntentResolver, load_intent_catalog
 from portfolio_rag_assistant.provider import EmbeddingRequest, EmbeddingResponse
 

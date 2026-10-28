@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Sequence
 
 from portfolio_rag_assistant.knowledge.ingestion import (
     KnowledgeBatch,
