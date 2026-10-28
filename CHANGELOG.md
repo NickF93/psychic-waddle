@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.2
+
+- Refresh qualified RAG, database, proxy and renewal runtime/trust inputs.
+- Preserve compatible Ollama embeddings, retrieval and provider behavior.
+- Resolve Ruff findings and retire obsolete plaintext acceptance instructions.
+
+See the [release and recovery notes](docs/release-v0.4.2.md).
+
 ## v0.4.1
 
 - Restore portfolio external generation after the free MiniMax launch endpoint was removed.
