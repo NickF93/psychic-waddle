@@ -1,25 +1,26 @@
 """Bounded generation delivery, independent of evidence and source selection."""
 
 import asyncio
-from contextlib import aclosing
-from dataclasses import dataclass
 import logging
 import time
+from contextlib import aclosing
+from dataclasses import dataclass
+
+from portfolio_rag_assistant.provider.contract import (
+    ChatRequest,
+    LLMInputBudgetError,
+    LLMProviderError,
+    StreamingChatProvider,
+)
 
 from .contract import (
     AnswerDelta,
-    GenerationStatus,
-    AnswerGenerationProviderError,
     AnswerGenerationConfigurationError,
+    AnswerGenerationProviderError,
+    GenerationStatus,
 )
 from .delivery import failure_reason
 from .visibility import has_visible_answer_text
-from portfolio_rag_assistant.provider.contract import (
-    ChatRequest,
-    LLMProviderError,
-    LLMInputBudgetError,
-    StreamingChatProvider,
-)
 
 LOGGER = logging.getLogger(__name__)
 

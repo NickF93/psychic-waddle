@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import ClassVar, Final
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -44,7 +44,7 @@ class QuestionReviewApp(App[None]):
         padding: 0 2 1 2;
     }
     """
-    BINDINGS = [
+    BINDINGS: ClassVar[list[tuple[str, str, str]]] = [
         ("r", "refresh", "Refresh"),
         ("q", "quit", "Quit"),
     ]

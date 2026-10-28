@@ -1,12 +1,24 @@
 """Behavioral regressions for target mapping, completion and input admission."""
 
 import asyncio
-from dataclasses import replace
 import json
+from dataclasses import replace
 
 import httpx
 import pytest
+from test_generation_delivery import REQUEST, Provider
 
+from portfolio_rag_assistant.answer import GroundedAnswerGenerator
+from portfolio_rag_assistant.config import (
+    load_chat_provider_settings,
+    load_fallback_chat_provider_settings,
+)
+from portfolio_rag_assistant.provider import (
+    LlamaCppProvider,
+    OllamaProvider,
+    OpenAICompatibleProvider,
+)
+from portfolio_rag_assistant.provider.budget import InputBudget
 from portfolio_rag_assistant.provider.contract import (
     ChatMessage,
     ChatRequest,
@@ -16,18 +28,6 @@ from portfolio_rag_assistant.provider.contract import (
     LLMProviderResponseError,
 )
 from portfolio_rag_assistant.provider.parameters import ParameterProfile, chat_payload
-from portfolio_rag_assistant.provider.budget import InputBudget
-from portfolio_rag_assistant.provider import (
-    OpenAICompatibleProvider,
-    OllamaProvider,
-    LlamaCppProvider,
-)
-from portfolio_rag_assistant.config import (
-    load_chat_provider_settings,
-    load_fallback_chat_provider_settings,
-)
-from test_generation_delivery import Provider, REQUEST
-from portfolio_rag_assistant.answer import GroundedAnswerGenerator
 
 BASE = ChatRequest(
     model="selected",

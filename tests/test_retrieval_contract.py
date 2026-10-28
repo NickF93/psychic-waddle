@@ -6,10 +6,10 @@ import pytest
 
 from portfolio_rag_assistant.intent import IntentResolution
 from portfolio_rag_assistant.retrieval import (
-    RetrievedContext,
     RetrievalRequest,
     RetrievalResponse,
     RetrievalScore,
+    RetrievedContext,
     Retriever,
 )
 

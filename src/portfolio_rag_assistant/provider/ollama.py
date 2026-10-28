@@ -8,7 +8,6 @@ from typing import Any
 from urllib.parse import urlparse
 
 import httpx
-from .parameters import ParameterProfile, chat_payload
 
 from portfolio_rag_assistant.provider.contract import (
     ChatMessage,
@@ -23,6 +22,8 @@ from portfolio_rag_assistant.provider.contract import (
     LLMProviderTransportError,
     TokenUsage,
 )
+
+from .parameters import ParameterProfile, chat_payload
 
 
 class OllamaProvider:
@@ -214,9 +215,7 @@ def _read_keep_alive(value: str) -> str | int:
 def _model_name_matches(*, expected: str, loaded: str) -> bool:
     if loaded == expected:
         return True
-    if ":" not in expected and loaded == f"{expected}:latest":
-        return True
-    return False
+    return bool(":" not in expected and loaded == f"{expected}:latest")
 
 
 def _read_model(payload: dict[str, Any]) -> str:

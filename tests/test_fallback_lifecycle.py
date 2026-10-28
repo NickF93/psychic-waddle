@@ -1,6 +1,6 @@
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -36,6 +36,7 @@ def run_phase(tmp_path, phase, extra=""):
         env=env,
         text=True,
         capture_output=True,
+        check=False,
     )
     return result, log.read_text() if log.exists() else ""
 

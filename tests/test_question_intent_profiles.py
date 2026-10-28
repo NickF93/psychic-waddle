@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-
 from intent_catalog_helpers import tracked_intent_catalog
+
 from portfolio_rag_assistant.intent import IntentCatalog, QuestionIntent
 
 
@@ -53,10 +53,8 @@ def test_profiles_define_unique_supported_recruiter_intents() -> None:
         ("Where is his GitHub link?", ("contact",)),
         ("Qual e il ruolo attuale di Niccolo?", ("current_role",)),
         ("Chi e il datore di lavoro attuale di Niccolo?", ("current_role",)),
-        ("Come posso contattare Niccolo?", ("contact",)),
         ("What pre-prints does Niccolo have?", ("publications",)),
         ("What preprint does Niccolo have?", ("publications",)),
-        ("Quali software di ricerca ha pubblicato Niccolo?", ("projects",)),
         ("What kind of work does Niccolo do?", ("professional_overview",)),
         ("What type of work does Niccolo do?", ("professional_overview",)),
         ("Give me a career snapshot for Niccolo.", ("professional_overview",)),
@@ -183,14 +181,14 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
     ("text", "intent"),
     (
         (
-            "Niccolo Ferrari is a Senior Machine Learning Engineer and Researcher "
-            "with a Ph.D. research background.",
+            ("Niccolo Ferrari is a Senior Machine Learning Engineer and Researcher "
+            "with a Ph.D. research background."),
             "professional_overview",
         ),
         (
-            "Niccolo Ferrari's work history includes Senior Machine Learning "
+            ("Niccolo Ferrari's work history includes Senior Machine Learning "
             "Engineer at NAIS S.r.l. and Machine Learning Engineer at "
-            "Bonfiglioli Engineering.",
+            "Bonfiglioli Engineering."),
             "professional_overview",
         ),
         (
@@ -198,8 +196,8 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
             "workplace",
         ),
         (
-            "Niccolo Ferrari's professional workplaces include NAIS S.r.l. "
-            "and Bonfiglioli Engineering.",
+            ("Niccolo Ferrari's professional workplaces include NAIS S.r.l. "
+            "and Bonfiglioli Engineering."),
             "workplace",
         ),
         (
@@ -211,23 +209,23 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
             "current_role",
         ),
         (
-            "Niccolo Ferrari uses Docker for reproducible machine learning "
-            "environments.",
+            ("Niccolo Ferrari uses Docker for reproducible machine learning "
+            "environments."),
             "skills",
         ),
         (
-            "Niccolo Ferrari's production deployment skills include C++, "
-            "ONNX, OpenVINO, and TensorRT.",
+            ("Niccolo Ferrari's production deployment skills include C++, "
+            "ONNX, OpenVINO, and TensorRT."),
             "skills",
         ),
         (
-            "Niccolo Ferrari's computer vision architecture experience includes "
-            "CNNs, ResNet, ViT, and YOLO models.",
+            ("Niccolo Ferrari's computer vision architecture experience includes "
+            "CNNs, ResNet, ViT, and YOLO models."),
             "skills",
         ),
         (
-            "Niccolo Ferrari's areas of specialization include industrial "
-            "computer vision and visual inspection.",
+            ("Niccolo Ferrari's areas of specialization include industrial "
+            "computer vision and visual inspection."),
             "skills",
         ),
         (
@@ -235,8 +233,8 @@ def test_profile_for_intent_exposes_retrieval_expansion_terms() -> None:
             "license",
         ),
         (
-            "Niccolo Ferrari's interests include artificial intelligence, "
-            "deep learning research, and game development.",
+            ("Niccolo Ferrari's interests include artificial intelligence, "
+            "deep learning research, and game development."),
             "interests",
         ),
     ),

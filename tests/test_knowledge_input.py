@@ -1,17 +1,23 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, get_args
 
 import pytest
 
 from portfolio_rag_assistant.knowledge import (
+    ALLOWED_KNOWLEDGE_CATEGORIES,
     CURRENT_KNOWLEDGE_SCHEMA_VERSION,
     FactInput,
+    KnowledgeCategory,
     KnowledgeInputError,
     SourceInput,
     parse_knowledge_document,
 )
+
+
+def test_public_category_alias_exposes_the_declared_literal_values() -> None:
+    assert frozenset(get_args(KnowledgeCategory)) == ALLOWED_KNOWLEDGE_CATEGORIES
 
 
 def valid_document() -> dict[str, Any]:

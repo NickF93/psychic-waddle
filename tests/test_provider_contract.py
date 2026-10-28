@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
 
 import pytest
 
 from portfolio_rag_assistant.provider import (
-    ChatProvider,
     ChatMessage,
+    ChatProvider,
     ChatRequest,
     ChatResponse,
     EmbeddingProvider,
@@ -21,8 +20,6 @@ from portfolio_rag_assistant.provider import (
     LLMProviderTransportError,
     TokenUsage,
 )
-
-T = TypeVar("T")
 
 
 class FakeProvider:
@@ -44,7 +41,7 @@ class FakeProvider:
         return EmbeddingResponse(model=request.model, embeddings=embeddings)
 
 
-def run_async(awaitable: Awaitable[T]) -> T:
+def run_async[T](awaitable: Awaitable[T]) -> T:
     return asyncio.run(awaitable)
 
 

@@ -3,14 +3,13 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
 
 import httpx
 import pytest
 
 from portfolio_rag_assistant.provider import (
-    ChatProvider,
     ChatMessage,
+    ChatProvider,
     ChatRequest,
     EmbeddingProvider,
     EmbeddingRequest,
@@ -21,10 +20,8 @@ from portfolio_rag_assistant.provider import (
     TokenUsage,
 )
 
-T = TypeVar("T")
 
-
-def run_async(awaitable: Awaitable[T]) -> T:
+def run_async[T](awaitable: Awaitable[T]) -> T:
     return asyncio.run(awaitable)
 
 

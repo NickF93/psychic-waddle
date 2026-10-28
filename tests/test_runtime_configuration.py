@@ -381,7 +381,10 @@ def test_example_primary_controls_encode_for_json_and_streaming(stream):
         load_chat_provider_settings,
     )
     from portfolio_rag_assistant.provider.contract import ChatMessage, ChatRequest
-    from portfolio_rag_assistant.provider.parameters import ParameterProfile, chat_payload
+    from portfolio_rag_assistant.provider.parameters import (
+        ParameterProfile,
+        chat_payload,
+    )
 
     settings = _load_env_example()
     primary = load_chat_provider_settings(settings)

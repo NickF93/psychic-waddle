@@ -7,7 +7,6 @@ from typing import Any
 from urllib.parse import urlparse
 
 import httpx
-from .parameters import ParameterProfile, chat_payload
 
 from portfolio_rag_assistant.provider.contract import (
     ChatMessage,
@@ -22,6 +21,8 @@ from portfolio_rag_assistant.provider.contract import (
     LLMProviderTransportError,
     TokenUsage,
 )
+
+from .parameters import ParameterProfile, chat_payload
 
 
 class OpenAICompatibleProvider:

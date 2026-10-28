@@ -7,9 +7,9 @@ from typing import Protocol
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from sse_starlette import EventSourceResponse
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
-from sse_starlette import EventSourceResponse
 
 from portfolio_rag_assistant.api.schemas import (
     MAX_REQUEST_BODY_BYTES,

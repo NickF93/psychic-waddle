@@ -26,8 +26,8 @@ from portfolio_rag_assistant.provider import (
     ChatMessage,
     ChatRequest,
     EmbeddingRequest,
-    LLMProviderConfigurationError,
     LlamaCppProvider,
+    LLMProviderConfigurationError,
     OllamaProvider,
     OpenAICompatibleProvider,
 )

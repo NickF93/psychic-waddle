@@ -2,29 +2,29 @@ import asyncio
 from contextlib import aclosing
 
 import pytest
+from test_grounded_answer_generation import _answerable_decision
 
 from portfolio_rag_assistant.answer import (
+    AnswerGenerationProviderError,
     AnswerGenerationRequest,
     GroundedAnswerGenerator,
-    AnswerGenerationProviderError,
 )
 from portfolio_rag_assistant.answer.contract import (
     AnswerDelta,
     AnswerGenerationResponse,
 )
 from portfolio_rag_assistant.config import (
-    load_fallback_chat_provider_settings,
+    RuntimeConfigurationError,
     load_chat_provider_settings,
+    load_fallback_chat_provider_settings,
     load_request_timeout,
 )
 from portfolio_rag_assistant.provider import (
-    ChatResponse,
     ChatMessage,
-    LLMProviderTransportError,
+    ChatResponse,
     LLMProviderConfigurationError,
+    LLMProviderTransportError,
 )
-from portfolio_rag_assistant.config import RuntimeConfigurationError
-from test_grounded_answer_generation import _answerable_decision
 
 REQUEST = AnswerGenerationRequest(
     question="Where did Niccolo work?", decision=_answerable_decision(), language="en"

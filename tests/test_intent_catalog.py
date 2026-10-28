@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 
 import pytest
-
 from intent_catalog_helpers import TRACKED_INTENT_CATALOG
+
 from portfolio_rag_assistant.intent import (
     IntentResolution,
     QuestionIntent,
@@ -84,7 +84,7 @@ def test_tracked_intent_catalog_reproduces_current_evidence_matching() -> None:
             profile.accepted_categories
         )
         evidence_terms = tuple(
-            sorted(group)[0] for group in profile.required_evidence_groups
+            min(group) for group in profile.required_evidence_groups
         )
         text = f"evidence probe {' '.join(evidence_terms)}"
         assert catalog.text_satisfies_intent_evidence(text, profile.intent)
@@ -322,8 +322,8 @@ def test_load_intent_catalog_rejects_unknown_profile_keys(tmp_path: Path) -> Non
                 "semantic_required_threshold",
                 0.7,
             ),
-            "semantic_required_threshold must be at least "
-            "semantic_candidate_threshold",
+            ("semantic_required_threshold must be at least "
+            "semantic_candidate_threshold"),
         ),
         (
             lambda payload: payload["profiles"][0].__setitem__(

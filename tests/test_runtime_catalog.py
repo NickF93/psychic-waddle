@@ -53,12 +53,12 @@ def export(env=None, documents=None, **kwargs):
         assert path == "/api/show"
         return documents[payload["model"]]
 
-    values = dict(
-        source_commit="d" * 40,
-        chat_context=4096,
-        chat_output=1024,
-        embedding_context=2048,
-    )
+    values = {
+        "source_commit": "d" * 40,
+        "chat_context": 4096,
+        "chat_output": 1024,
+        "embedding_context": 2048,
+    }
     values.update(kwargs)
     return export_catalog(env or ENV, read=read, **values), calls
 

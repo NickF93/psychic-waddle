@@ -14,18 +14,16 @@ class CatalogExportError(ValueError):
 
 
 def read_metadata(base: str, path: str, payload: dict | None = None) -> dict:
-    with httpx.Client(timeout=5, trust_env=False, follow_redirects=False) as client:
-        with client.stream(
-            "POST" if payload else "GET", base + path, json=payload
-        ) as response:
-            response.raise_for_status()
-            body = bytearray()
-            for chunk in response.iter_bytes():
-                body.extend(chunk)
-                if len(body) > 1048576:
-                    raise CatalogExportError(
-                        "Provider metadata exceeds the export limit"
-                    )
+    with (
+        httpx.Client(timeout=5, trust_env=False, follow_redirects=False) as client,
+        client.stream("POST" if payload else "GET", base + path, json=payload) as response,
+    ):
+        response.raise_for_status()
+        body = bytearray()
+        for chunk in response.iter_bytes():
+            body.extend(chunk)
+            if len(body) > 1048576:
+                raise CatalogExportError("Provider metadata exceeds the export limit")
     import json
 
     result = json.loads(body)

@@ -32,17 +32,18 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.mark.parametrize("streaming", [False, True])
 def test_runtime_budget_configuration_reaches_actual_inference_requests(streaming):
-    from portfolio_rag_assistant.api import create_api_app
-    from portfolio_rag_assistant.api.composition import build_runtime_services
-    from portfolio_rag_assistant.provider import LLMProviderTransportError
-    from portfolio_rag_assistant.policy import AnswerPolicyDecision
-    from test_generation_delivery import Provider
     from test_chat_service import (
-        FakeRetriever,
         FakePolicy,
+        FakeRetriever,
         _context,
         _retrieval_response,
     )
+    from test_generation_delivery import Provider
+
+    from portfolio_rag_assistant.api import create_api_app
+    from portfolio_rag_assistant.api.composition import build_runtime_services
+    from portfolio_rag_assistant.policy import AnswerPolicyDecision
+    from portfolio_rag_assistant.provider import LLMProviderTransportError
 
     primary = Provider([LLMProviderTransportError("unavailable")])
     fallback = Provider(["Reviewed answer."])
@@ -384,27 +385,27 @@ def _post_chat(app) -> httpx.Response:
 
 def _record_chat_provider(
     settings: ChatProviderSettings,
-    provider: "FakeChatProvider",
+    provider: FakeChatProvider,
     records: list[ChatProviderSettings],
-) -> "FakeChatProvider":
+) -> FakeChatProvider:
     records.append(settings)
     return provider
 
 
 def _record_embedding_provider(
     settings: EmbeddingProviderSettings,
-    provider: "FakeEmbeddingProvider",
+    provider: FakeEmbeddingProvider,
     records: list[EmbeddingProviderSettings],
-) -> "FakeEmbeddingProvider":
+) -> FakeEmbeddingProvider:
     records.append(settings)
     return provider
 
 
 def _record_connection(
     settings: DatabaseSettings,
-    connection: "FakeRetrievalConnection",
+    connection: FakeRetrievalConnection,
     records: list[DatabaseSettings],
-) -> "FakeRetrievalConnection":
+) -> FakeRetrievalConnection:
     records.append(settings)
     return connection
 

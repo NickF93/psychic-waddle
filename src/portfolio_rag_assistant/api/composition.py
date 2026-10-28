@@ -20,12 +20,12 @@ from portfolio_rag_assistant.config import (
     build_chat_provider,
     build_embedding_provider,
     load_chat_provider_settings,
-    load_fallback_chat_provider_settings,
-    load_request_timeout,
     load_database_settings,
     load_embedding_provider_settings,
+    load_fallback_chat_provider_settings,
     load_intent_catalog_settings,
     load_question_collection_settings,
+    load_request_timeout,
     load_retrieval_settings,
 )
 from portfolio_rag_assistant.intent import SemanticIntentResolver, load_intent_catalog
