@@ -97,6 +97,9 @@ Then fill the explicit database and provider values. The full setup path is in
 migrate, ingest reviewed knowledge, index embeddings, start services, and run
 smoke checks without hiding state changes behind implicit defaults.
 
+Open contribution pull requests against `develop`. GitHub Actions runs Ruff and
+pytest on those pull requests.
+
 Common local validation:
 
 ```sh
