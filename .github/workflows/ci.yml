@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop]
+    types: [opened, reopened, synchronize, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: psychic-waddle-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate (Python)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12.16'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --require-hashes -r installer.lock
+          python -m pip install --constraint requirements.lock . pytest==9.1.1 ruff==0.15.9 PyYAML==6.0.3
+          python -m pip check
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Test
+        run: timeout 45s python -m pytest -q tests
