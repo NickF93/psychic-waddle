@@ -79,7 +79,7 @@ Do not reopen or redirect token-bearing legacy HTTP endpoints.
 
 ## Certificate maintenance and rollback
 
-Both edge profiles use the official NGINX 1.30.6 Alpine image pinned by digest in
+Both edge profiles use the official NGINX 1.30.7 Alpine image pinned by digest in
 `compose.yaml`. The native Docker proxy fixture reads that same pin. For an
 image-only security update, pre-pull the approved image and validate the existing
 mounts and networks with candidate `nginx -t` before replacing only `nginx-tls`
